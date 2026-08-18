@@ -1,11 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
 
 export function LoginForm() {
   const router = useRouter();
+  // ?next= is read at SUBMIT time, not during render. useSearchParams()
+  // would make this component client-only under Cache Components, which
+  // means the sign-in form would be a skeleton until JS hydrates — on the
+  // one page that must work immediately.
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +43,15 @@ export function LoginForm() {
         platform_role: body.data.platform_role,
         active_team: body.data.active_team,
       });
-      router.push(body.data.force_change ? "/admin/password" : "/admin");
+      // AccessGate and the proxy bounce here with ?next=, so a member
+      // who was merely signed out lands back where they were.
+      const next = new URLSearchParams(window.location.search).get("next");
+      router.push(
+        body.data.force_change
+          ? "/admin/password"
+          : (next ??
+            (body.data.platform_role === "megaadmin" ? "/ops" : "/")),
+      );
       router.refresh();
     } catch {
       setError("Could not reach the server — check your connection.");
@@ -84,6 +97,12 @@ export function LoginForm() {
       >
         {pending ? "Signing in…" : "Sign in"}
       </button>
+      <p className="text-center text-xs text-text-muted">
+        New here?{" "}
+        <Link href="/signup" className="font-medium text-accent">
+          Create an account
+        </Link>
+      </p>
     </form>
   );
 }

@@ -1,0 +1,128 @@
+import { Suspense } from "react";
+import Link from "next/link";
+import {
+  Calculator,
+  Car,
+  CarFront,
+  Info,
+  ShoppingBag,
+  Swords,
+} from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getNavState, type NavState } from "@/lib/nav";
+import { cn } from "@/lib/utils";
+
+type Feature = {
+  label: string;
+  href: string | null; // null = not built yet, renders disabled
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  iconClass: string;
+};
+
+// The app drawer. A tile with href: null renders greyed and inert
+// rather than vanishing — the app-wide disabled-not-hidden rule.
+// Matches and Car Counter read team data, so they need a Team Ledger;
+// the two calculators are pure and work for everyone.
+function buildFeatures(nav: NavState): Feature[] {
+  return [
+    {
+      label: "Matches",
+      href: nav.hasTeamLedger ? "/matches" : null,
+      icon: Swords,
+      iconClass: "bg-low-light text-low-foreground",
+    },
+    {
+      label: "Car Fee Calculator",
+      href: "/car-fee",
+      icon: Car,
+      iconClass: "bg-accent-light text-accent",
+    },
+    {
+      label: "Car Counter",
+      href: nav.hasTeamLedger ? "/car-count" : null,
+      icon: CarFront,
+      iconClass: "bg-scheduled-light text-scheduled-foreground",
+    },
+    {
+      label: "Virtual Match Fee",
+      href: "/virtual-fee",
+      icon: Calculator,
+      iconClass: "bg-credit-light text-credit-foreground",
+    },
+    ...(nav.signedIn
+      ? [
+          {
+            label: "Purchases",
+            href: "/purchases",
+            icon: ShoppingBag,
+            iconClass: "bg-accent-light text-accent",
+          } satisfies Feature,
+        ]
+      : []),
+    {
+      label: "About us",
+      href: "/about-us",
+      icon: Info,
+      iconClass: "bg-surface-secondary text-text-secondary",
+    },
+  ];
+}
+
+async function MoreData() {
+  const FEATURES = buildFeatures(await getNavState());
+  return (
+    <section className="grid grid-cols-2 gap-3">
+      {FEATURES.map((feature, i) => {
+        const Icon = feature.icon;
+        const inner = (
+          <>
+            <span
+              className={cn(
+                "flex size-9 items-center justify-center rounded-md",
+                feature.iconClass,
+              )}
+            >
+              <Icon size={18} />
+            </span>
+            <span className="text-sm font-semibold">{feature.label}</span>
+          </>
+        );
+        return feature.href ? (
+          <Link
+            key={i}
+            href={feature.href}
+            className="flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface p-4 text-text-primary"
+          >
+            {inner}
+          </Link>
+        ) : (
+          <div
+            key={i}
+            aria-disabled="true"
+            className="flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface p-4 text-text-muted opacity-60"
+          >
+            {inner}
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+export default function More() {
+  return (
+    <>
+      <div>
+        <h1 className="text-xl font-bold text-text-primary">More</h1>
+        <p className="mt-0.5 text-xs text-text-muted">
+          New features land here.
+        </p>
+      </div>
+      {/* Reads the session to decide which tiles are live, so it must
+          sit inside Suspense under cacheComponents. */}
+      <Suspense fallback={<Skeleton className="h-64 rounded-lg" />}>
+        <MoreData />
+      </Suspense>
+    </>
+  );
+}

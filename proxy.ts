@@ -18,6 +18,8 @@ import { SESSION_COOKIE } from "@/lib/cookies";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // /admin/login is now just a redirect to /login; let it through so it
+  // can do its job instead of bouncing signed-out visitors in a loop.
   if (pathname === "/admin/login") {
     return NextResponse.next();
   }
@@ -39,7 +41,10 @@ export async function proxy(request: NextRequest) {
   }
 
   const url = request.nextUrl.clone();
-  url.pathname = "/admin/login";
+  url.pathname = "/login";
+  // Come back here once signed in — a member who was merely signed out
+  // should not be dumped on the dashboard.
+  url.search = `?next=${encodeURIComponent(pathname)}`;
   return NextResponse.redirect(url);
 }
 

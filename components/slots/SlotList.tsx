@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CalendarPlus } from "lucide-react";
 import { CreditSheet } from "@/components/pool/CreditSheet";
 
 type Props = {
   // ISO dates, ascending — already filtered to open future slots.
   dates: string[];
+  // Server-resolved: may this visitor schedule a match on a slot?
+  // Was a client fetch of /api/auth/me, which meant the buttons popped
+  // in a beat after paint; the page already knows, so it just tells us.
+  canSchedule?: boolean;
 };
 
 function monthLabel(iso: string): string {
@@ -27,24 +31,9 @@ function dayLabel(iso: string): string {
 
 // Public read-only list of open ground dates; signed-in admins can tap
 // a slot to schedule a match on it (which removes it from this page).
-export function SlotList({ dates }: Props) {
-  const [isAdmin, setIsAdmin] = useState(false);
+export function SlotList({ dates, canSchedule = false }: Props) {
+  const isAdmin = canSchedule;
   const [scheduleDate, setScheduleDate] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/auth/me")
-      .then((res) => res.json())
-      .then((body) => {
-        if (!cancelled && body?.success && !body.data.force_change) {
-          setIsAdmin(true);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const byMonth = new Map<string, string[]>();
   for (const date of dates) {

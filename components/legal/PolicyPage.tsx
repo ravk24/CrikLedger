@@ -1,0 +1,37 @@
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
+
+// Shared frame for the six Razorpay compliance pages.
+//
+// These must stay 100% STATIC — no session reads, no cookies. Razorpay's
+// reviewer and search crawlers fetch them directly, and a dynamic read
+// out here would both slow them down and fail the build under
+// cacheComponents. If you ever want a "Signed in as…" line on one of
+// these, that is the moment it breaks.
+export function PolicyPage({
+  title,
+  updated,
+  children,
+}: {
+  title: string;
+  updated: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      <Link
+        href="/about-us"
+        className="flex min-h-11 items-center gap-1 self-start text-sm font-medium text-text-secondary"
+      >
+        <ChevronLeft size={16} /> About us
+      </Link>
+      <div>
+        <h1 className="text-xl font-bold text-text-primary">{title}</h1>
+        <p className="mt-0.5 text-xs text-text-muted">Last updated {updated}</p>
+      </div>
+      <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 text-sm leading-relaxed text-text-secondary [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:text-text-primary">
+        {children}
+      </section>
+    </>
+  );
+}
