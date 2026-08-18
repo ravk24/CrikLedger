@@ -1,5 +1,10 @@
 -- ============================================================
 -- CricLedger — RESET: clear all dev/seed data.
+--
+-- ⚠ Do NOT run during development (Ravi, 2026-08-18): dev-DB test
+-- data accumulates through the whole build and is the verification
+-- baseline. This file is reserved for the ONE deliberate pre-launch
+-- reset after the application is fully built.
 -- Keeps the superadmin (ravi_kant), the schema (tables, views,
 -- RLS, grants), AND the migration-26 team seed (teams,
 -- team_grounds, team_seasons, team_slots) — deleting the team
