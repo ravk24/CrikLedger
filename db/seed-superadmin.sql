@@ -1,5 +1,5 @@
 -- ============================================================
--- CricLedger — Megaadmin seed (run ONCE, at bootstrap)
+-- CrikLedger — Megaadmin seed (run ONCE, at bootstrap)
 --
 -- Replace YOUR_STRONG_PASSWORD before running. Never commit a real
 -- password here — this file is a template.

@@ -70,7 +70,7 @@ export default function Purchases() {
       <div>
         <h1 className="text-xl font-bold text-text-primary">Purchases</h1>
         <p className="mt-0.5 text-xs text-text-muted">
-          What CricLedger offers, and what you already have.
+          What CrikLedger offers, and what you already have.
         </p>
       </div>
       <Suspense fallback={<Skeleton className="h-64 rounded-lg" />}>

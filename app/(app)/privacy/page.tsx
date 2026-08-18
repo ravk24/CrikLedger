@@ -1,13 +1,13 @@
 import { PolicyPage } from "@/components/legal/PolicyPage";
 
-export const metadata = { title: "Privacy policy · CricLedger" };
+export const metadata = { title: "Privacy policy · CrikLedger" };
 
 // Static by design — see components/legal/PolicyPage.
 export default function Privacy() {
   return (
     <PolicyPage title="Privacy policy" updated="18 August 2026">
       <p>
-        TODO(ravi): review before launch. This describes what CricLedger
+        TODO(ravi): review before launch. This describes what CrikLedger
         currently does.
       </p>
       <h2>What we store</h2>

@@ -65,7 +65,7 @@ Last updated: 2026-08-18 (session 6, end)
 
 ## Current state
 
-- Repo `ravk24/cricledger` `main` @ `7c85101`, tree clean except intentionally-local
+- Repo `ravk24/crikledger` `main` @ `7c85101`, tree clean except intentionally-local
   planning docs; all pushed. Feature 2 fully complete and E2E-verified.
 - Dev DB: **31 migrations applied**; data intact (12 players, 1 completed **'home'** match,
   fee 214 / surplus 8 / pool 1408, 60/61 slots open, Season 2 Nov 2026–May 2027).
@@ -91,4 +91,4 @@ the guest client-side sample from access model v2. Alternatively: Feature 1 extr
   shell vs dedicated lightweight flow? Can a superadmin's 2 admins manage their
   tournaments? Purchases page content + pricing + GST (Features 3/5). Post-signup
   pre-purchase Schedule behavior. Tournament "Host a new tournament" inner pages.
-- Phase 0 leftovers: PostHog project for cricledger; own backup workflow (Feature 9).
+- Phase 0 leftovers: PostHog project for crikledger; own backup workflow (Feature 9).

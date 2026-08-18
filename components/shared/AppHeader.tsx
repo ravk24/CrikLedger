@@ -12,7 +12,7 @@ function Brand() {
     <Link href="/" className="flex items-center gap-2">
       <Image src="/logo.png" alt="" width={32} height={32} priority />
       <span className="flex items-center">
-        <span className="sr-only">CricLedger</span>
+        <span className="sr-only">CrikLedger</span>
         <Image
           src="/wordmark-light.svg"
           alt=""

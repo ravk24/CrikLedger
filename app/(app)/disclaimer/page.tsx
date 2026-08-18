@@ -1,13 +1,13 @@
 import { PolicyPage } from "@/components/legal/PolicyPage";
 
-export const metadata = { title: "Disclaimer · CricLedger" };
+export const metadata = { title: "Disclaimer · CrikLedger" };
 
 // Static by design — see components/legal/PolicyPage.
 export default function Disclaimer() {
   return (
     <PolicyPage title="Disclaimer" updated="18 August 2026">
       <p>
-        CricLedger is a record-keeping and calculation tool for amateur
+        CrikLedger is a record-keeping and calculation tool for amateur
         cricket teams. It is not an accounting, banking, or payment
         service between players.
       </p>

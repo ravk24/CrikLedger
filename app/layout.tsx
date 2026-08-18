@@ -9,11 +9,11 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "CricLedger",
-  description: "CricLedger — cricket team fund & match fee ledger",
+  title: "CrikLedger",
+  description: "CrikLedger — cricket team fund & match fee ledger",
   appleWebApp: {
     capable: true,
-    title: "CricLedger",
+    title: "CrikLedger",
     statusBarStyle: "default",
   },
   icons: { apple: "/apple-touch-icon.png" },

@@ -5,7 +5,7 @@ import type { NavState } from "@/lib/nav";
 
 type TeamRow = { id: string; slug: string; display_name: string };
 
-// Every team using CricLedger. Titles are visible to everyone; rows are
+// Every team using CrikLedger. Titles are visible to everyone; rows are
 // greyed and inert unless you are a member — the app-wide
 // disabled-not-hidden rule.
 //
@@ -27,7 +27,7 @@ export async function TeamsDirectory({ nav }: { nav: NavState }) {
         <h1 className="text-xl font-bold text-text-primary">Teams</h1>
         <p className="mt-0.5 text-xs text-text-muted">
           {teams.length} team{teams.length === 1 ? "" : "s"} run their ledger
-          on CricLedger.
+          on CrikLedger.
         </p>
       </div>
 

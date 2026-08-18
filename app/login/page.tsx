@@ -11,14 +11,14 @@ export default function Login() {
       <main className="mx-auto w-full max-w-md px-4">
         <Image
           src="/logo.png"
-          alt="CricLedger logo"
+          alt="CrikLedger logo"
           width={64}
           height={64}
           className="mx-auto mb-2"
           priority
         />
         <p className="text-center text-[11px] font-bold uppercase tracking-wider text-accent">
-          CricLedger
+          CrikLedger
         </p>
         <h1 className="mt-1 text-center text-2xl font-bold text-text-primary">
           Sign in

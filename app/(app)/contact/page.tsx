@@ -1,6 +1,6 @@
 import { PolicyPage } from "@/components/legal/PolicyPage";
 
-export const metadata = { title: "Contact us · CricLedger" };
+export const metadata = { title: "Contact us · CrikLedger" };
 
 // Static by design — see components/legal/PolicyPage.
 export default function Contact() {

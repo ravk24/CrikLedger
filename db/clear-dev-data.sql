@@ -1,5 +1,5 @@
 -- ============================================================
--- CricLedger — RESET: clear all dev/seed data.
+-- CrikLedger — RESET: clear all dev/seed data.
 --
 -- ⚠ Do NOT run during development (Ravi, 2026-08-18): dev-DB test
 -- data accumulates through the whole build and is the verification

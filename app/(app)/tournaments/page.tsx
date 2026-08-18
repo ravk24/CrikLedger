@@ -47,7 +47,7 @@ async function TournamentDirectory({ hosted }: { hosted: boolean }) {
       ) : (
         <>
           <h2 className="px-1 text-[11px] font-medium uppercase tracking-wider text-text-muted">
-            Hosted on CricLedger
+            Hosted on CrikLedger
           </h2>
           <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
             {all.map((t) => (

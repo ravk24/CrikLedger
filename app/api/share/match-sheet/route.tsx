@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
         }}
       >
         <div style={{ display: "flex", fontSize: 26, color: "#38bdf8", letterSpacing: 2 }}>
-          CRICLEDGER
+          CRIKLEDGER
         </div>
 
         <div style={{ display: "flex", fontSize: 56, fontWeight: 700, marginTop: 12 }}>

@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "CricLedger",
-    short_name: "CricLedger",
-    description: "CricLedger — cricket team fund & match fee ledger",
+    name: "CrikLedger",
+    short_name: "CrikLedger",
+    description: "CrikLedger — cricket team fund & match fee ledger",
     start_url: "/",
     display: "standalone",
     background_color: "#f5f6f8", // --color-background

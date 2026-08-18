@@ -1,8 +1,8 @@
-# CricLedger
+# CrikLedger
 
 A mobile-first web app that manages a **cricket team's money** — match fee splitting, a shared team fund (pool), and per-player balances. A team's data is private to its members; completed match sheets stay shareable by link. No payments happen in the app — all money moves offline, and the app is the single source-of-truth ledger.
 
-**Status:** CricLedger v0.1 — core app running on the dev DB (2026-08-17); multi-team generalization next. Born from the LR-SuperGiants team ledger.
+**Status:** CrikLedger v0.1 — core app running on the dev DB (2026-08-17); multi-team generalization next. Born from the LR-SuperGiants team ledger.
 
 ---
 

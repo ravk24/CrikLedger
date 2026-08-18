@@ -1,5 +1,5 @@
 -- ============================================================
--- CricLedger — Development seed
+-- CrikLedger — Development seed
 -- Test players + a few pool entries so the public pages have data.
 -- Do NOT run in production. Players are name-only (migration 5).
 -- Tenancy (migration 26+): every row belongs to the default team

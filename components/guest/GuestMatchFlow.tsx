@@ -110,7 +110,7 @@ export function GuestMatchFlow() {
             </p>
             <p className="mt-3 text-sm text-text-secondary">
               {DEMO_PLAYERS.length} players played. Complete the match to see
-              how CricLedger splits the cost — and share the result.
+              how CrikLedger splits the cost — and share the result.
             </p>
           </section>
           <button

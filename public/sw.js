@@ -1,9 +1,16 @@
-// CricLedger service worker — the entire caching policy.
+// CrikLedger service worker — the entire caching policy.
 // This is a LIVE MONEY LEDGER: a cached balance is a wrong balance.
 // Network-first for every page and API; cache ONLY truly static assets.
 // Bump STATIC_CACHE when icons change.
-const STATIC_CACHE = "cricledger-static-v2";
-const STATIC_ASSETS = ["/icon-192.png", "/icon-512.png", "/offline.html"];
+// v3: the CricLedger -> CrikLedger rename replaced every icon and the
+// app title, so installed clients must drop the old shell.
+const STATIC_CACHE = "crikledger-static-v3";
+const STATIC_ASSETS = [
+  "/icon-192.png",
+  "/icon-512.png",
+  "/splash.png",
+  "/offline.html",
+];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(STATIC_CACHE).then((c) => c.addAll(STATIC_ASSETS)));

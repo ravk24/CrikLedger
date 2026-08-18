@@ -1,13 +1,13 @@
 import { PolicyPage } from "@/components/legal/PolicyPage";
 
-export const metadata = { title: "Return policy · CricLedger" };
+export const metadata = { title: "Return policy · CrikLedger" };
 
 // Static by design — see components/legal/PolicyPage.
 export default function Returns() {
   return (
     <PolicyPage title="Return policy" updated="18 August 2026">
       <p>
-        CricLedger sells digital access to software. There is nothing
+        CrikLedger sells digital access to software. There is nothing
         physical to ship or return, so no return policy applies in the
         conventional sense.
       </p>

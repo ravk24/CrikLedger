@@ -1,6 +1,6 @@
 import { PolicyPage } from "@/components/legal/PolicyPage";
 
-export const metadata = { title: "Refund policy · CricLedger" };
+export const metadata = { title: "Refund policy · CrikLedger" };
 
 // Static by design — see components/legal/PolicyPage.
 export default function Refunds() {

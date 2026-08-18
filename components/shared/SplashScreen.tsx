@@ -36,8 +36,10 @@ export function SplashScreen() {
         phase === "fade" ? "opacity-0" : "opacity-100"
       }`}
     >
-      {/* The icon has native transparency — shown whole, no corner rounding. */}
-      <Image src="/icon-192.png" alt="" width={112} height={112} priority />
+      {/* The splash art carries the wordmark and tagline, and its corners
+          are transparent (scripts/generate-icons.mjs lifts them), so it sits
+          on either theme background without a white or black box. */}
+      <Image src="/splash.png" alt="" width={200} height={200} priority />
     </div>
   );
 }

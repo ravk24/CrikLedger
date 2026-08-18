@@ -199,7 +199,7 @@ async function ConsoleData() {
 
       <p className="flex items-center justify-center gap-1.5 text-center text-xs text-text-muted">
         <Image src="/logo.png" alt="" width={16} height={16} />
-        CricLedger · v0.1
+        CrikLedger · v0.1
       </p>
     </>
   );

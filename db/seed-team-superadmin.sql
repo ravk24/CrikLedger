@@ -1,5 +1,5 @@
 -- ============================================================
--- CricLedger — Team superadmin seed (template, run manually)
+-- CrikLedger — Team superadmin seed (template, run manually)
 --
 -- Replace YOUR_STRONG_PASSWORD and the username/name/team slug
 -- before running. Never commit a real password — this file is a

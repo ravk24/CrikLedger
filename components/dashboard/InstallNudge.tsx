@@ -65,7 +65,7 @@ export function InstallNudge() {
       />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-text-primary">
-          Add CricLedger to your home screen
+          Add CrikLedger to your home screen
         </p>
         {installEvent ? (
           <button
