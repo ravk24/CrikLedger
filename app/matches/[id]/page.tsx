@@ -15,6 +15,7 @@ import { formatDate, formatDateShort, formatRupees, formatWeekday } from "@/lib/
 import { resolveGroundInfo } from "@/lib/grounds";
 import { getSessionAdmin } from "@/lib/session";
 import { supabasePublic } from "@/lib/supabase-public";
+import { getCurrentTeam, getTeamGrounds } from "@/lib/team";
 import { rowKey, type WizardInitial } from "@/components/wizard/wizardTypes";
 import type { GroundBookingPublic, Match, MatchParticipantPublic } from "@/types";
 
@@ -154,7 +155,7 @@ async function MatchDetailData({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [matchRes, participantsRes] = await Promise.all([
+  const [matchRes, participantsRes, team, grounds] = await Promise.all([
     supabasePublic
       .from("matches_public")
       .select("*")
@@ -164,10 +165,18 @@ async function MatchDetailData({
       .from("match_participants_public")
       .select("*")
       .eq("match_id", id),
+    getCurrentTeam(),
+    getTeamGrounds(),
   ]);
 
   const match = matchRes.data as MatchPublicRow | null;
   if (!match) notFound();
+  const groundInfo = resolveGroundInfo(
+    match.ground,
+    match.venue ?? null,
+    grounds,
+    team.home_ground_name,
+  );
 
   // Captain and booking are scoped by the match's own team; the
   // booking resolves by id (matches.ground_booking_id) — the old
@@ -221,7 +230,7 @@ async function MatchDetailData({
       <section className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-semibold text-text-primary">
-            Our XI vs {match.opponent}
+            {team.short_name ?? team.display_name} vs {match.opponent}
           </h1>
           <ResultBadge match={match} />
         </div>
@@ -262,7 +271,7 @@ async function MatchDetailData({
           </div>
         )}
         <p className="mt-1 text-sm text-text-secondary">
-          Ground: {resolveGroundInfo(match.ground, match.venue ?? null).label}
+          Ground: {groundInfo.label}
         </p>
       </section>
 
@@ -284,6 +293,8 @@ async function MatchDetailData({
           status={match.status}
           ground={match.ground}
           venue={match.venue ?? null}
+          grounds={grounds}
+          groundInfo={groundInfo}
           opponentCaptain={booking?.captain ?? null}
           feePending={adminProps.matchFee?.amountPending ?? 0}
           players={adminProps.players}

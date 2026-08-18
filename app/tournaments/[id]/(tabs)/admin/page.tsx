@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TournamentAdminPanel } from "@/components/tournaments/TournamentAdminPanel";
 import { getSessionAdmin } from "@/lib/session";
 import { supabasePublic } from "@/lib/supabase-public";
+import { getTeamGrounds } from "@/lib/team";
 import type { TournamentPlayerPublic, TournamentPublic } from "@/types";
 
 // The tournament mini-app's admin console tab. Admin-gated server-side
@@ -15,7 +16,7 @@ async function TournamentAdminData({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [tRes, playersRes, admin] = await Promise.all([
+  const [tRes, playersRes, admin, grounds] = await Promise.all([
     supabasePublic
       .from("tournaments_public")
       .select("*")
@@ -26,6 +27,7 @@ async function TournamentAdminData({
       .select("*")
       .eq("tournament_id", id),
     getSessionAdmin(),
+    getTeamGrounds(),
   ]);
 
   const tournament = tRes.data as TournamentPublic | null;
@@ -40,6 +42,7 @@ async function TournamentAdminData({
       <TournamentAdminPanel
         tournament={tournament}
         players={players}
+        grounds={grounds}
         isSuperadmin={admin.role === "superadmin"}
       />
     </>

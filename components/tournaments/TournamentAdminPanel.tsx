@@ -19,6 +19,7 @@ import {
   OTHER_GROUND,
   venueToSelection,
 } from "@/components/shared/GroundSelect";
+import type { Ground } from "@/lib/grounds";
 import { CaptainMark } from "@/components/shared/CaptainMark";
 import { ViceCaptainMark } from "@/components/shared/ViceCaptainMark";
 import { TournamentDepositSheet } from "@/components/tournaments/TournamentDepositSheet";
@@ -32,6 +33,7 @@ import type { TournamentPlayerPublic, TournamentPublic } from "@/types";
 type Props = {
   tournament: TournamentPublic;
   players: TournamentPlayerPublic[]; // full roster, active + removed
+  grounds: Ground[]; // team ground list for the venue select
   isSuperadmin: boolean;
 };
 
@@ -48,6 +50,7 @@ const tileClass =
 export function TournamentAdminPanel({
   tournament,
   players,
+  grounds,
   isSuperadmin,
 }: Props) {
   const router = useRouter();
@@ -67,7 +70,7 @@ export function TournamentAdminPanel({
       ? String(Math.round(Number(tournament.joining_fee)))
       : "",
   );
-  const initialGround = venueToSelection(tournament.venue);
+  const initialGround = venueToSelection(grounds, tournament.venue);
   const [groundChoice, setGroundChoice] = useState(initialGround.choice);
   const [customName, setCustomName] = useState(initialGround.customName);
   const [startDate, setStartDate] = useState(tournament.start_date ?? "");
@@ -371,6 +374,7 @@ export function TournamentAdminPanel({
             />
           </label>
           <GroundSelect
+            grounds={grounds}
             choice={groundChoice}
             customName={customName}
             onChoiceChange={setGroundChoice}
@@ -463,6 +467,7 @@ export function TournamentAdminPanel({
         onOpenChange={setScheduleOpen}
         tournamentId={tournament.id}
         venue={tournament.venue}
+        grounds={grounds}
       />
       <TournamentDepositSheet
         open={depositOpen}

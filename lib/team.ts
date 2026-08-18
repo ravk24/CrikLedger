@@ -1,5 +1,6 @@
 import { cache } from "react";
 import type { Pool, PoolClient } from "pg";
+import type { Ground } from "@/lib/grounds";
 import { supabasePublic } from "@/lib/supabase-public";
 
 // Interim single-team resolution (Feature 2 tenancy step). Every read
@@ -39,6 +40,53 @@ export const getCurrentTeam = cache(async (): Promise<TeamPublic> => {
     );
   }
   return data as TeamPublic;
+});
+
+// The team's active grounds as the UI's Ground shape (name + per-car
+// allowance), replacing the old lib/grounds.ts GROUNDS literal. Deduped
+// per request render like getCurrentTeam.
+export const getTeamGrounds = cache(async (): Promise<Ground[]> => {
+  const team = await getCurrentTeam();
+  const { data, error } = await supabasePublic
+    .from("team_grounds_public")
+    .select("name, car_allowance, sort_order")
+    .eq("team_id", team.id)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+  if (error) {
+    throw new Error(`Could not load team grounds: ${error.message}`);
+  }
+  return (data ?? []).map((g) => ({
+    name: g.name as string,
+    allowance: Number(g.car_allowance),
+  }));
+});
+
+export type TeamSlot = {
+  slot_date: string; // yyyy-mm-dd
+  season_label: string;
+  starts_on: string;
+  ends_on: string;
+};
+
+// The team's bookable slot dates with their season window, replacing
+// the old lib/groundSlots.ts GROUND_SLOTS literal.
+export const getTeamSlots = cache(async (): Promise<TeamSlot[]> => {
+  const team = await getCurrentTeam();
+  const { data, error } = await supabasePublic
+    .from("team_slots_public")
+    .select("slot_date, season_label, starts_on, ends_on")
+    .eq("team_id", team.id)
+    .order("slot_date", { ascending: true });
+  if (error) {
+    throw new Error(`Could not load team slots: ${error.message}`);
+  }
+  return (data ?? []).map((s) => ({
+    slot_date: String(s.slot_date).slice(0, 10),
+    season_label: s.season_label as string,
+    starts_on: String(s.starts_on).slice(0, 10),
+    ends_on: String(s.ends_on).slice(0, 10),
+  }));
 });
 
 // API routes / lib code on the pg pool. Team ids are immutable, so a

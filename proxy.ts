@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
-
-const SESSION_COOKIE = "cl_session";
+import { SESSION_COOKIE } from "@/lib/cookies";
 
 // Page-level gate only: keeps signed-out visitors off /admin/* screens.
 // API routes authorize themselves via requireAdmin()/requireSuperadmin(),

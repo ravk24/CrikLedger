@@ -6,7 +6,7 @@ import { Money } from "@/components/shared/Money";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function CarFeeCalculator() {
+export function CarFeeCalculator({ ratePerKm }: { ratePerKm: number }) {
   const [raw, setRaw] = useState("");
 
   const distance = Number(raw);
@@ -38,7 +38,7 @@ export function CarFeeCalculator() {
         <div className="flex flex-col gap-1 rounded-lg border border-border bg-surface p-4">
           <p className="text-sm font-bold text-text-primary">Car allowance</p>
           <Money
-            amount={carFee(distance)}
+            amount={carFee(distance, ratePerKm)}
             variant="balance"
             className="text-2xl font-bold"
           />

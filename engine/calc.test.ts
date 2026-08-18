@@ -193,19 +193,19 @@ describe("ceilSplit", () => {
 
 describe("carFee", () => {
   it("round trip at ₹9.6/km, ceiled: 7.3 km → 141 (140.16 up)", () => {
-    expect(carFee(7.3)).toBe(141);
+    expect(carFee(7.3, 9.6)).toBe(141);
   });
 
   it("fractional result is ceiled: 7.36 km → 142 (141.312 up)", () => {
-    expect(carFee(7.36)).toBe(142);
+    expect(carFee(7.36, 9.6)).toBe(142);
   });
 
   it("zero distance is a zero fee", () => {
-    expect(carFee(0)).toBe(0);
+    expect(carFee(0, 9.6)).toBe(0);
   });
 
   it("negative distance is rejected", () => {
-    expect(() => carFee(-1)).toThrowError("NEGATIVE_DISTANCE");
+    expect(() => carFee(-1, 9.6)).toThrowError("NEGATIVE_DISTANCE");
   });
 });
 

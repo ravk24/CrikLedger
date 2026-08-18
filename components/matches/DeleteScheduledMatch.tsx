@@ -75,7 +75,7 @@ export function DeleteScheduledMatch({
         title="Delete match"
         description={
           ground === "barne"
-            ? `vs ${opponent} · ${matchDateLabel} — the date reopens on Barne Slots. Superadmin only.`
+            ? `vs ${opponent} · ${matchDateLabel} — the date reopens on Home Matches. Superadmin only.`
             : `vs ${opponent} · ${matchDateLabel} — away match. Superadmin only.`
         }
       >

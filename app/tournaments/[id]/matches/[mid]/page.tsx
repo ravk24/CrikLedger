@@ -16,6 +16,7 @@ import {
 import { resolveGroundInfo } from "@/lib/grounds";
 import { getSessionAdmin } from "@/lib/session";
 import { supabasePublic } from "@/lib/supabase-public";
+import { getCurrentTeam, getTeamGrounds } from "@/lib/team";
 import { rowKey, type WizardInitial } from "@/components/wizard/wizardTypes";
 import type {
   MatchParticipantPublic,
@@ -90,7 +91,7 @@ async function TournamentMatchData({
   params: Promise<{ id: string; mid: string }>;
 }) {
   const { id, mid } = await params;
-  const [tRes, matchRes, participantsRes] = await Promise.all([
+  const [tRes, matchRes, participantsRes, team, grounds] = await Promise.all([
     supabasePublic
       .from("tournaments_public")
       .select("*")
@@ -106,11 +107,19 @@ async function TournamentMatchData({
       .from("tournament_match_participants_public")
       .select("*")
       .eq("match_id", mid),
+    getCurrentTeam(),
+    getTeamGrounds(),
   ]);
 
   const tournament = tRes.data as TournamentPublic | null;
   const match = matchRes.data as TournamentMatch | null;
   if (!tournament || !match) notFound();
+  const groundInfo = resolveGroundInfo(
+    "other",
+    tournament.venue,
+    grounds,
+    null,
+  );
   const participants = (participantsRes.data ??
     []) as MatchParticipantPublic[];
   const adminProps =
@@ -125,7 +134,8 @@ async function TournamentMatchData({
       <section className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-semibold text-text-primary">
-            {tournament.team_name ?? "Our XI"} vs {match.opponent}
+            {tournament.team_name ?? team.short_name ?? team.display_name} vs{" "}
+            {match.opponent}
           </h1>
           <ResultBadge match={match} />
         </div>
@@ -137,10 +147,7 @@ async function TournamentMatchData({
           {formatTime(match.match_time)}
         </p>
         <p className="text-sm text-text-secondary">
-          Ground:{" "}
-          {tournament.venue
-            ? resolveGroundInfo("other", tournament.venue).label
-            : "Not set"}
+          Ground: {tournament.venue ? groundInfo.label : "Not set"}
         </p>
       </section>
 
@@ -167,6 +174,8 @@ async function TournamentMatchData({
           matchDateLabel={`${formatDateShort(match.match_date)} · ${formatTime(match.match_time)}`}
           status={match.status}
           venue={tournament.venue}
+          grounds={grounds}
+          groundInfo={groundInfo}
           players={adminProps.players}
           isSuperadmin={adminProps.isSuperadmin}
           initial={adminProps.initial}

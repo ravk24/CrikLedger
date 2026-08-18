@@ -9,12 +9,14 @@ import { MoneyInput } from "@/components/shared/MoneyInput";
 import { GroundSelect, OTHER_GROUND } from "@/components/shared/GroundSelect";
 import { Switch } from "@/components/ui/switch";
 import { formatRupees } from "@/lib/format";
+import type { Ground } from "@/lib/grounds";
 
 type PaidTo = "opponent" | "owner";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  grounds: Ground[]; // team ground list for the venue select
   // Standing captain (players.is_captain) for the paid-to-owner note.
   captainName: string | null;
 };
@@ -26,7 +28,12 @@ type Props = {
 // opponent's share flows offline to the captain). Step 2 is the
 // familiar schedule form plus the contribution amount; submit creates
 // the match and the pool debit in one transaction.
-export function OtherScheduleWizard({ open, onOpenChange, captainName }: Props) {
+export function OtherScheduleWizard({
+  open,
+  onOpenChange,
+  grounds,
+  captainName,
+}: Props) {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [paidTo, setPaidTo] = useState<PaidTo | null>(null);
@@ -277,6 +284,7 @@ export function OtherScheduleWizard({ open, onOpenChange, captainName }: Props) 
             />
           </label>
           <GroundSelect
+            grounds={grounds}
             choice={groundChoice}
             customName={customName}
             onChoiceChange={setGroundChoice}

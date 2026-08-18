@@ -6,6 +6,7 @@ import { MatchWizard } from "@/components/wizard/MatchWizard";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { ScheduleMatchSheet } from "@/components/admin/ScheduleMatchSheet";
 import { cn } from "@/lib/utils";
+import type { Ground, GroundInfo } from "@/lib/grounds";
 import type { WizardInitial, WizardPlayer } from "@/components/wizard/wizardTypes";
 
 type Props = {
@@ -16,6 +17,8 @@ type Props = {
   status: "scheduled" | "completed" | "abandoned";
   ground: "barne" | "other";
   venue: string | null; // away ground name, Other matches only
+  grounds: Ground[]; // team ground list for the edit-schedule select
+  groundInfo: GroundInfo; // resolved server-side for the wizard prefill
   // Linked ground booking's captain; null = no booking for this opponent.
   opponentCaptain: string | null;
   // Linked booking's pending fee; 0 = fully paid or no booking.
@@ -35,6 +38,8 @@ export function MatchAdminActions({
   status,
   ground,
   venue,
+  grounds,
+  groundInfo,
   opponentCaptain,
   feePending,
   players,
@@ -77,8 +82,7 @@ export function MatchAdminActions({
       matchDateLabel={matchDateLabel}
       players={players}
       mode={status === "scheduled" ? "complete" : "edit"}
-      ground={ground}
-      venue={venue}
+      groundInfo={groundInfo}
       initial={initial}
       initialGroundFee={initialGroundFee}
     />
@@ -140,6 +144,7 @@ export function MatchAdminActions({
         <ScheduleMatchSheet
           open={editScheduleOpen}
           onOpenChange={setEditScheduleOpen}
+          grounds={grounds}
           editing={{
             matchId,
             date: matchDate,

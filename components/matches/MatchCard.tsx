@@ -11,7 +11,7 @@ type Props = {
 
 export function MatchCard({ match, attendeeCount }: Props) {
   const state = matchState(match);
-  const isBarne = match.ground === "barne";
+  const isHome = match.ground === "barne";
 
   return (
     <Link
@@ -30,19 +30,19 @@ export function MatchCard({ match, attendeeCount }: Props) {
           <span
             className={cn(
               "rounded-full px-2 py-0.5 text-xs font-medium",
-              isBarne
+              isHome
                 ? "bg-scheduled-light text-scheduled-foreground"
                 : "bg-inactive-light text-inactive-foreground",
             )}
           >
-            {isBarne ? "Barne" : "Other"}
+            {isHome ? "Home" : "Away"}
           </span>
           {state !== "scheduled" && <ResultBadge match={match} />}
         </span>
       </div>
       <p className="mt-1 text-xs text-text-muted">
         {formatDate(match.match_date)}
-        {!isBarne && match.venue && (
+        {!isHome && match.venue && (
           <>
             {" · "}
             {match.venue}

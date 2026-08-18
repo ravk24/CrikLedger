@@ -8,10 +8,12 @@ import {
   OTHER_GROUND,
   venueToSelection,
 } from "@/components/shared/GroundSelect";
+import type { Ground } from "@/lib/grounds";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  grounds: Ground[]; // team ground list for the venue select
   // Present when fixing an already-scheduled match instead of creating one.
   // opponentCaptain comes from the linked ground booking; null = no booking,
   // so there is no captain record to edit.
@@ -32,6 +34,7 @@ type Props = {
 export function ScheduleMatchSheet({
   open,
   onOpenChange,
+  grounds,
   editing,
   initialDate,
 }: Props) {
@@ -39,7 +42,7 @@ export function ScheduleMatchSheet({
   const [date, setDate] = useState(editing?.date ?? initialDate ?? "");
   const [opponent, setOpponent] = useState(editing?.opponent ?? "");
   const [captain, setCaptain] = useState(editing?.opponentCaptain ?? "");
-  const initialSelection = venueToSelection(editing?.venue);
+  const initialSelection = venueToSelection(grounds, editing?.venue);
   const [groundChoice, setGroundChoice] = useState(initialSelection.choice);
   const [customName, setCustomName] = useState(initialSelection.customName);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +62,7 @@ export function ScheduleMatchSheet({
       setDate(editDate);
       setOpponent(editOpponent);
       setCaptain(editCaptain ?? "");
-      const selection = venueToSelection(editVenue);
+      const selection = venueToSelection(grounds, editVenue);
       setGroundChoice(selection.choice);
       setCustomName(selection.customName);
       setError(null);
@@ -67,7 +70,7 @@ export function ScheduleMatchSheet({
       setDate(initialDate);
       setError(null);
     }
-  }, [open, editDate, editOpponent, editCaptain, editVenue, initialDate]);
+  }, [open, editDate, editOpponent, editCaptain, editVenue, initialDate, grounds]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -154,6 +157,7 @@ export function ScheduleMatchSheet({
         </label>
         {hasVenueField && (
           <GroundSelect
+            grounds={grounds}
             choice={groundChoice}
             customName={customName}
             onChoiceChange={setGroundChoice}

@@ -6,7 +6,7 @@ import { TournamentCard } from "@/components/tournaments/TournamentCard";
 import { CreateTournamentSheet } from "@/components/tournaments/CreateTournamentSheet";
 import { getSessionAdmin } from "@/lib/session";
 import { supabasePublic } from "@/lib/supabase-public";
-import { getCurrentTeam } from "@/lib/team";
+import { getCurrentTeam, getTeamGrounds } from "@/lib/team";
 import type { TournamentPublic } from "@/types";
 
 function CardList({ tournaments }: { tournaments: TournamentPublic[] }) {
@@ -21,13 +21,14 @@ function CardList({ tournaments }: { tournaments: TournamentPublic[] }) {
 
 async function TournamentsData() {
   const team = await getCurrentTeam();
-  const [res, admin] = await Promise.all([
+  const [res, admin, grounds] = await Promise.all([
     supabasePublic
       .from("tournaments_public")
       .select("*")
       .eq("team_id", team.id)
       .order("created_at", { ascending: false }),
     getSessionAdmin(),
+    getTeamGrounds(),
   ]);
   const tournaments = (res.data ?? []) as TournamentPublic[];
   const active = tournaments.filter((t) => t.status === "active");
@@ -36,7 +37,7 @@ async function TournamentsData() {
 
   return (
     <>
-      {isAdmin && <CreateTournamentSheet />}
+      {isAdmin && <CreateTournamentSheet grounds={grounds} />}
 
       {tournaments.length === 0 && (
         <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">

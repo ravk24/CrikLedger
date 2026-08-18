@@ -13,7 +13,7 @@ import { StepCarAllowance } from "@/components/wizard/StepCarAllowance";
 import { StepCars } from "@/components/wizard/StepCars";
 import { StepFeePreview } from "@/components/wizard/StepFeePreview";
 import { formatRupees } from "@/lib/format";
-import { resolveGroundInfo } from "@/lib/grounds";
+import type { GroundInfo } from "@/lib/grounds";
 import { cn } from "@/lib/utils";
 import {
   rowKey,
@@ -33,9 +33,9 @@ type Props = {
   matchDateLabel: string;
   players: WizardPlayer[]; // all active players
   mode: "complete" | "edit";
-  // Provenance + away ground name — drives the Car fee step's prefill.
-  ground: "barne" | "other";
-  venue: string | null;
+  // Resolved server-side from the team's ground list (lib/grounds.ts
+  // resolveGroundInfo) — drives the Car fee step's prefill and label.
+  groundInfo: GroundInfo;
   initial?: WizardInitial;
   // Pre-fills the Costs step's ground fee on completion; editable.
   // Other matches: the pool-fronted fee (linked debit's current amount)
@@ -96,8 +96,7 @@ export function MatchWizard({
   matchDateLabel,
   players,
   mode,
-  ground,
-  venue,
+  groundInfo,
   initial,
   initialGroundFee,
   apiBase,
@@ -120,7 +119,6 @@ export function MatchWizard({
   );
   const [abandonMode, setAbandonMode] = useState(false);
   const [abandonReason, setAbandonReason] = useState("");
-  const groundInfo = resolveGroundInfo(ground, venue);
   const [costs, setCosts] = useState<WizardCosts>(
     initial?.costs ?? {
       ground: initialGroundFee ? String(initialGroundFee) : "",

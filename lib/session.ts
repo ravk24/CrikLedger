@@ -1,11 +1,12 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
+import { SESSION_COOKIE } from "@/lib/cookies";
 import { pool } from "@/lib/db";
 import { ApiError } from "@/lib/validate";
 import type { AdminRole } from "@/types";
 
-export const SESSION_COOKIE = "cl_session";
+export { SESSION_COOKIE };
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
 
 const secret = () => new TextEncoder().encode(process.env.SESSION_SECRET!);

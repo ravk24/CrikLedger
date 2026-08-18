@@ -1,11 +1,12 @@
 "use client";
 
-import { GROUNDS, findGround } from "@/lib/grounds";
+import { findGround, type Ground } from "@/lib/grounds";
 
 // Sentinel select value for a ground not in the list.
 export const OTHER_GROUND = "__other__";
 
 type Props = {
+  grounds: Ground[]; // the team's grounds, fetched server-side
   choice: string; // "" | canonical ground name | OTHER_GROUND
   customName: string; // free text, used when choice === OTHER_GROUND
   onChoiceChange: (value: string) => void;
@@ -15,13 +16,16 @@ type Props = {
 
 // Map a stored venue back to dropdown state (legacy venues may be free
 // text — a name not in the list lands on "Other ground…" preserved).
-export function venueToSelection(venue: string | null | undefined): {
+export function venueToSelection(
+  grounds: Ground[],
+  venue: string | null | undefined,
+): {
   choice: string;
   customName: string;
 } {
   const trimmed = venue?.trim() ?? "";
   if (!trimmed) return { choice: "", customName: "" };
-  const hit = findGround(trimmed);
+  const hit = findGround(grounds, trimmed);
   if (hit) return { choice: hit.name, customName: "" };
   return { choice: OTHER_GROUND, customName: trimmed };
 }
@@ -30,6 +34,7 @@ const inputClass =
   "h-11 w-full rounded-md border border-border bg-surface-secondary px-3 text-base text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 export function GroundSelect({
+  grounds,
   choice,
   customName,
   onChoiceChange,
@@ -48,7 +53,7 @@ export function GroundSelect({
           className={inputClass}
         >
           <option value="">Choose a ground…</option>
-          {GROUNDS.map((g) => (
+          {grounds.map((g) => (
             <option key={g.name} value={g.name}>
               {g.name}
             </option>

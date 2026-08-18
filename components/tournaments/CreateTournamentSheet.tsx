@@ -7,8 +7,9 @@ import { Plus } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { GroundSelect, OTHER_GROUND } from "@/components/shared/GroundSelect";
+import type { Ground } from "@/lib/grounds";
 
-export function CreateTournamentSheet() {
+export function CreateTournamentSheet({ grounds }: { grounds: Ground[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -114,6 +115,7 @@ export function CreateTournamentSheet() {
             />
           </label>
           <GroundSelect
+            grounds={grounds}
             choice={groundChoice}
             customName={customName}
             onChoiceChange={setGroundChoice}

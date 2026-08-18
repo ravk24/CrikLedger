@@ -6,7 +6,7 @@ import { ScheduleOtherMatch } from "@/components/slots/ScheduleOtherMatch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSessionAdmin } from "@/lib/session";
 import { supabasePublic } from "@/lib/supabase-public";
-import { getCurrentTeam } from "@/lib/team";
+import { getCurrentTeam, getTeamGrounds } from "@/lib/team";
 import type { Match, MatchParticipantPublic } from "@/types";
 
 // Away matches have no pre-booked slot list — admins schedule them
@@ -15,7 +15,7 @@ import type { Match, MatchParticipantPublic } from "@/types";
 // and on /matches alike.
 async function OtherMatchesData() {
   const team = await getCurrentTeam();
-  const [matchesRes, participantsRes, captainRes, admin] = await Promise.all([
+  const [matchesRes, participantsRes, captainRes, admin, grounds] = await Promise.all([
     supabasePublic
       .from("matches_public")
       .select("*")
@@ -32,6 +32,7 @@ async function OtherMatchesData() {
       .eq("is_captain", true)
       .maybeSingle(),
     getSessionAdmin(),
+    getTeamGrounds(),
   ]);
   const captainName = (captainRes.data as { name: string } | null)?.name ?? null;
 
@@ -58,7 +59,9 @@ async function OtherMatchesData() {
 
   return (
     <>
-      {canSchedule && <ScheduleOtherMatch captainName={captainName} />}
+      {canSchedule && (
+        <ScheduleOtherMatch grounds={grounds} captainName={captainName} />
+      )}
 
       {matches.length === 0 && (
         <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
