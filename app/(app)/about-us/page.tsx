@@ -4,20 +4,30 @@ import {
   FileText,
   Info,
   Mail,
+  Receipt,
   RotateCcw,
+  Scale,
   Shield,
-  Undo2,
+  Truck,
 } from "lucide-react";
 
-// The About us card from the More drawer: a hub for the six compliance
-// pages Razorpay requires. Fully static — no session, no cookies.
+// The About us card from the More drawer: the hub for every compliance
+// document Razorpay requires (terms, privacy, shipping, contact,
+// cancellation/refunds) plus pricing. Fully static — no session, no
+// cookies — so a reviewer or crawler can read all of it signed out.
 const LINKS = [
   { href: "/about", label: "About", icon: Info },
   { href: "/contact", label: "Contact us", icon: Mail },
+  { href: "/terms", label: "Terms & conditions", icon: Scale },
   { href: "/privacy", label: "Privacy policy", icon: Shield },
-  { href: "/refund-policy", label: "Refund policy", icon: RotateCcw },
-  { href: "/return-policy", label: "Return policy", icon: Undo2 },
+  {
+    href: "/refund-policy",
+    label: "Cancellation & refunds",
+    icon: RotateCcw,
+  },
+  { href: "/shipping-policy", label: "Shipping & delivery", icon: Truck },
   { href: "/disclaimer", label: "Disclaimer", icon: FileText },
+  { href: "/pricing", label: "Pricing", icon: Receipt },
 ];
 
 export default function AboutUs() {

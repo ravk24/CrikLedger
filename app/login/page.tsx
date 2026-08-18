@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { LegalFooter } from "@/components/legal/LegalFooter";
 import { LoginForm } from "@/components/admin/LoginForm";
 
 // The canonical sign-in page. /admin/login redirects here — signing in
@@ -32,6 +33,7 @@ export default function Login() {
         <p className="mt-4 text-center text-xs text-text-muted">
           Forgot your password? Ask your team&apos;s superadmin for a reset.
         </p>
+        <LegalFooter />
       </main>
     </div>
   );

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { LegalFooter } from "@/components/legal/LegalFooter";
 import { SignupForm } from "@/components/auth/SignupForm";
 
 // Self-serve signup. Outside the (app) route group on purpose — no tab
@@ -28,6 +29,7 @@ export default function Signup() {
         <div className="mt-6 rounded-lg border border-border bg-surface p-4">
           <SignupForm />
         </div>
+        <LegalFooter />
       </main>
     </div>
   );

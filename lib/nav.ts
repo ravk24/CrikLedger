@@ -80,10 +80,13 @@ const MORE_ALSO = [
   "/about-us",
   "/about",
   "/contact",
+  "/terms",
   "/privacy",
   "/refund-policy",
   "/return-policy",
+  "/shipping-policy",
   "/disclaimer",
+  "/pricing",
   "/purchases",
 ];
 

@@ -144,7 +144,7 @@ export function SignupForm() {
           className={FIELD}
         />
         <span className="text-xs text-text-muted">
-          Used for receipts and account recovery.
+          Identifies your account. Razorpay issues purchase receipts to it.
         </span>
       </label>
 

@@ -92,3 +92,10 @@ the guest client-side sample from access model v2. Alternatively: Feature 1 extr
   tournaments? Purchases page content + pricing + GST (Features 3/5). Post-signup
   pre-purchase Schedule behavior. Tournament "Host a new tournament" inner pages.
 - Phase 0 leftovers: PostHog project for crikledger; own backup workflow (Feature 9).
+- **DEFERRED (2026-08-18): daily DB backup.** `gh run list` shows NO runs at all on
+  `ravk24/crikledger` — the nightly workflow has never executed (likely the missing
+  `SUPABASE_DB_URL` / `BACKUP_PASSPHRASE` secrets documented in `db/BACKUP.md`).
+  Ravi's decision: implement at a later stage. **Until a run is green, the privacy
+  policy must NOT claim backups** — the claim was deliberately left out of
+  `app/(app)/privacy/page.tsx` for exactly this reason. Re-add it when the workflow
+  is verified.

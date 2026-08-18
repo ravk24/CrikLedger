@@ -5,6 +5,7 @@ import {
   Car,
   CarFront,
   Info,
+  Receipt,
   ShoppingBag,
   Swords,
 } from "lucide-react";
@@ -47,6 +48,14 @@ function buildFeatures(nav: NavState): Feature[] {
       label: "Virtual Match Fee",
       href: "/virtual-fee",
       icon: Calculator,
+      iconClass: "bg-credit-light text-credit-foreground",
+    },
+    // Pricing is public; Purchases needs a session. A guest must still be
+    // able to see what things cost, so Pricing is always shown.
+    {
+      label: "Pricing",
+      href: "/pricing",
+      icon: Receipt,
       iconClass: "bg-credit-light text-credit-foreground",
     },
     ...(nav.signedIn
