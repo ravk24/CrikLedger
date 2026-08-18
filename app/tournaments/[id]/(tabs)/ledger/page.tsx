@@ -3,8 +3,11 @@ import { notFound } from "next/navigation";
 import { LedgerRow } from "@/components/shared/LedgerRow";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TournamentLedgerSection } from "@/components/tournaments/TournamentLedgerSection";
+// aliased: this file already has a local `canWrite` meaning
+// "the tournament is still active".
+import { canWrite as canWriteScope } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
 import type { TournamentLedgerRow, TournamentPublic } from "@/types";
 
 // The tournament mini-app's Ledger tab — the /pool analogue, scoped to
@@ -15,14 +18,14 @@ async function TournamentLedgerData({
   params: Promise<{ id: string }>;
 }) {
   const [{ id }, admin] = await Promise.all([params, getSessionAdmin()]);
-  const isAdmin = !!admin && !admin.mustChangePassword;
+  const signedInAdmin = !!admin && !admin.mustChangePassword;
   const [tRes, entriesRes] = await Promise.all([
-    supabasePublic
+    supabaseServer
       .from("tournaments_public")
       .select("*")
       .eq("id", id)
       .maybeSingle(),
-    supabasePublic
+    supabaseServer
       .from("tournament_ledger_public")
       .select("*")
       .eq("tournament_id", id),
@@ -30,6 +33,16 @@ async function TournamentLedgerData({
 
   const tournament = tRes.data as TournamentPublic | null;
   if (!tournament) notFound();
+
+  // Rights come from this tournament's own scope — its hosting team, or
+  // the tournament itself for a standalone purchase. Being an admin of
+  // some other team grants nothing here, and the megaadmin reads but
+  // never writes (canWrite refuses it).
+  const isAdmin =
+    signedInAdmin &&
+    (tournament.team_id
+      ? canWriteScope(admin, "team", tournament.team_id)
+      : canWriteScope(admin, "tournament", tournament.id));
   const entries = (entriesRes.data ?? []) as TournamentLedgerRow[];
   const canWrite = isAdmin && tournament.status === "active";
 

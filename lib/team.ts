@@ -1,6 +1,6 @@
 import { cache } from "react";
 import type { Ground } from "@/lib/grounds";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
 import { ApiError } from "@/lib/validate";
 import { getSessionAdmin } from "@/lib/session";
 
@@ -33,7 +33,7 @@ export type TeamPublic = {
 };
 
 export const getTeamById = cache(async (teamId: string): Promise<TeamPublic> => {
-  const { data, error } = await supabasePublic
+  const { data, error } = await supabaseServer
     .from("teams_public")
     .select("*")
     .eq("id", teamId)
@@ -46,7 +46,7 @@ export const getTeamById = cache(async (teamId: string): Promise<TeamPublic> => 
 
 export const getTeamBySlug = cache(
   async (slug: string): Promise<TeamPublic | null> => {
-    const { data, error } = await supabasePublic
+    const { data, error } = await supabaseServer
       .from("teams_public")
       .select("*")
       .eq("slug", slug)
@@ -112,7 +112,7 @@ export async function getCurrentTeam(): Promise<TeamPublic> {
 // allowance), replacing the old lib/grounds.ts GROUNDS literal.
 export const getTeamGrounds = cache(
   async (teamId: string): Promise<Ground[]> => {
-    const { data, error } = await supabasePublic
+    const { data, error } = await supabaseServer
       .from("team_grounds_public")
       .select("name, car_allowance, sort_order")
       .eq("team_id", teamId)
@@ -139,7 +139,7 @@ export type TeamSlot = {
 // the old lib/groundSlots.ts GROUND_SLOTS literal.
 export const getTeamSlots = cache(
   async (teamId: string): Promise<TeamSlot[]> => {
-    const { data, error } = await supabasePublic
+    const { data, error } = await supabaseServer
       .from("team_slots_public")
       .select("slot_date, season_label, starts_on, ends_on")
       .eq("team_id", teamId)

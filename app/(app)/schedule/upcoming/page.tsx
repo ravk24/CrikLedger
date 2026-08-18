@@ -1,21 +1,30 @@
 import { Suspense } from "react";
 import { MatchCard } from "@/components/matches/MatchCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
+import { AccessGate } from "@/components/shared/AccessGate";
+import { checkActiveTeamRead } from "@/lib/access";
 import { getCurrentTeam } from "@/lib/team";
 import type { Match, MatchParticipantPublic } from "@/types";
 
 // Scheduled-only view of the matches list (played matches live on
 // /matches) — same data pattern as app/matches/page.tsx.
 async function ScheduledMatchesData() {
+  // Team data needs a session whose membership matches. Renders a panel
+  // rather than throwing — a member who is merely signed out should see
+  // "sign in", not a broken page.
+  const verdict = await checkActiveTeamRead();
+  if (!verdict.ok) {
+    return <AccessGate verdict={verdict} what="scheduled matches" next="/schedule/upcoming" />;
+  }
   const team = await getCurrentTeam();
   const [matchesRes, participantsRes] = await Promise.all([
-    supabasePublic
+    supabaseServer
       .from("matches_public")
       .select("*")
       .eq("team_id", team.id)
       .eq("status", "scheduled"),
-    supabasePublic
+    supabaseServer
       .from("match_participants_public")
       .select("match_id, is_playing")
       .eq("team_id", team.id),

@@ -16,7 +16,7 @@ import {
 import { resolveGroundInfo } from "@/lib/grounds";
 import { canWrite, isScopeSuperadmin } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
 import { getTeamById, getTeamGrounds } from "@/lib/team";
 import { rowKey, type WizardInitial } from "@/components/wizard/wizardTypes";
 import type {
@@ -103,18 +103,18 @@ async function TournamentMatchData({
 }) {
   const { id, mid } = await params;
   const [tRes, matchRes, participantsRes] = await Promise.all([
-    supabasePublic
+    supabaseServer
       .from("tournaments_public")
       .select("*")
       .eq("id", id)
       .maybeSingle(),
-    supabasePublic
+    supabaseServer
       .from("tournament_matches_public")
       .select("*")
       .eq("id", mid)
       .eq("tournament_id", id)
       .maybeSingle(),
-    supabasePublic
+    supabaseServer
       .from("tournament_match_participants_public")
       .select("*")
       .eq("match_id", mid),

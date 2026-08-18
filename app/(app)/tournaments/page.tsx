@@ -6,7 +6,7 @@ import Link from "next/link";
 import { getNavState } from "@/lib/nav";
 import { canWrite } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
 import { getCurrentTeam, getTeamGrounds } from "@/lib/team";
 import type { TournamentPublic } from "@/types";
 
@@ -25,7 +25,7 @@ function CardList({ tournaments }: { tournaments: TournamentPublic[] }) {
 // state — a visitor has to be able to see what is on offer; what a
 // purchase unlocks is hosting, inside.
 async function TournamentDirectory({ hosted }: { hosted: boolean }) {
-  const { data } = await supabasePublic
+  const { data } = await supabaseServer
     .from("tournaments_public")
     .select("id, name, status")
     .order("created_at", { ascending: false });
@@ -82,7 +82,7 @@ async function TournamentsData() {
 async function HostedTournaments() {
   const team = await getCurrentTeam();
   const [res, admin, grounds] = await Promise.all([
-    supabasePublic
+    supabaseServer
       .from("tournaments_public")
       .select("*")
       .eq("team_id", team.id)

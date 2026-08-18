@@ -7,7 +7,7 @@ import {
   StatementRow,
   type FeeDetail,
 } from "@/components/tournaments/TournamentStatementRow";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
 import type {
   TournamentFeeBreakdownRow,
   TournamentFeeChargePublic,
@@ -26,25 +26,25 @@ async function StatementData({
 }) {
   const { id: tournamentId, pid: playerId } = await params;
   const [playerRes, rowsRes, chargeRes, breakdownRes] = await Promise.all([
-    supabasePublic
+    supabaseServer
       .from("tournament_players_public")
       .select("*")
       .eq("id", playerId)
       .eq("tournament_id", tournamentId)
       .maybeSingle(),
-    supabasePublic
+    supabaseServer
       .from("tournament_player_statement")
       .select("*")
       .eq("player_id", playerId)
       .order("entry_date", { ascending: false })
       .order("created_at", { ascending: false }),
-    supabasePublic
+    supabaseServer
       .from("tournament_fee_charges_public")
       .select("*")
       .eq("tournament_id", tournamentId)
       .eq("player_id", playerId)
       .maybeSingle(),
-    supabasePublic
+    supabaseServer
       .from("tournament_fee_breakdown_public")
       .select("*")
       .eq("player_id", playerId)

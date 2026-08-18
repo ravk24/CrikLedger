@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DemoLedger } from "@/components/guest/DemoLedger";
 import { getNavState } from "@/lib/nav";
 import { getSessionAdmin } from "@/lib/session";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
 import { getCurrentTeam } from "@/lib/team";
 import type { PlayerPublic, PoolLedgerRow } from "@/types";
 
@@ -20,7 +20,7 @@ async function LedgerData() {
 async function PoolLedgerData() {
   const team = await getCurrentTeam();
   const [entriesRes, admin] = await Promise.all([
-    supabasePublic.from("pool_ledger_public").select("*").eq("team_id", team.id),
+    supabaseServer.from("pool_ledger_public").select("*").eq("team_id", team.id),
     getSessionAdmin(),
   ]);
   const entries = (entriesRes.data ?? []) as PoolLedgerRow[];
@@ -34,7 +34,7 @@ async function PoolLedgerData() {
   }
 
   if (admin && !admin.mustChangePassword) {
-    const { data: playersData } = await supabasePublic
+    const { data: playersData } = await supabaseServer
       .from("players_public")
       .select("id, name, is_active")
       .eq("team_id", team.id)

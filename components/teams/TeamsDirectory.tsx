@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Users } from "lucide-react";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
 import type { NavState } from "@/lib/nav";
 
 type TeamRow = { id: string; slug: string; display_name: string };
@@ -13,7 +13,7 @@ type TeamRow = { id: string; slug: string; display_name: string };
 // status_threshold, car_rate_per_km, meeting_point and is_sandbox, none
 // of which a directory needs and none of which a stranger should get.
 export async function TeamsDirectory({ nav }: { nav: NavState }) {
-  const { data } = await supabasePublic
+  const { data } = await supabaseServer
     .from("teams_public")
     .select("id, slug, display_name")
     .order("display_name");

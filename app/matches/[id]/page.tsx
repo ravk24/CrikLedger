@@ -15,7 +15,7 @@ import { formatDate, formatDateShort, formatRupees, formatWeekday } from "@/lib/
 import { resolveGroundInfo } from "@/lib/grounds";
 import { canWrite, isScopeSuperadmin } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
 import { getTeamById, getTeamGrounds } from "@/lib/team";
 import { rowKey, type WizardInitial } from "@/components/wizard/wizardTypes";
 import type { GroundBookingPublic, Match, MatchParticipantPublic } from "@/types";
@@ -163,12 +163,12 @@ async function MatchDetailData({
 }) {
   const { id } = await params;
   const [matchRes, participantsRes] = await Promise.all([
-    supabasePublic
+    supabaseServer
       .from("matches_public")
       .select("*")
       .eq("id", id)
       .maybeSingle(),
-    supabasePublic
+    supabaseServer
       .from("match_participants_public")
       .select("*")
       .eq("match_id", id),
@@ -196,14 +196,14 @@ async function MatchDetailData({
   // booking resolves by id (matches.ground_booking_id) — the old
   // opponent-name heuristic is gone.
   const [captainRes, bookingRes] = await Promise.all([
-    supabasePublic
+    supabaseServer
       .from("players_public")
       .select("name")
       .eq("team_id", match.team_id)
       .eq("is_captain", true)
       .maybeSingle(),
     match.ground_booking_id
-      ? supabasePublic
+      ? supabaseServer
           .from("ground_bookings_public")
           .select("team_name, captain, amount_pending, created_at")
           .eq("id", match.ground_booking_id)

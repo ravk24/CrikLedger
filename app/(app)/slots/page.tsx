@@ -1,10 +1,12 @@
 import { Suspense } from "react";
 import { SlotList } from "@/components/slots/SlotList";
+import { AccessGate } from "@/components/shared/AccessGate";
+import { checkActiveTeamRead } from "@/lib/access";
 import { canWrite } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { Skeleton } from "@/components/ui/skeleton";
 import { todayIST } from "@/lib/format";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
 import { getCurrentTeam, getTeamSlots } from "@/lib/team";
 
 function monthYear(iso: string): string {
@@ -15,6 +17,12 @@ function monthYear(iso: string): string {
 }
 
 async function SlotsData() {
+  const verdict = await checkActiveTeamRead();
+  if (!verdict.ok) {
+    return (
+      <AccessGate verdict={verdict} what="this team's slots" next="/slots" />
+    );
+  }
   const team = await getCurrentTeam();
   const admin = await getSessionAdmin();
   // Scheduling is a write on THIS team — canWrite also refuses the
@@ -24,7 +32,7 @@ async function SlotsData() {
   const slots = await getTeamSlots(team.id);
   // Only home matches consume home slot dates — an away match on a
   // slot Saturday leaves the home ground free.
-  const matchesRes = await supabasePublic
+  const matchesRes = await supabaseServer
     .from("matches_public")
     .select("match_date")
     .eq("team_id", team.id)

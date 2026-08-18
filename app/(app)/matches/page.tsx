@@ -1,15 +1,24 @@
 import { Suspense } from "react";
 import { MatchCard } from "@/components/matches/MatchCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
+import { AccessGate } from "@/components/shared/AccessGate";
+import { checkActiveTeamRead } from "@/lib/access";
 import { getCurrentTeam } from "@/lib/team";
 import type { Match, MatchParticipantPublic } from "@/types";
 
 async function MatchesData() {
+  // Team data needs a session whose membership matches. Renders a panel
+  // rather than throwing — a member who is merely signed out should see
+  // "sign in", not a broken page.
+  const verdict = await checkActiveTeamRead();
+  if (!verdict.ok) {
+    return <AccessGate verdict={verdict} what="this team's matches" next="/matches" />;
+  }
   const team = await getCurrentTeam();
   const [matchesRes, participantsRes] = await Promise.all([
-    supabasePublic.from("matches_public").select("*").eq("team_id", team.id),
-    supabasePublic
+    supabaseServer.from("matches_public").select("*").eq("team_id", team.id),
+    supabaseServer
       .from("match_participants_public")
       .select("match_id, is_playing")
       .eq("team_id", team.id),

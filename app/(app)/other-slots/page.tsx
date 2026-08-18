@@ -3,7 +3,9 @@ import { MatchCard } from "@/components/matches/MatchCard";
 import { ScheduleOtherMatch } from "@/components/slots/ScheduleOtherMatch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSessionAdmin } from "@/lib/session";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
+import { AccessGate } from "@/components/shared/AccessGate";
+import { checkActiveTeamRead } from "@/lib/access";
 import { getCurrentTeam, getTeamGrounds } from "@/lib/team";
 import type { Match, MatchParticipantPublic } from "@/types";
 
@@ -12,18 +14,25 @@ import type { Match, MatchParticipantPublic } from "@/types";
 // ground = 'away'. The public sees the resulting match cards here
 // and on /matches alike.
 async function OtherMatchesData() {
+  // Team data needs a session whose membership matches. Renders a panel
+  // rather than throwing — a member who is merely signed out should see
+  // "sign in", not a broken page.
+  const verdict = await checkActiveTeamRead();
+  if (!verdict.ok) {
+    return <AccessGate verdict={verdict} what="away scheduling" next="/other-slots" />;
+  }
   const team = await getCurrentTeam();
   const [matchesRes, participantsRes, captainRes, admin, grounds] = await Promise.all([
-    supabasePublic
+    supabaseServer
       .from("matches_public")
       .select("*")
       .eq("team_id", team.id)
       .eq("ground", "away"),
-    supabasePublic
+    supabaseServer
       .from("match_participants_public")
       .select("match_id, is_playing")
       .eq("team_id", team.id),
-    supabasePublic
+    supabaseServer
       .from("players_public")
       .select("name")
       .eq("team_id", team.id)

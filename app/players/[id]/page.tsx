@@ -11,8 +11,11 @@ import {
   StatementList,
   type StatementRow,
 } from "@/components/players/StatementList";
+import { AccessGate } from "@/components/shared/AccessGate";
+import { checkTeamRead } from "@/lib/access";
+import { canWrite } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
 import type { PlayerPublic } from "@/types";
 
 async function StatementData({
@@ -22,8 +25,8 @@ async function StatementData({
 }) {
   const { id } = await params;
   const [playerRes, statementRes, admin] = await Promise.all([
-    supabasePublic.from("players_public").select("*").eq("id", id).maybeSingle(),
-    supabasePublic
+    supabaseServer.from("players_public").select("*").eq("id", id).maybeSingle(),
+    supabaseServer
       .from("player_statement")
       .select("*")
       .eq("player_id", id)
@@ -32,10 +35,31 @@ async function StatementData({
     getSessionAdmin(),
   ]);
 
-  const player = playerRes.data as PlayerPublic | null;
+  // team_id comes from players_public (migration 29) but is not part of
+  // PlayerPublic — that shape is shared with tournament players, who
+  // belong to no team.
+  const player = playerRes.data as (PlayerPublic & { team_id: string }) | null;
   if (!player) notFound();
+
+  // A player's balance and full statement are private team data. This
+  // page used to be a bare .eq("id", ...) lookup with no team check at
+  // all — any id, from any team, to anyone. Scope it to the PLAYER's own
+  // team (players_public exposes team_id since migration 29).
+  const verdict = await checkTeamRead(player.team_id);
+  if (!verdict.ok) {
+    return (
+      <AccessGate
+        verdict={verdict}
+        what="this player's statement"
+        next={`/players/${id}`}
+      />
+    );
+  }
+
   const rows = (statementRes.data ?? []) as StatementRow[];
-  const canEdit = !!admin && !admin.mustChangePassword;
+  // Editing is a write on that player's team, not "am I an admin anywhere".
+  const canEdit =
+    !!admin && !admin.mustChangePassword && canWrite(admin, "team", player.team_id);
 
   return (
     <>

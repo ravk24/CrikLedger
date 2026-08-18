@@ -4,8 +4,9 @@ import { PlayerGrid } from "@/components/dashboard/PlayerGrid";
 import { PoolSummaryCard } from "@/components/dashboard/PoolSummaryCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateShort } from "@/lib/format";
+import { canWrite } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
 import type {
   PlayerPublic,
   TournamentPlayerPublic,
@@ -48,18 +49,18 @@ async function TournamentHomeData({
   params: Promise<{ id: string }>;
 }) {
   const [{ id }, admin] = await Promise.all([params, getSessionAdmin()]);
-  const isAdmin = !!admin && !admin.mustChangePassword;
+  const signedInAdmin = !!admin && !admin.mustChangePassword;
   const [tRes, playersRes, countRes] = await Promise.all([
-    supabasePublic
+    supabaseServer
       .from("tournaments_public")
       .select("*")
       .eq("id", id)
       .maybeSingle(),
-    supabasePublic
+    supabaseServer
       .from("tournament_players_public")
       .select("*")
       .eq("tournament_id", id),
-    supabasePublic
+    supabaseServer
       .from("tournament_ledger_public")
       .select("id", { count: "exact", head: true })
       .eq("tournament_id", id),
@@ -67,6 +68,16 @@ async function TournamentHomeData({
 
   const tournament = tRes.data as TournamentPublic | null;
   if (!tournament) notFound();
+
+  // Rights come from this tournament's own scope — its hosting team, or
+  // the tournament itself for a standalone purchase. Being an admin of
+  // some other team grants nothing here, and the megaadmin reads but
+  // never writes (canWrite refuses it).
+  const isAdmin =
+    signedInAdmin &&
+    (tournament.team_id
+      ? canWrite(admin, "team", tournament.team_id)
+      : canWrite(admin, "tournament", tournament.id));
   const players = (playersRes.data ?? []) as TournamentPlayerPublic[];
 
   // Dashboard sort rule: biggest debtors first, inactive last, name tiebreak.

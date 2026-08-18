@@ -2,8 +2,9 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TournamentMatchCard } from "@/components/tournaments/TournamentMatchCard";
+import { canWrite } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
 import type { TournamentMatch, TournamentPublic } from "@/types";
 
 // The tournament mini-app's Matches tab — the /matches analogue.
@@ -14,18 +15,18 @@ async function TournamentMatchesData({
   params: Promise<{ id: string }>;
 }) {
   const [{ id }, admin] = await Promise.all([params, getSessionAdmin()]);
-  const isAdmin = !!admin && !admin.mustChangePassword;
+  const signedInAdmin = !!admin && !admin.mustChangePassword;
   const [tRes, matchesRes, participantsRes] = await Promise.all([
-    supabasePublic
+    supabaseServer
       .from("tournaments_public")
       .select("*")
       .eq("id", id)
       .maybeSingle(),
-    supabasePublic
+    supabaseServer
       .from("tournament_matches_public")
       .select("*")
       .eq("tournament_id", id),
-    supabasePublic
+    supabaseServer
       .from("tournament_match_participants_public")
       .select("match_id")
       .eq("tournament_id", id),
@@ -33,6 +34,16 @@ async function TournamentMatchesData({
 
   const tournament = tRes.data as TournamentPublic | null;
   if (!tournament) notFound();
+
+  // Rights come from this tournament's own scope — its hosting team, or
+  // the tournament itself for a standalone purchase. Being an admin of
+  // some other team grants nothing here, and the megaadmin reads but
+  // never writes (canWrite refuses it).
+  const isAdmin =
+    signedInAdmin &&
+    (tournament.team_id
+      ? canWrite(admin, "team", tournament.team_id)
+      : canWrite(admin, "tournament", tournament.id));
   const matches = (matchesRes.data ?? []) as TournamentMatch[];
 
   const counts = new Map<string, number>();

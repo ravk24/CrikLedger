@@ -1,22 +1,31 @@
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
+import { AccessGate } from "@/components/shared/AccessGate";
+import { checkActiveTeamRead } from "@/lib/access";
 import { getCurrentTeam } from "@/lib/team";
 
 // Derived, like every number in the app: a player's car count is the
 // number of completed-match rows where they brought a car — no stored
 // counter table.
 async function CarCountData() {
+  // Team data needs a session whose membership matches. Renders a panel
+  // rather than throwing — a member who is merely signed out should see
+  // "sign in", not a broken page.
+  const verdict = await checkActiveTeamRead();
+  if (!verdict.ok) {
+    return <AccessGate verdict={verdict} what="the car counter" next="/car-count" />;
+  }
   const team = await getCurrentTeam();
   const [playersRes, participantsRes] = await Promise.all([
-    supabasePublic
+    supabaseServer
       .from("players_public")
       .select("name, is_active")
       .eq("team_id", team.id)
       .eq("is_active", true)
       .order("name"),
-    supabasePublic
+    supabaseServer
       .from("match_participants_public")
       .select("player_name, brought_car")
       .eq("team_id", team.id),

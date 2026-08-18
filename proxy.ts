@@ -49,5 +49,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  // /ops is gated again inside each page by requireMegaadminPage() —
+  // this matcher only bounces visitors with no cookie at all.
+  matcher: ["/admin/:path*", "/ops/:path*", "/purchases"],
 };

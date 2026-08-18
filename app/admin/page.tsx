@@ -19,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatDateShort } from "@/lib/format";
 import { getSessionAdmin } from "@/lib/session";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
 import { getCurrentTeam } from "@/lib/team";
 
 type Tile = {
@@ -74,19 +74,19 @@ async function ConsoleData() {
   const isSuperadmin = admin.activeTeamRole === "superadmin";
   const team = await getCurrentTeam();
   const [poolRes, lastEntryRes, playersRes] = await Promise.all([
-    supabasePublic
+    supabaseServer
       .from("pool_balance")
       .select("balance")
       .eq("team_id", team.id)
       .single(),
-    supabasePublic
+    supabaseServer
       .from("pool_ledger_public")
       .select("entry_date, edited_by")
       .eq("team_id", team.id)
       .limit(1)
       .maybeSingle(),
     isSuperadmin
-      ? supabasePublic
+      ? supabaseServer
           .from("players_public")
           .select("id, name, is_captain, is_vice_captain")
           .eq("team_id", team.id)

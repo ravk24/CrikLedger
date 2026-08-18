@@ -1,6 +1,6 @@
 # CricLedger
 
-A mobile-first web app that manages a **cricket team's money** — match fee splitting, a shared team fund (pool), and per-player balances. Everything is publicly readable by anyone with the URL; only admins can write. No payments happen in the app — all money moves offline, and the app is the single source-of-truth ledger.
+A mobile-first web app that manages a **cricket team's money** — match fee splitting, a shared team fund (pool), and per-player balances. A team's data is private to its members; completed match sheets stay shareable by link. No payments happen in the app — all money moves offline, and the app is the single source-of-truth ledger.
 
 **Status:** CricLedger v0.1 — core app running on the dev DB (2026-08-17); multi-team generalization next. Born from the LR-SuperGiants team ledger.
 
@@ -49,12 +49,26 @@ Balances are **always derived** from the ledger — there is no stored balance c
 
 ### Roles
 
+Since Feature 4 (migration 32), power comes from **membership rows**, not from
+the account: a person may be superadmin of their own team and an admin on
+someone else's. Each purchase grants one scope — a team or a tournament — with
+its own allowance of 2 admins.
+
 | Role | Access |
 |---|---|
-| **Viewer** | Anyone with the URL. Reads everything, no login. No personal data is stored — players are name-only (phone numbers were removed in v1). |
-| **Admin** | Username + password login. Schedules/completes/edits/abandons matches, manages pool entries and players. |
-| **Superadmin** | Everything above, plus creating/revoking admins and resetting their passwords. |
-| **Captain** | Not a login — a player flag (at most one, declared by the superadmin). All guest charges land on the captain's balance; the captain settles guest cash offline. |
+| **Guest** | No login. Browses the app, completes and shares a sample match, and views a sample ledger — all from fixed example data. Sees team and tournament titles, nothing more. |
+| **Signed in** | An account with no purchases: the same as a guest, plus a Purchases page. |
+| **Admin** | Per team or tournament, at most 2 per scope, provisioned by that scope's superadmin with a one-time password. Schedules/completes/edits/abandons matches, manages pool entries and players — **for that scope only**. |
+| **Superadmin** | The purchaser of a scope. Everything above, plus creating/revoking its admins and resetting their passwords. One scope per purchase. |
+| **Megaadmin** | The platform operator (`ravi_kant`). **Reads every team and tournament, writes none** — an observer, so a console bug cannot corrupt a customer's ledger. Holds no membership and cannot: team rights need a separate account. Owns `/ops`: teams, accounts, password resets and suspensions. |
+| **Captain** | Not a login — a player flag (at most one per team, declared by the superadmin). All guest charges land on the captain's balance; the captain settles guest cash offline. |
+
+**Public by link:** a *completed* match sheet, so it can be shared to WhatsApp
+with players who have no account. Everything else team-scoped — ledger, pool,
+statements, slots, players, tournaments — requires a session whose membership
+matches. That is enforced by revoking the anon role (migration 33), not only by
+the UI: server components read the views with the service role, which never
+reaches the browser.
 
 ---
 
@@ -111,7 +125,8 @@ The app is installable as a **PWA** (web manifest + install nudge) and designed 
 1. **Create a Supabase project**, then run in the SQL editor, in order:
    - `db/migration-1.sql` — schema, views, RLS (source of truth)
    - `db/migration-2.sql`, `db/migration-3.sql`, `db/migration-4.sql` (run migration-4 statement-by-statement — its enum additions can't share a transaction with the constraint that uses them), `db/migration-5.sql`, `db/migration-6.sql`, `db/migration-7.sql`, `db/migration-8.sql` (statement-by-statement, same reason as migration-4), `db/migration-9.sql`, `db/migration-10.sql`, `db/migration-11.sql`, `db/migration-12.sql`, `db/migration-13.sql`, `db/migration-14.sql`, `db/migration-15.sql`, `db/migration-16.sql` (restores the ₹900 balance-status threshold — required on fresh setups, no-op where it was already applied), `db/migration-17.sql`, `db/migration-18.sql`, `db/migration-19.sql` (tournaments — isolated per-tournament rosters and ledgers), `db/migration-20.sql` (tournament captain & vice-captain), `db/migration-21.sql` (tournament team name + venue), `db/migration-22.sql` (tournament matches — SG match engine scoped per tournament), `db/migration-23.sql` (tournament participation-fee model), `db/migration-24.sql` (tournament statement drill-down views), `db/migration-25.sql` (per-match tournament fee model — charge lines)
-   - `db/seed-superadmin.sql` — seeds the single superadmin account
+   - `db/seed-superadmin.sql` — seeds the platform megaadmin (template; never commit a real password)
+   - `db/seed-team-superadmin.sql` — seeds a team's superadmin + membership (same rule)
    - optionally `db/seed-dev.sql` / `db/seed-matches-dev.sql` for dev data
 
 2. **Configure environment** — copy `.env.example` to `.env.local`:

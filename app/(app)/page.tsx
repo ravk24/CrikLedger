@@ -5,7 +5,7 @@ import { InstallNudge } from "@/components/dashboard/InstallNudge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TeamsDirectory } from "@/components/teams/TeamsDirectory";
 import { getNavState } from "@/lib/nav";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
 import { getCurrentTeam } from "@/lib/team";
 import type { PlayerPublic } from "@/types";
 
@@ -22,17 +22,17 @@ async function HomeData() {
 async function DashboardData() {
   const team = await getCurrentTeam();
   const [poolRes, playersRes, countRes, lastMatchRes] = await Promise.all([
-    supabasePublic
+    supabaseServer
       .from("pool_balance")
       .select("balance")
       .eq("team_id", team.id)
       .single(),
-    supabasePublic.from("players_public").select("*").eq("team_id", team.id),
-    supabasePublic
+    supabaseServer.from("players_public").select("*").eq("team_id", team.id),
+    supabaseServer
       .from("pool_ledger_public")
       .select("*", { count: "exact", head: true })
       .eq("team_id", team.id),
-    supabasePublic
+    supabaseServer
       .from("pool_ledger_public")
       .select("amount")
       .eq("team_id", team.id)

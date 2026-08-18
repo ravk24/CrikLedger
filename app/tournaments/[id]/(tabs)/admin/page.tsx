@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TournamentAdminPanel } from "@/components/tournaments/TournamentAdminPanel";
 import { canWrite, isScopeSuperadmin } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
-import { supabasePublic } from "@/lib/supabase-public";
+import { supabaseServer } from "@/lib/supabase-server";
 import { getTeamGrounds } from "@/lib/team";
 import type { TournamentPlayerPublic, TournamentPublic } from "@/types";
 
@@ -18,12 +18,12 @@ async function TournamentAdminData({
 }) {
   const { id } = await params;
   const [tRes, playersRes, admin] = await Promise.all([
-    supabasePublic
+    supabaseServer
       .from("tournaments_public")
       .select("*")
       .eq("id", id)
       .maybeSingle(),
-    supabasePublic
+    supabaseServer
       .from("tournament_players_public")
       .select("*")
       .eq("tournament_id", id),

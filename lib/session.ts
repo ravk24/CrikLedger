@@ -226,21 +226,26 @@ async function requireScope(
   options: RequireOptions = {},
 ): Promise<ScopedAdmin> {
   const admin = await requireAccount(options);
+
+  // Checked FIRST, before the active-team lookup: the platform account is
+  // refused every scope write whether or not it currently has a team
+  // selected, and the error should say so rather than reporting the
+  // incidental NO_ACTIVE_TEAM. It reads every scope but writes none —
+  // an observer, not an operator.
+  if (isMegaadmin(admin)) {
+    throw new ApiError(
+      403,
+      "MEGAADMIN_READ_ONLY",
+      "The platform account cannot modify team data",
+    );
+  }
+
   const id = scopeId ?? (kind === "team" ? admin.activeTeamId : null);
   if (!id) {
     throw new ApiError(
       409,
       "NO_ACTIVE_TEAM",
       "No team selected for this account",
-    );
-  }
-  // The megaadmin reads every scope but writes none — it is an observer,
-  // not an operator, so it never reaches a write guard.
-  if (isMegaadmin(admin)) {
-    throw new ApiError(
-      403,
-      "MEGAADMIN_READ_ONLY",
-      "The platform account cannot modify team data",
     );
   }
   const allowed = needSuperadmin
