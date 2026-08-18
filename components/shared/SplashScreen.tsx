@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 
 const SPLASH_KEY = "cl-splash-shown";
-const HOLD_MS = 1700;
+const HOLD_MS = 1500;
 const FADE_MS = 300;
 
-// Page-order v1: the app icon holds for ~1.7s on the theme background at app
+// Page-order v1: the app icon holds for ~1.5s on the theme background at app
 // start, then fades into the app. Shown once per browser session; on a
 // same-session hard reload it hides as soon as React hydrates.
 export function SplashScreen() {
@@ -36,14 +36,8 @@ export function SplashScreen() {
         phase === "fade" ? "opacity-0" : "opacity-100"
       }`}
     >
-      <Image
-        src="/icon-192.png"
-        alt=""
-        width={112}
-        height={112}
-        priority
-        className="rounded-2xl"
-      />
+      {/* The icon has native transparency — shown whole, no corner rounding. */}
+      <Image src="/icon-192.png" alt="" width={112} height={112} priority />
     </div>
   );
 }
