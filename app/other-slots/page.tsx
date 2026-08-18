@@ -32,7 +32,7 @@ async function OtherMatchesData() {
       .eq("is_captain", true)
       .maybeSingle(),
     getSessionAdmin(),
-    getTeamGrounds(),
+    getTeamGrounds(team.id),
   ]);
   const captainName = (captainRes.data as { name: string } | null)?.name ?? null;
 

@@ -71,7 +71,7 @@ async function ConsoleData() {
   if (!admin) redirect("/admin/login");
   if (admin.mustChangePassword) redirect("/admin/password");
 
-  const isSuperadmin = admin.role === "superadmin";
+  const isSuperadmin = admin.activeTeamRole === "superadmin";
   const team = await getCurrentTeam();
   const [poolRes, lastEntryRes, playersRes] = await Promise.all([
     supabasePublic
@@ -107,7 +107,7 @@ async function ConsoleData() {
   } | null;
 
   const tiles = TILES.filter(
-    (t) => !t.superadminOnly || admin.role === "superadmin",
+    (t) => !t.superadminOnly || isSuperadmin,
   );
 
   function renderTile(tile: Tile) {
@@ -160,7 +160,9 @@ async function ConsoleData() {
           <h1 className="truncate text-lg font-bold text-text-primary">
             Hello, {admin.name}
           </h1>
-          <p className="text-xs capitalize text-text-secondary">{admin.role}</p>
+          <p className="text-xs capitalize text-text-secondary">
+            {admin.activeTeamRole ?? admin.platformRole}
+          </p>
         </div>
         <LogoutButton />
       </div>

@@ -4,8 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 
-export function ChangePasswordForm() {
+// requireCurrent mirrors the server rule: a voluntary change must prove
+// the old password; the forced first-login change cannot, because the
+// temp password was just spent getting here.
+export function ChangePasswordForm({
+  requireCurrent = false,
+}: {
+  requireCurrent?: boolean;
+}) {
   const router = useRouter();
+  const [current, setCurrent] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -13,15 +21,18 @@ export function ChangePasswordForm() {
 
   const longEnough = password.length >= 8;
   const matches = confirm.length > 0 && password === confirm;
-  const valid = longEnough && matches;
+  const hasCurrent = !requireCurrent || current.length > 0;
+  const valid = longEnough && matches && hasCurrent;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!valid) {
       setError(
-        !longEnough
-          ? "Password must be at least 8 characters."
-          : "Both entries must match.",
+        !hasCurrent
+          ? "Enter your current password."
+          : !longEnough
+            ? "Password must be at least 8 characters."
+            : "Both entries must match.",
       );
       return;
     }
@@ -31,11 +42,22 @@ export function ChangePasswordForm() {
       const res = await fetch("/api/auth/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ new_password: password }),
+        body: JSON.stringify(
+          requireCurrent
+            ? { current_password: current, new_password: password }
+            : { new_password: password },
+        ),
       });
       const body = await res.json();
       if (!body.success) {
-        setError("Could not save the new password — try again.");
+        const code = body.error?.code;
+        setError(
+          code === "INVALID_CURRENT_PASSWORD"
+            ? "That is not your current password."
+            : code === "CURRENT_PASSWORD_REQUIRED"
+              ? "Enter your current password."
+              : "Could not save the new password — try again.",
+        );
         return;
       }
       router.push("/admin");
@@ -49,6 +71,21 @@ export function ChangePasswordForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      {requireCurrent && (
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-text-secondary">
+            Current password
+          </span>
+          <input
+            type="password"
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            autoComplete="current-password"
+            required
+            className="h-11 rounded-md border border-border bg-surface-secondary px-3 text-base text-text-primary focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+        </label>
+      )}
       <label className="flex flex-col gap-1">
         <span className="text-xs font-medium text-text-secondary">
           New password

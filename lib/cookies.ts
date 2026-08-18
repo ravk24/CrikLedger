@@ -2,3 +2,9 @@
 // lib/session.ts — that would pull pg + next/headers into the edge
 // bundle. Keep this module dependency-free.
 export const SESSION_COOKIE = "cl_session";
+
+// Active-team hint: holds a team SLUG, never an id, and is re-validated
+// against live memberships on every request (lib/roles.ts
+// resolveActiveTeamId). A stale or forged value loses rather than
+// granting anything, so proxy.ts passes it through untouched.
+export const TEAM_COOKIE = "cl_team";

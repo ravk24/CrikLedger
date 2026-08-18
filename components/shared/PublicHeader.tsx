@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import posthog from "posthog-js";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 
-type SessionAdmin = { name: string; role: string };
+type SessionAdmin = { name: string; role: string | null };
 
 export function PublicHeader() {
   const [admin, setAdmin] = useState<SessionAdmin | null>(null);
@@ -18,12 +18,16 @@ export function PublicHeader() {
       .then((res) => res.json())
       .then((body) => {
         if (!cancelled && body?.success && !body.data.force_change) {
-          setAdmin({ name: body.data.name, role: body.data.role });
+          setAdmin({
+            name: body.data.name,
+            role: body.data.team_role ?? body.data.platform_role,
+          });
           // Re-links returning admins whose session cookie outlived local
           // analytics state; no-op when the distinct id is unchanged.
           posthog.identify(body.data.admin_id, {
             name: body.data.name,
-            role: body.data.role,
+            platform_role: body.data.platform_role,
+            active_team: body.data.active_team,
           });
         }
       })

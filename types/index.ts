@@ -94,6 +94,9 @@ export type TournamentPublic = {
   team_name: string | null; // what our side is called in this tournament
   venue: string | null; // ground name from the shared grounds dropdown
   joining_fee: number; // one participation fee for the whole tournament
+  // Null since migration 32: a Tournament-Credit buyer owns no team, so
+  // a tournament can stand alone. Exposed by tournaments_public (m30).
+  team_id: string | null;
 };
 
 // No ₹900 threshold here — tournaments only distinguish debt vs clear.

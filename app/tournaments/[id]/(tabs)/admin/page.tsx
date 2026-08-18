@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TournamentAdminPanel } from "@/components/tournaments/TournamentAdminPanel";
+import { canWrite, isScopeSuperadmin } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabasePublic } from "@/lib/supabase-public";
 import { getTeamGrounds } from "@/lib/team";
@@ -16,7 +17,7 @@ async function TournamentAdminData({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [tRes, playersRes, admin, grounds] = await Promise.all([
+  const [tRes, playersRes, admin] = await Promise.all([
     supabasePublic
       .from("tournaments_public")
       .select("*")
@@ -27,12 +28,26 @@ async function TournamentAdminData({
       .select("*")
       .eq("tournament_id", id),
     getSessionAdmin(),
-    getTeamGrounds(),
   ]);
 
   const tournament = tRes.data as TournamentPublic | null;
   if (!tournament) notFound();
   if (!admin || admin.mustChangePassword) redirect(`/tournaments/${id}`);
+
+  // Rights come from the tournament's own scope: its hosting team, or
+  // the tournament itself when a Tournament-Credit buyer owns no team.
+  const canEdit = tournament.team_id
+    ? canWrite(admin, "team", tournament.team_id)
+    : canWrite(admin, "tournament", tournament.id);
+  if (!canEdit) redirect(`/tournaments/${id}`);
+  const isSuperadmin = tournament.team_id
+    ? isScopeSuperadmin(admin, "team", tournament.team_id)
+    : isScopeSuperadmin(admin, "tournament", tournament.id);
+
+  // Grounds belong to the hosting team; a standalone tournament has none.
+  const grounds = tournament.team_id
+    ? await getTeamGrounds(tournament.team_id)
+    : [];
   const players = (playersRes.data ?? []) as TournamentPlayerPublic[];
 
   return (
@@ -43,7 +58,7 @@ async function TournamentAdminData({
         tournament={tournament}
         players={players}
         grounds={grounds}
-        isSuperadmin={admin.role === "superadmin"}
+        isSuperadmin={isSuperadmin}
       />
     </>
   );

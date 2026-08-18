@@ -28,7 +28,7 @@ async function TournamentsData() {
       .eq("team_id", team.id)
       .order("created_at", { ascending: false }),
     getSessionAdmin(),
-    getTeamGrounds(),
+    getTeamGrounds(team.id),
   ]);
   const tournaments = (res.data ?? []) as TournamentPublic[];
   const active = tournaments.filter((t) => t.status === "active");

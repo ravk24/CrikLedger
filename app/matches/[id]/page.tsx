@@ -13,9 +13,10 @@ import { computeSlotShare } from "@/lib/bookings";
 import { pool } from "@/lib/db";
 import { formatDate, formatDateShort, formatRupees, formatWeekday } from "@/lib/format";
 import { resolveGroundInfo } from "@/lib/grounds";
+import { canWrite, isScopeSuperadmin } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabasePublic } from "@/lib/supabase-public";
-import { getCurrentTeam, getTeamGrounds } from "@/lib/team";
+import { getTeamById, getTeamGrounds } from "@/lib/team";
 import { rowKey, type WizardInitial } from "@/components/wizard/wizardTypes";
 import type { GroundBookingPublic, Match, MatchParticipantPublic } from "@/types";
 
@@ -24,6 +25,12 @@ type MatchPublicRow = Match & { updated_by_name: string | null };
 async function buildAdminProps(match: MatchPublicRow) {
   const admin = await getSessionAdmin();
   if (!admin || admin.mustChangePassword) return null;
+
+  // Admin rights are per TEAM, resolved against this match's own team —
+  // being an admin somewhere is not being an admin here. canWrite also
+  // refuses the megaadmin, who reads every match but edits none.
+  if (!canWrite(admin, "team", match.team_id)) return null;
+  const isSuperadmin = isScopeSuperadmin(admin, "team", match.team_id);
 
   // Recently-played first (kickoff §6 step 3), then alphabetical.
   const playersRes = await pool.query(
@@ -126,7 +133,7 @@ async function buildAdminProps(match: MatchPublicRow) {
       (booking.cleared_amount
         ? computeSlotShare(Number(booking.cleared_amount), feeSlots)
         : 0);
-    if (match.status === "scheduled" && admin.role === "superadmin") {
+    if (match.status === "scheduled" && isSuperadmin) {
       // Deleting also reverts the cleared-pending credit's slot share,
       // so the confirm dialog quotes the full pool deduction.
       const slots = Number(booking.slots);
@@ -140,7 +147,7 @@ async function buildAdminProps(match: MatchPublicRow) {
 
   return {
     players,
-    isSuperadmin: admin.role === "superadmin",
+    isSuperadmin,
     initial,
     bookingShare,
     bookingFee,
@@ -155,7 +162,7 @@ async function MatchDetailData({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [matchRes, participantsRes, team, grounds] = await Promise.all([
+  const [matchRes, participantsRes] = await Promise.all([
     supabasePublic
       .from("matches_public")
       .select("*")
@@ -165,12 +172,19 @@ async function MatchDetailData({
       .from("match_participants_public")
       .select("*")
       .eq("match_id", id),
-    getCurrentTeam(),
-    getTeamGrounds(),
   ]);
 
   const match = matchRes.data as MatchPublicRow | null;
   if (!match) notFound();
+
+  // The team comes from the MATCH, never from the session — this page is
+  // publicly link-readable (the WhatsApp sharing loop), so it must render
+  // for a visitor who has no active team at all.
+  const [team, grounds] = await Promise.all([
+    getTeamById(match.team_id),
+    getTeamGrounds(match.team_id),
+  ]);
+
   const groundInfo = resolveGroundInfo(
     match.ground,
     match.venue ?? null,

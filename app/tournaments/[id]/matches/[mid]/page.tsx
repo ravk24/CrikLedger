@@ -14,9 +14,10 @@ import {
   formatWeekday,
 } from "@/lib/format";
 import { resolveGroundInfo } from "@/lib/grounds";
+import { canWrite, isScopeSuperadmin } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabasePublic } from "@/lib/supabase-public";
-import { getCurrentTeam, getTeamGrounds } from "@/lib/team";
+import { getTeamById, getTeamGrounds } from "@/lib/team";
 import { rowKey, type WizardInitial } from "@/components/wizard/wizardTypes";
 import type {
   MatchParticipantPublic,
@@ -32,6 +33,16 @@ async function buildAdminProps(
 ) {
   const admin = await getSessionAdmin();
   if (!admin || admin.mustChangePassword) return null;
+
+  // Rights come from this tournament's own scope — its hosting team, or
+  // the tournament itself for a standalone Tournament-Credit purchase.
+  // Being an admin elsewhere grants nothing here, and the megaadmin
+  // reads this page but never edits it.
+  const scope = tournament.team_id
+    ? { kind: "team" as const, id: tournament.team_id }
+    : { kind: "tournament" as const, id: tournament.id };
+  if (!canWrite(admin, scope.kind, scope.id)) return null;
+  const isSuperadmin = isScopeSuperadmin(admin, scope.kind, scope.id);
 
   // Recently-played first, then alphabetical — scoped to this tournament.
   const playersRes = await pool.query(
@@ -82,7 +93,7 @@ async function buildAdminProps(
     };
   }
 
-  return { players, isSuperadmin: admin.role === "superadmin", initial };
+  return { players, isSuperadmin, initial };
 }
 
 async function TournamentMatchData({
@@ -91,7 +102,7 @@ async function TournamentMatchData({
   params: Promise<{ id: string; mid: string }>;
 }) {
   const { id, mid } = await params;
-  const [tRes, matchRes, participantsRes, team, grounds] = await Promise.all([
+  const [tRes, matchRes, participantsRes] = await Promise.all([
     supabasePublic
       .from("tournaments_public")
       .select("*")
@@ -107,13 +118,20 @@ async function TournamentMatchData({
       .from("tournament_match_participants_public")
       .select("*")
       .eq("match_id", mid),
-    getCurrentTeam(),
-    getTeamGrounds(),
   ]);
 
   const tournament = tRes.data as TournamentPublic | null;
   const match = matchRes.data as TournamentMatch | null;
   if (!tournament || !match) notFound();
+
+  // Team from the RESOURCE, not the session — this match sheet is
+  // publicly link-readable and must render with no active team.
+  const [team, grounds] = tournament.team_id
+    ? await Promise.all([
+        getTeamById(tournament.team_id),
+        getTeamGrounds(tournament.team_id),
+      ])
+    : [null, []];
   const groundInfo = resolveGroundInfo(
     "away",
     tournament.venue,
@@ -134,7 +152,7 @@ async function TournamentMatchData({
       <section className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-semibold text-text-primary">
-            {tournament.team_name ?? team.short_name ?? team.display_name} vs{" "}
+            {tournament.team_name ?? team?.short_name ?? team?.display_name ?? "Our side"} vs{" "}
             {match.opponent}
           </h1>
           <ResultBadge match={match} />

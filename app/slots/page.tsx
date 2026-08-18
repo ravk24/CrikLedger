@@ -15,7 +15,8 @@ function monthYear(iso: string): string {
 }
 
 async function SlotsData() {
-  const [team, slots] = await Promise.all([getCurrentTeam(), getTeamSlots()]);
+  const team = await getCurrentTeam();
+  const slots = await getTeamSlots(team.id);
   // Only home matches consume home slot dates — an away match on a
   // slot Saturday leaves the home ground free.
   const matchesRes = await supabasePublic

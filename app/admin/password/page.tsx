@@ -24,7 +24,7 @@ async function PasswordGate() {
           : "Choose a new password for your admin account."}
       </p>
       <div className="mt-6 rounded-lg border border-border bg-surface p-4">
-        <ChangePasswordForm />
+        <ChangePasswordForm requireCurrent={!admin.mustChangePassword} />
       </div>
     </>
   );

@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/session";
+import { requireAccount } from "@/lib/session";
 import { handleRouteError } from "@/lib/validate";
 
 export async function GET() {
   try {
-    const admin = await requireAdmin({ allowPasswordChangePending: true });
+    // requireAccount, not requireTeamAdmin: a freshly signed-up account
+    // holds no memberships yet and must still be able to identify itself.
+    const admin = await requireAccount({ allowPasswordChangePending: true });
     return NextResponse.json({
       success: true,
       data: {
         admin_id: admin.id,
         name: admin.name,
-        role: admin.role,
+        platform_role: admin.platformRole,
+        active_team: admin.activeTeamSlug,
+        team_role: admin.activeTeamRole,
         force_change: admin.mustChangePassword,
       },
     });

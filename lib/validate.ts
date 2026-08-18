@@ -8,8 +8,12 @@ export const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+// current_password is required for a voluntary change and absent for the
+// forced first-login change, where there is no old password to give. The
+// route decides which case applies from must_change_password.
 export const changePasswordSchema = z.object({
-  new_password: z.string().min(8),
+  current_password: z.string().min(1).optional(),
+  new_password: z.string().min(8).max(200),
 });
 
 export const addPlayerSchema = z.object({
@@ -103,14 +107,35 @@ export const poolEntryEditSchema = z
     { message: "Nothing to update" },
   );
 
+const usernameField = z
+  .string()
+  .trim()
+  .min(3)
+  .max(40)
+  .regex(/^[a-z0-9_]+$/, "lowercase letters, digits, underscores");
+
 export const createAdminSchema = z.object({
-  username: z
+  username: usernameField,
+  name: z.string().trim().min(1).max(80),
+});
+
+// Self-serve signup: user id + password + email. Email is stored as the
+// recovery channel and Razorpay receipt target; nothing sends to it yet,
+// so recovery is a megaadmin-initiated reset from the operator console.
+export const signupSchema = z.object({
+  username: usernameField,
+  password: z.string().min(8).max(200),
+  email: z.string().trim().toLowerCase().email().max(200),
+  name: z.string().trim().min(1).max(80).optional(),
+});
+
+export const usernameAvailabilitySchema = z.object({ username: usernameField });
+
+export const teamSwitchSchema = z.object({
+  slug: z
     .string()
     .trim()
-    .min(3)
-    .max(40)
-    .regex(/^[a-z0-9_]+$/, "lowercase letters, digits, underscores"),
-  name: z.string().trim().min(1).max(80),
+    .regex(/^[a-z0-9][a-z0-9-]*$/, "team slug"),
 });
 
 export const scheduleMatchSchema = z

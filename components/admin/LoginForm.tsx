@@ -35,7 +35,8 @@ export function LoginForm() {
       }
       posthog.identify(body.data.admin_id, {
         name: body.data.name,
-        role: body.data.role,
+        platform_role: body.data.platform_role,
+        active_team: body.data.active_team,
       });
       router.push(body.data.force_change ? "/admin/password" : "/admin");
       router.refresh();

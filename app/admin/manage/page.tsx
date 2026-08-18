@@ -11,11 +11,21 @@ async function ManageData() {
   const admin = await getSessionAdmin();
   if (!admin) redirect("/admin/login");
   if (admin.mustChangePassword) redirect("/admin/password");
-  if (admin.role !== "superadmin") redirect("/admin");
+  // Superadmin OF THE ACTIVE TEAM — not an account-level role any more.
+  if (admin.activeTeamRole !== "superadmin" || !admin.activeTeamId) {
+    redirect("/admin");
+  }
 
+  // Scoped to the active team: listing every admin on the platform was a
+  // cross-tenant leak the moment a second team existed.
   const res = await pool.query(
-    `SELECT id, username, name, role, is_active, created_at
-     FROM admins ORDER BY created_at ASC`,
+    `SELECT a.id, a.username, a.name, m.team_role AS role,
+            m.is_active, m.created_at
+       FROM team_memberships m
+       JOIN admins a ON a.id = m.admin_id
+      WHERE m.team_id = $1
+      ORDER BY m.created_at ASC`,
+    [admin.activeTeamId],
   );
   const admins = res.rows as AdminListRow[];
 
