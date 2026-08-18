@@ -109,7 +109,7 @@ export default function OtherSlots() {
       <PublicHeader />
       <main className="mx-auto flex max-w-md flex-col gap-4 px-4 py-4">
         <div>
-          <h1 className="text-xl font-bold text-text-primary">Other Slots</h1>
+          <h1 className="text-xl font-bold text-text-primary">Away Matches</h1>
           <p className="mt-0.5 text-xs text-text-muted">
             Away matches at other grounds
           </p>

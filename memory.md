@@ -1,94 +1,95 @@
-# Memory — CricLedger: planning docs + Feature 1 basic + rebrand
+# Memory — Feature 2 tenancy schema built + own GitHub repo + nav v2
 
-Last updated: 2026-08-18
+Last updated: 2026-08-18 (session 5)
 
 ## What was built
 
-1. **Planning docs** (all under `Project Details/`):
-   - `old_project/implementation-reference.md` — full "how supergiants works" reference
-     (fee engine formulas, pool ledger rules, derived balances, tournament fee model,
-     transaction/reversal patterns, schema + 17 views + RLS, test suite, money invariants).
-   - `old_project/constants-inventory.md` — exhaustive constants→variables audit.
-   - `cric_ledger/roadmap.md` — technical phases 0–7.
-   - `cric_ledger/products-and-payments.md` — products, Razorpay flow, share/export specs.
-   - `cric_ledger/build-order.md` — **authoritative Feature 1→10 delivery order**.
-   - `cric_ledger/page-order.md` — page order v1 + future nav architecture.
-2. **Feature 1 basic (DONE)**:
-   - `db/apply-migrations.mjs` — applied all 25 migrations to the fresh dev Supabase
-     (tracks in `_migrations`; reruns no-op). Seeded superadmin (username `ravi_kant`,
-     dev password known to Ravi — [REDACTED]) + 5 dev players via `db/seed-dev.sql`.
-   - Icons regenerated from `Project Details/cric_ledger/Support_imgs/cricLedger-icon.png`
-     (transparent badge, full image, no crop): `public/icon-192/512.png`, maskable (66% on
-     white), `apple-touch-icon.png` (white bg), `app/icon.png` (favicon), `public/logo.png`
-     (transparent). Wordmark SVGs = "CRIC" navy + "LEDGER" green, viewBox 240×36.
-   - `components/shared/SplashScreen.tsx` — icon holds **1700ms** on `bg-background`,
-     300ms fade, once per session (`cl-splash-shown` sessionStorage), mounted in layout.
-   - `public/sw.js` cache = `cricledger-static-v2`.
-3. **Full brand-text sweep** (49 replacements / 26 files): all LR-SuperGiants/lrsg text →
-   CricLedger across app metadata, manifest, offline.html, headers, admin pages, install
-   nudge (`cl-install-nudge-*`), tournament copy, comments, README, context/ docs.
-   Session cookie renamed `lrsg_session` → **`cl_session`** (proxy.ts + lib/session.ts).
-   New `app/opengraph-image.png` + `twitter-image.png` (1200×630 badge on white).
-   Scratchpad scripts: `make_icons.ps1`, `rebrand.mjs`, `e2e-match.mjs`.
+1. **Feature 2 tenancy schema — DONE** (spec `Project Details/cric_ledger/tenancy-schema.md`,
+   all decisions recorded there; migrations applied to dev DB, rerun no-ops):
+   - `db/migration-26.sql` — `teams` (slug/display/short name, home ground name+label,
+     meeting point, `status_threshold` default 900, `car_rate_per_km` default 9.6, branding
+     cols, `is_sandbox`), `team_grounds`, `team_seasons`, `team_slots`; RLS + anon revoke;
+     seeds team `our-xi` ("Our XI") + 16 grounds + Season 2 + 61 slots verbatim from
+     `lib/grounds.ts` / `lib/groundSlots.ts`; new views `teams_public`,
+     `team_grounds_public`, `team_slots_public` (anon-granted).
+   - `db/migration-27.sql` — `team_id` on players/matches/pool_entries/ground_bookings/
+     tournaments (+ nullable on admins; bare col on match_participants/expense_shares),
+     backfill to `our-xi`, NOT NULL, `UNIQUE (team_id, id)` targets,
+     `matches (team_id, match_date)` index, re-scoped uniques (player name, captain/vice
+     partials ON (team_id), tournament name).
+   - `db/migration-28.sql` — 11 composite FKs `(team_id, X)` (cross-team refs structurally
+     impossible); SET NULL links use PG15+ column-list form (dev DB is PG 17.6).
+   - `db/migration-29.sql` — 8 SG views rewritten (append team_id; `pool_balance` one row
+     PER TEAM; `players_public` uses `teams.status_threshold` — 900 literal dead;
+     `matches_public` +ground_booking_id; `ground_bookings_public` +id);
+     `anon_read_matches` policy DROPPED + `REVOKE ALL ON matches FROM anon`.
+   - `db/migration-30.sql` — 9 tournament views append team_id/tournament_id.
+2. **Code team-scoping**: new `lib/team.ts` (`CURRENT_TEAM_SLUG = "our-xi"`,
+   `getCurrentTeam()` React-cached for pages, `getCurrentTeamId(pool|client)` memoized for
+   routes). All INSERTs stamp team_id (players/matches/pool credit+debit/entries re-split/
+   bookings/tournaments routes + `lib/matches.ts`, `lib/bookings.ts`, `lib/tournaments.ts`);
+   captain + vice routes scoped `WHERE team_id`; preview route captain lookup scoped;
+   `matches` table reads → `matches_public` (app/matches, app/slots, app/other-slots);
+   every list page filters `.eq("team_id", …)`; booking↔match opponent-name heuristic
+   replaced with `ground_booking_id` id-join (match detail page + schedule-edit route);
+   `Match` type gained `team_id`; `db/seed-dev.sql` rewritten team-aware.
+3. **Own GitHub repo**: `ravk24/cricledger`, branch `main`, pushed (Phase 0 leftover done).
+   `.gitignore` created (Next standard + `.env.local` + **`/Project Details/` and
+   `/context/` are gitignored** — planning docs stay local only).
+4. **UI tweaks (committed 1092c3f, 03f5715)**: splash hold 1700→1500ms, icon shown whole
+   (removed `rounded-2xl` crop); tab bar now 4 tabs — Home, Schedule, **Tournaments**
+   (promoted from More), More; Matches + Ledger tiles moved into `/more` drawer
+   (More tab `also`-highlights /matches and /pool).
 
 ## Decisions made
 
-- **One app, many teams** (single DB, team_id scoping; tournament subsystem = prior art).
-  ₹ / en-IN / Asia/Kolkata stay hardcoded.
-- **Paid app**: Team Ledger (**yearly**) + Tournament Credit (**1 tournament/payment**) +
-  free sample = **sandbox team** (1 scheduled match w/ 1 booking slot, 1 completion,
-  5 manual ledger entries), **discarded on purchase**. Everything visible after login,
-  unpurchased = greyed out never hidden. Payments = **Razorpay** (orders server-side,
-  webhook source of truth, idempotent grants).
-- Ledger **export only** (CSV no-dep + **ExcelJS**; never npm `xlsx`). Match-sheet share =
-  **image card** (ImageResponse + Web Share API).
-- **Build order Features 1→10** (build-order.md wins over roadmap phases); auth moved to
-  **Feature 4** (payments need users); its deep design discussion = Feature 4 prepare step.
-- **Page order v1**: splash → app exactly as supergiants, ALL features enabled; greyed-out
-  and sample-limit decisions deferred. Future nav locked: `/` landing, two-level tab bars
-  (hub + team bar w/ exit tab), sample on same `/[team]` routes, pure calculators free at
-  hub level.
-- Interim names: display "Our XI", placeholders "Your XI", footer "CricLedger · v0.1".
-- Dev DB now / prod DB at launch; never the SG prod DB. Standing rule: spec before code;
-  migrations immutable (new number per change); engine pure, `ceilRupees` only rounding.
+- Tenancy spec decisions (full detail in `tenancy-schema.md`): admins get nullable team_id
+  (NULL = platform); only `teams.is_sandbox` now — `payments`/`entitlements` DDL is
+  Feature 3; dev data backfilled as team #1 `our-xi`; barne→home rename deferred to the
+  config-surface step; anon read model accepted interim (definer views + server-side team
+  filter; DB-level read isolation revisited Feature 4/7); team deletion = hard CASCADE
+  everywhere (sandbox purge = one DELETE; no archived status); booking ids exposed publicly
+  (heuristic dead).
+- **STANDING RULE (Ravi): never delete dev-DB test data during development** — data
+  accumulates as the verification baseline; destructive checks only inside BEGIN…ROLLBACK;
+  `db/clear-dev-data.sql` is reserved for the ONE pre-launch reset. (Also in persistent
+  Claude memory + build-order.md rule 4 + the SQL file header.)
+- Migration files stay immutable; next migration number is **31**.
 
 ## Problems solved
 
-- Migrations 4 & 8 must run **statement-by-statement** (ALTER TYPE ADD VALUE) — runner
-  splits those files; others run per-file.
-- `db/seed-matches-dev.sql` is broken (pre-migration-6 schema) — skip it; create matches
-  via UI/API instead.
-- API responses wrap as `{success, data}` with snake_case (e.g. preview `data.rows`
-  `{player_id, brought_car, fee}`).
-- Killing a background `npm run dev` can orphan the actual Next server (port 3000 held);
-  fix: `taskkill /PID <pid> /F`.
-- New icon source has native transparency → use full image, no crop/threshold needed.
+- Orphaned Next server from a prior session held port 3000 (`EADDRINUSE` on npm start) —
+  find PID via `netstat -ano | grep :3000` / `Get-NetTCPConnection`, `taskkill /PID x /F`.
+- `CREATE OR REPLACE VIEW` works for all 17 rewrites because every change is append-only
+  (columns added at END); grants survive. No DROP VIEW needed anywhere.
+- Auto-generated FK names verified against pg_constraint before migration-28 — all were
+  Postgres defaults (`<table>_<col>_fkey`).
+- `git commit` with nothing staged does nothing — `git add -A` first (initial commit).
 
 ## Current state
 
-- App runs fully on the dev Supabase DB: all pages/assets 200, tests **30/30**, build clean
-  (41 pages; `[auth/me]` cookies log during prerender is pre-existing/benign).
-- E2E verified with canonical numbers: 2000+60, 2 cars @250, 12 heads → fee 214, driver
-  −36, collected 2068, **surplus 8**; pool balance 1408. Dev DB contains this test data
-  (12 players, 1 completed match, booking credit).
-- `.env.local` holds dev Supabase URL/keys + generated SESSION_SECRET/CRON_SECRET
-  (values in the file only — never in memory). PostHog vars empty.
-- Cookie rename means one fresh admin login is needed.
-- Grep for supergiants/lrsg is clean in code; only deliberate lineage mentions remain
-  (README status line, old_project docs, progress-tracker.md).
+- Repo `ravk24/cricledger` `main` = 496d11b…03f5715, tree clean, all pushed. Dev DB has
+  30 migrations applied; test data intact (12 players, 1 completed match w/ canonical
+  numbers fee 214 / surplus 8 / pool 1408, booking credit) — all E2E-verified post-tenancy.
+- `npm test` 30/30, `npm run build` clean (benign `[auth/me]` prerender log persists).
+- Second-team smoke test passed (rolled back): dup names + second captain allowed across
+  teams, cross-team FK rejected (`pe_player_same_team`), team CASCADE delete clean.
+- Inherited `.github/workflows/db-backup.yml` is now live on GitHub and will fail nightly
+  (no secrets configured) — harmless noise; disable in Actions tab or park until Feature 9.
+- Cookie is `cl_session`; a fresh admin login may still be needed (superadmin `ravi_kant`).
 
 ## Next session starts with
 
-**Feature 2 prepare session**: the tenancy-schema spec (teams table + settings columns,
-team_id + composite FKs everywhere, re-scoped uniques, all 17 views team-filtered,
-`payments`/`entitlements`/`teams.is_sandbox`) — discuss with Ravi before any migration.
-Alternative quick wins if preferred: Feature 1 extras (match-sheet share image card,
-ledger xlsx/csv export — specs in products-and-payments.md §3–4).
+**Feature 2 continues — config-surface step** (roadmap Phase 2): `getTeamConfig` /
+`getCurrentTeam` consuming `teams_public` + `team_grounds_public` + `team_slots_public`
+in the UI (grounds list, slot calendar, car rate as engine parameter, copy/team-name
+sites from `constants-inventory.md`), then barne→home/other→away rename (migration 31,
+separate), then `/[team]/` routing (Phase 3). Alternatively Feature 1 extras (share card,
+export) if preferred.
 
 ## Open questions
 
-- Pricing amounts (₹/year, ₹/tournament), refund/expiry UX, GST — parked for Feature 3/5.
-- Exact greyed-out map + sample-limit UX — deliberately deferred (page-order.md).
-- Public-link viewing vs login-only for paid teams — Feature 4 (auth) discussion.
-- Phase 0 leftovers: own GitHub repo for cricledger not yet created; PostHog project for
-  cricledger not yet set up; backup workflow for the new DB pending.
+- Pricing/GST (Features 3/5); greyed-out map + sample-limit UX (deferred); public-link vs
+  login-only viewing (Feature 4); per-team DB-level read isolation (Feature 4/7).
+- Phase 0 leftovers: PostHog project for cricledger; own backup workflow (Feature 9) — and
+  the inherited backup workflow currently failing nightly on GitHub (see Current state).

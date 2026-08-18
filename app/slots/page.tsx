@@ -50,7 +50,7 @@ export default function AvailableSlots() {
       <main className="mx-auto flex max-w-md flex-col gap-4 px-4 py-4">
         <div>
           <h1 className="text-xl font-bold text-text-primary">
-            Barne Slots
+            Home Matches
           </h1>
           <p className="mt-0.5 text-xs text-text-muted">
             Ground booked Sat–Sun · Nov 2026 – May 2027

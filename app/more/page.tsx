@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Calculator, Car, CarFront, Swords, Wallet } from "lucide-react";
+import { Calculator, Car, CarFront, Swords } from "lucide-react";
 import { PublicHeader } from "@/components/shared/PublicHeader";
 import { TabBar } from "@/components/shared/TabBar";
 import { cn } from "@/lib/utils";
@@ -19,12 +19,6 @@ const FEATURES: Feature[] = [
     href: "/matches",
     icon: Swords,
     iconClass: "bg-low-light text-low-foreground",
-  },
-  {
-    label: "Ledger",
-    href: "/pool",
-    icon: Wallet,
-    iconClass: "bg-credit-light text-credit-foreground",
   },
   {
     label: "Car Fee Calculator",
