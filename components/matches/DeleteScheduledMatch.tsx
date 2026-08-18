@@ -10,7 +10,7 @@ type Props = {
   matchId: string;
   opponent: string;
   matchDateLabel: string;
-  ground: "barne" | "other";
+  ground: "home" | "away";
   // This match's per-slot share of the booking credit; 0 = no booking.
   bookingShare: number;
   // Other matches: the pool-fronted ground fee that returns on delete.
@@ -18,7 +18,7 @@ type Props = {
 };
 
 // Superadmin only — red button at the bottom of a scheduled match page.
-// Barne: deletes the match (its slot reopens) and the server returns the
+// Home: deletes the match (its slot reopens) and the server returns the
 // slot's share of the booking credit; the captain settles the opponent's
 // cash offline. Other: no slot exists — the fee debit is deleted, so the
 // paid ground fee returns to the pool.
@@ -74,13 +74,13 @@ export function DeleteScheduledMatch({
         onOpenChange={setOpen}
         title="Delete match"
         description={
-          ground === "barne"
+          ground === "home"
             ? `vs ${opponent} · ${matchDateLabel} — the date reopens on Home Matches. Superadmin only.`
             : `vs ${opponent} · ${matchDateLabel} — away match. Superadmin only.`
         }
       >
         <p className="text-sm text-text-secondary">
-          {ground === "other"
+          {ground === "away"
             ? otherFee > 0
               ? `₹${formatRupees(otherFee)} — the ground fee paid for this match — will be returned to the pool ledger automatically.`
               : "No pool entry is affected."

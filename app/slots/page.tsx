@@ -22,7 +22,7 @@ async function SlotsData() {
     .from("matches_public")
     .select("match_date")
     .eq("team_id", team.id)
-    .eq("ground", "barne");
+    .eq("ground", "home");
 
   // Any home match on a date consumes the ground day; past unscheduled
   // slots are wasted, not available.

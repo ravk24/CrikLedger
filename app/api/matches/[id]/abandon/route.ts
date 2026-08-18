@@ -13,7 +13,7 @@ export async function POST(
     const { reason } = abandonMatchSchema.parse(await req.json());
 
     const result = await withTransaction(async (client) => {
-      // Allowed from scheduled only. Barne: zero financials. Other: the
+      // Allowed from scheduled only. Home: zero financials. Away: the
       // pool-fronted ground fee returns — its debit row is deleted (the
       // FK NULLs the link), restoring the pool balance.
       const res = await client.query(

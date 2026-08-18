@@ -119,24 +119,24 @@ export const scheduleMatchSchema = z
     opponent: z.string().trim().min(1).max(80),
     // Create only: which scheduling flow this is. Provenance — the edit
     // route never updates it (project rule: ground is set once, at insert).
-    ground: z.enum(["barne", "other"]).default("barne"),
-    // Away ground name, Other matches only; absent = unknown/keep current.
+    ground: z.enum(["home", "away"]).default("home"),
+    // Away ground name, away matches only; absent = unknown/keep current.
     venue: z.string().trim().min(1).max(80).optional(),
-    // Other creates only: who received our team's ground share, and the
+    // Away creates only: who received our team's ground share, and the
     // contribution recorded as a pool debit in the same transaction.
     fee_paid_to: z.enum(["opponent", "owner"]).optional(),
     fee_amount: z.number().int().positive().optional(),
     // Edit mode only: renames the linked ground booking's captain.
     opponent_captain: z.string().trim().min(1).max(80).optional(),
   })
-  // Scheduling an Other match ALWAYS records the payment (one switch is
-  // required in the UI). Edit bodies never send ground, so the barne
+  // Scheduling an away match ALWAYS records the payment (one switch is
+  // required in the UI). Edit bodies never send ground, so the home
   // default keeps this refine out of their way.
   .refine(
     (body) =>
-      body.ground !== "other" ||
+      body.ground !== "away" ||
       (body.fee_paid_to !== undefined && body.fee_amount !== undefined),
-    { message: "fee_paid_to and fee_amount are required for other matches" },
+    { message: "fee_paid_to and fee_amount are required for away matches" },
   );
 
 export const abandonMatchSchema = z.object({

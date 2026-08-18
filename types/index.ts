@@ -58,8 +58,8 @@ export type Match = {
   guest_names: string[];
   guest_cars: boolean[]; // index-aligned with guest_names; legacy = []
   ground_booking_id: string | null; // set = created by a ground booking
-  ground: "barne" | "other"; // which scheduling flow created the match
-  venue: string | null; // away ground name; always NULL for barne matches
+  ground: "home" | "away"; // which scheduling flow created the match
+  venue: string | null; // away ground name; always NULL for home matches
   fee_paid_to: "opponent" | "owner" | null; // who received our ground share (other only)
   updated_at: string | null;
   created_at: string;

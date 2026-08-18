@@ -103,7 +103,7 @@ export function OtherScheduleWizard({
         body: JSON.stringify({
           match_date: date,
           opponent: opponent.trim(),
-          ground: "other",
+          ground: "away",
           ...(venue ? { venue } : {}),
           fee_paid_to: paidTo,
           fee_amount: feeAmount,

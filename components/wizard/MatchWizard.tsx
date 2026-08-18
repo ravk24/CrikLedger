@@ -38,9 +38,9 @@ type Props = {
   groundInfo: GroundInfo;
   initial?: WizardInitial;
   // Pre-fills the Costs step's ground fee on completion; editable.
-  // Other matches: the pool-fronted fee (linked debit's current amount)
+  // Away matches: the pool-fronted fee (linked debit's current amount)
   // — the recoup always reads the debit row, so edits can't double-count.
-  // Barne booking matches: this match's slot share of what the opponent
+  // Home booking matches: this match's slot share of what the opponent
   // paid to book (paid + pending + cleared-pending).
   initialGroundFee?: number;
   // Tournament reuse (defaults preserve SG behavior exactly):

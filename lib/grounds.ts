@@ -27,12 +27,12 @@ export type GroundInfo = {
 // mean the team's home ground; away matches resolve through the venue
 // name. homeGroundName comes from teams.home_ground_name.
 export function resolveGroundInfo(
-  ground: "barne" | "other",
+  ground: "home" | "away",
   venue: string | null,
   grounds: Ground[],
   homeGroundName: string | null,
 ): GroundInfo {
-  if (ground === "barne") {
+  if (ground === "home") {
     const home = findGround(grounds, homeGroundName);
     if (home) return { label: home.name, allowance: home.allowance, known: true };
     return { label: homeGroundName ?? "Home ground", allowance: null, known: false };

@@ -43,7 +43,7 @@ export function TournamentScheduleMatchSheet({
   const [pending, setPending] = useState(false);
 
   const groundLabel = venue
-    ? resolveGroundInfo("other", venue, grounds, null).label
+    ? resolveGroundInfo("away", venue, grounds, null).label
     : null;
 
   const editOpponent = editing?.opponent;

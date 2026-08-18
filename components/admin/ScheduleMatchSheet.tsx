@@ -22,11 +22,11 @@ type Props = {
     date: string;
     opponent: string;
     opponentCaptain: string | null;
-    ground: "barne" | "other";
+    ground: "home" | "away";
     venue: string | null;
   };
   // Create mode only: pre-fill the date (e.g. scheduling from a slot).
-  // Creation here is always a Barne match — away matches go through
+  // Creation here is always a home match — away matches go through
   // OtherScheduleWizard, which also records the ground-fee debit.
   initialDate?: string;
 };
@@ -50,8 +50,8 @@ export function ScheduleMatchSheet({
 
   // Only booking matches carry an opponent captain to edit.
   const hasCaptainField = editing?.opponentCaptain != null;
-  // Venue only exists on Other (away) matches.
-  const hasVenueField = editing?.ground === "other";
+  // Venue only exists on away matches.
+  const hasVenueField = editing?.ground === "away";
 
   const editDate = editing?.date;
   const editOpponent = editing?.opponent;

@@ -115,7 +115,7 @@ async function TournamentMatchData({
   const match = matchRes.data as TournamentMatch | null;
   if (!tournament || !match) notFound();
   const groundInfo = resolveGroundInfo(
-    "other",
+    "away",
     tournament.venue,
     grounds,
     null,

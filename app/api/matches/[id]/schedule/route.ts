@@ -30,7 +30,7 @@ export async function PATCH(
       // ground is provenance — set at insert, never edited. Venue is only
       // meaningful on Other matches; absent = keep the stored value.
       const venue =
-        cur.rows[0].ground === "other" ? (body.venue ?? null) : null;
+        cur.rows[0].ground === "away" ? (body.venue ?? null) : null;
       const res = await client.query(
         `UPDATE matches
          SET match_date = $1, opponent = $2,

@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     const body = scheduleMatchSchema.parse(await req.json());
     const teamId = await getCurrentTeamId(pool);
 
-    if (body.ground === "other") {
+    if (body.ground === "away") {
       // Away matches are pay-per-ground: scheduling records the pool's
       // payment too. One transaction — debit (our team's contribution
       // only; the opponent's share never enters the app) -> match.
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
           `INSERT INTO matches
              (match_date, opponent, ground, venue, fee_paid_to,
               other_fee_entry_id, created_by, team_id)
-           VALUES ($1, $2, 'other', $3, $4, $5, $6, $7)
+           VALUES ($1, $2, 'away', $3, $4, $5, $6, $7)
            RETURNING id, match_date, opponent, status, ground`,
           [
             body.match_date,
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     const res = await pool.query(
       `INSERT INTO matches (match_date, opponent, ground, created_by, team_id)
-       VALUES ($1, $2, 'barne', $3, $4)
+       VALUES ($1, $2, 'home', $3, $4)
        RETURNING id, match_date, opponent, status, ground`,
       [body.match_date, body.opponent, admin.id, teamId],
     );

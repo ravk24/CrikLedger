@@ -11,8 +11,8 @@ type Option = {
   iconClass: string;
 };
 
-// Home = the pre-booked home-ground slot flow (ground 'barne');
-// Away = free-form scheduling at other grounds (ground 'other').
+// Home = the pre-booked home-ground slot flow (ground 'home');
+// Away = free-form scheduling at other grounds (ground 'away').
 const OPTIONS: Option[] = [
   {
     label: "Home Matches",

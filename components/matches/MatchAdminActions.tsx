@@ -15,8 +15,8 @@ type Props = {
   matchDate: string; // yyyy-mm-dd, for editing the schedule
   matchDateLabel: string;
   status: "scheduled" | "completed" | "abandoned";
-  ground: "barne" | "other";
-  venue: string | null; // away ground name, Other matches only
+  ground: "home" | "away";
+  venue: string | null; // away ground name, away matches only
   grounds: Ground[]; // team ground list for the edit-schedule select
   groundInfo: GroundInfo; // resolved server-side for the wizard prefill
   // Linked ground booking's captain; null = no booking for this opponent.
@@ -26,7 +26,7 @@ type Props = {
   players: WizardPlayer[];
   isSuperadmin: boolean;
   initial?: WizardInitial; // present when status = completed
-  // Other matches: pool-fronted ground fee, pre-fills the wizard's Costs step.
+  // Away matches: pool-fronted ground fee, pre-fills the wizard's Costs step.
   initialGroundFee?: number;
 };
 
@@ -163,7 +163,7 @@ export function MatchAdminActions({
         onOpenChange={setConfirmDelete}
         title="Delete this match?"
         description={
-          ground === "other"
+          ground === "away"
             ? "Superadmin only. All participant rows and the auto pool credit are removed, and the pool-fronted ground fee returns to the pool — every balance recalculates."
             : "Superadmin only. All participant rows and the auto pool credit are removed, and a booking match's share of the booking credit is deducted from the pool — every balance recalculates."
         }

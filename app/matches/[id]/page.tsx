@@ -311,7 +311,7 @@ async function MatchDetailData({
           matchId={match.id}
           opponent={match.opponent}
           matchDateLabel={formatDateShort(match.match_date)}
-          ground={match.ground === "other" ? "other" : "barne"}
+          ground={match.ground === "away" ? "away" : "home"}
           bookingShare={adminProps.bookingShare}
           otherFee={adminProps.otherFee}
         />

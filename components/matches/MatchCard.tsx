@@ -11,7 +11,7 @@ type Props = {
 
 export function MatchCard({ match, attendeeCount }: Props) {
   const state = matchState(match);
-  const isHome = match.ground === "barne";
+  const isHome = match.ground === "home";
 
   return (
     <Link

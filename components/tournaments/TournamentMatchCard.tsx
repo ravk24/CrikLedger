@@ -8,7 +8,7 @@ type Props = {
   attendeeCount: number; // 0 while scheduled
 };
 
-// Tournament match card — sibling of the SG MatchCard (no Barne/Other
+// Tournament match card — sibling of the SG MatchCard (no Home/Away
 // pill, no venue suffix, no guests; time on the date line instead).
 export function TournamentMatchCard({ match, attendeeCount }: Props) {
   return (

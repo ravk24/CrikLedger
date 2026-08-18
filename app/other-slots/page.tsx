@@ -11,7 +11,7 @@ import type { Match, MatchParticipantPublic } from "@/types";
 
 // Away matches have no pre-booked slot list — admins schedule them
 // free-form (date + opponent + ground name), INSERTed with
-// ground = 'other'. The public sees the resulting match cards here
+// ground = 'away'. The public sees the resulting match cards here
 // and on /matches alike.
 async function OtherMatchesData() {
   const team = await getCurrentTeam();
@@ -20,7 +20,7 @@ async function OtherMatchesData() {
       .from("matches_public")
       .select("*")
       .eq("team_id", team.id)
-      .eq("ground", "other"),
+      .eq("ground", "away"),
     supabasePublic
       .from("match_participants_public")
       .select("match_id, is_playing")
