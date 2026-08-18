@@ -2,13 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  CalendarDays,
-  Home,
-  LayoutGrid,
-  Swords,
-  Wallet,
-} from "lucide-react";
+import { CalendarDays, Home, LayoutGrid, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Tab = {
@@ -18,23 +12,23 @@ type Tab = {
   also?: string[]; // child routes that keep this tab highlighted
 };
 
-// Five flex-1 tabs share ~380px — labels must stay short enough not to
+// Four flex-1 tabs share ~380px — labels must stay short enough not to
 // wrap. Schedule is a chooser screen (Barne Slots / Other Slots).
+// Matches and Ledger live in the More drawer.
 const TABS: Tab[] = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/matches", label: "Matches", icon: Swords },
   {
     href: "/schedule",
     label: "Schedule",
     icon: CalendarDays,
     also: ["/slots", "/other-slots"],
   },
-  { href: "/pool", label: "Ledger", icon: Wallet },
+  { href: "/tournaments", label: "Tournaments", icon: Trophy },
   {
     href: "/more",
     label: "More",
     icon: LayoutGrid,
-    also: ["/car-fee", "/car-count", "/virtual-fee", "/tournaments"],
+    also: ["/matches", "/pool", "/car-fee", "/car-count", "/virtual-fee"],
   },
 ];
 

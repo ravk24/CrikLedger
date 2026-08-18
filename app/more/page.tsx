@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Calculator, Car, CarFront, Trophy } from "lucide-react";
+import { Calculator, Car, CarFront, Swords, Wallet } from "lucide-react";
 import { PublicHeader } from "@/components/shared/PublicHeader";
 import { TabBar } from "@/components/shared/TabBar";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,18 @@ type Feature = {
 // The app drawer: future v2 features land here. Ship a feature by
 // filling in its href (and label/icon) — the tile becomes a link.
 const FEATURES: Feature[] = [
+  {
+    label: "Matches",
+    href: "/matches",
+    icon: Swords,
+    iconClass: "bg-low-light text-low-foreground",
+  },
+  {
+    label: "Ledger",
+    href: "/pool",
+    icon: Wallet,
+    iconClass: "bg-credit-light text-credit-foreground",
+  },
   {
     label: "Car Fee Calculator",
     href: "/car-fee",
@@ -31,12 +43,6 @@ const FEATURES: Feature[] = [
     href: "/virtual-fee",
     icon: Calculator,
     iconClass: "bg-credit-light text-credit-foreground",
-  },
-  {
-    label: "Tournaments",
-    href: "/tournaments",
-    icon: Trophy,
-    iconClass: "bg-low-light text-low-foreground",
   },
 ];
 
