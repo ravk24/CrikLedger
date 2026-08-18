@@ -1,102 +1,94 @@
-# Memory — Feature 2 tenancy schema + own GitHub repo + nav/schedule v2
+# Memory — Feature 2 COMPLETE (config surface + rename) · Access model v2 specced
 
-Last updated: 2026-08-18 (session 5, end)
+Last updated: 2026-08-18 (session 6, end)
 
 ## What was built
 
-1. **Feature 2 tenancy schema — DONE** (spec `Project Details/cric_ledger/tenancy-schema.md`,
-   all decisions recorded there; migrations applied to dev DB, rerun no-ops):
-   - `db/migration-26.sql` — `teams` (slug/display/short name, home ground name+label,
-     meeting point, `status_threshold` default 900, `car_rate_per_km` default 9.6, branding
-     cols, `is_sandbox`), `team_grounds`, `team_seasons`, `team_slots`; RLS + anon revoke;
-     seeds team `our-xi` ("Our XI") + 16 grounds + Season 2 + 61 slots verbatim from
-     `lib/grounds.ts` / `lib/groundSlots.ts`; new views `teams_public`,
-     `team_grounds_public`, `team_slots_public` (anon-granted).
-   - `db/migration-27.sql` — `team_id` on players/matches/pool_entries/ground_bookings/
-     tournaments (+ nullable on admins; bare col on match_participants/expense_shares),
-     backfill to `our-xi`, NOT NULL, `UNIQUE (team_id, id)` targets,
-     `matches (team_id, match_date)` index, re-scoped uniques (player name, captain/vice
-     partials ON (team_id), tournament name).
-   - `db/migration-28.sql` — 11 composite FKs `(team_id, X)` (cross-team refs structurally
-     impossible); SET NULL links use PG15+ column-list form (dev DB is PG 17.6).
-   - `db/migration-29.sql` — 8 SG views rewritten (append team_id; `pool_balance` one row
-     PER TEAM; `players_public` uses `teams.status_threshold` — 900 literal dead;
-     `matches_public` +ground_booking_id; `ground_bookings_public` +id);
-     `anon_read_matches` policy DROPPED + `REVOKE ALL ON matches FROM anon`.
-   - `db/migration-30.sql` — 9 tournament views append team_id/tournament_id.
-2. **Code team-scoping**: new `lib/team.ts` (`CURRENT_TEAM_SLUG = "our-xi"`,
-   `getCurrentTeam()` React-cached for pages, `getCurrentTeamId(pool|client)` memoized for
-   routes). All INSERTs stamp team_id (players/matches/pool credit+debit/entries re-split/
-   bookings/tournaments routes + `lib/matches.ts`, `lib/bookings.ts`, `lib/tournaments.ts`);
-   captain + vice routes scoped `WHERE team_id`; preview route captain lookup scoped;
-   `matches` table reads → `matches_public` (app/matches, app/slots, app/other-slots);
-   every list page filters `.eq("team_id", …)`; booking↔match opponent-name heuristic
-   replaced with `ground_booking_id` id-join (match detail page + schedule-edit route);
-   `Match` type gained `team_id`; `db/seed-dev.sql` rewritten team-aware.
-3. **Own GitHub repo**: `ravk24/cricledger`, branch `main`, pushed (Phase 0 leftover done).
-   `.gitignore` created (Next standard + `.env.local` + **`/Project Details/` and
-   `/context/` are gitignored** — planning docs stay local only).
-4. **Nav/UI v2** (commits 1092c3f, 03f5715, c2fb316):
-   - Splash: hold 1500ms, icon shown whole (no `rounded-2xl` crop).
-   - Tab bar (`components/shared/TabBar.tsx`): **5 tabs — Home, Schedule, Tournaments,
-     Ledger (/pool), More**; Matches lives in the More drawer (`app/more/page.tsx`:
-     Matches + 3 calculators; Tournaments tile removed).
-   - Schedule flow: `/schedule` chooser → "Scheduled Matches" (Swords icon,
-     → `/schedule/upcoming`, new scheduled-only MatchCard list) + "Schedule a Match"
-     (→ `/schedule/new`, new chooser: "Home Matches" → `/slots`, "Away Matches" →
-     `/other-slots`). Page titles renamed: /slots = "Home Matches", /other-slots =
-     "Away Matches" (display only; DB `barne`/`other` values and routes unchanged).
+1. **Access model v2 → planning docs** (all in gitignored `Project Details/cric_ledger/`):
+   guest mode (no login; adaptive 5-tab bar `Teams/Home · Schedule · Tournament · Ledger ·
+   More`; guest schedules/completes/shares a match **entirely client-side**, old sandbox
+   trial retired), 3-tier roles (`megaadmin` = Ravi platform / `superadmin` = any purchaser,
+   1 team, ≤2 admins via temp-password pattern / `admin`), self-serve signup (user id
+   availability + password + **email**), purchases drive tabs (Ledger → Teams becomes Home;
+   Tournament Credit → Tournament tab enables), Razorpay compliance pages (6, behind
+   More→"About us"), Razorpay→superadmin grant flow (order `notes` carry user_id; verified
+   capture → payments row → entitlement → role upgrade, idempotent). Updated: page-order.md
+   (largest rewrite — full per-state tab spec; hub bar/landing page superseded),
+   products-and-payments.md, build-order.md, roadmap.md, tenancy-schema.md.
+   `.env.example` gained empty `RAZORPAY_KEY_ID/KEY_SECRET/WEBHOOK_SECRET`.
+2. **Feature 2 finished — commit `ccf7145` (config surface)**: cached `getTeamGrounds()` /
+   `getTeamSlots()` in `lib/team.ts` over `team_grounds_public`/`team_slots_public`;
+   `GROUNDS`/`GROUND_SLOTS`/`CAR_RATE_PER_KM`/`BARNE_GROUND_NAME` deleted
+   (`lib/groundSlots.ts` removed); `findGround`/`resolveGroundInfo` pure over passed
+   grounds + homeGroundName; grounds threaded as props to GroundSelect's 4 consumers
+   (ScheduleMatchSheet, OtherScheduleWizard, CreateTournamentSheet, TournamentAdminPanel)
+   and both MatchAdminActions variants; MatchWizard takes server-resolved `groundInfo`
+   (ground/venue props died); /slots subtitle+counts from DB (season label + window);
+   /car-fee rate + meeting point from `teams` (page needed data inside `<Suspense>` to
+   build); match headers use `team.short_name ?? display_name`; chips/copy say Home/Away;
+   `SESSION_COOKIE` deduped into new `lib/cookies.ts` (proxy.ts must NOT import
+   lib/session.ts — pg would enter the middleware bundle).
+3. **Commit `7c85101` (migration 31)**: `db/migration-31.sql` applied to dev —
+   `matches.ground` values/CHECK (`matches_ground_check`)/default renamed to
+   `'home'`/`'away'`; full code enum sweep (types, zod in lib/validate.ts, raw SQL in
+   matches route, `.eq("ground",…)`, component literals). URLs `/slots` + `/other-slots`
+   deliberately kept.
 
 ## Decisions made
 
-- Tenancy spec decisions (full detail in `tenancy-schema.md`): admins get nullable team_id
-  (NULL = platform); only `teams.is_sandbox` now — `payments`/`entitlements` DDL is
-  Feature 3; dev data backfilled as team #1 `our-xi`; barne→home rename deferred to the
-  config-surface step (schema); anon read model accepted interim (definer views +
-  server-side team filter; DB-level read isolation revisited Feature 4/7); team deletion =
-  hard CASCADE everywhere (sandbox purge = one DELETE); booking ids exposed publicly
-  (name heuristic dead).
-- **STANDING RULE (Ravi): never delete dev-DB test data during development** — data
-  accumulates as the verification baseline; destructive checks only inside BEGIN…ROLLBACK;
-  `db/clear-dev-data.sql` is reserved for the ONE pre-launch reset. (Also in persistent
-  Claude memory + build-order.md rule 4 + the SQL file header.)
-- Home/Away is now the user-facing language for barne/other match provenance.
-- Migration files stay immutable; next migration number is **31**.
+- **`/[team]/` routing moved OUT of Feature 2** → folds into Features 3–5 shell/auth work
+  (adaptive tab bar build; URL visibility is a Feature 4 decision). Feature 2 = done.
+- Chips/copy = "Home"/"Away" everywhere; ground's real name only where a venue displays.
+- Guest sample = client-side only (no DB writes, no limits); `teams.is_sandbox` currently
+  unused — keep/repurpose/drop is a Feature 3 prepare decision.
+- Tournament-only purchaser gets superadmin role but team-creation + 2-admin allowance
+  unlock only with Team Ledger.
+- Megaadmin = `ravi_kant`; **password is never stored in repo/docs** (set directly in DB at
+  Feature 4 build; rotate before launch — it transited chat).
+- Migration files immutable; next migration number is **32**.
+- STANDING RULE unchanged: never delete dev-DB test data; `db/clear-dev-data.sql` reserved
+  for the one pre-launch reset.
 
 ## Problems solved
 
-- Orphaned Next server from a prior session held port 3000 (`EADDRINUSE` on npm start) —
-  find PID via `netstat -ano | grep :3000` / `Get-NetTCPConnection`, `taskkill /PID x /F`.
-- `CREATE OR REPLACE VIEW` works for all 17 rewrites because every change is append-only
-  (columns added at END); grants survive. No DROP VIEW needed anywhere.
-- Auto-generated FK names verified against pg_constraint before migration-28 — all were
-  Postgres defaults (`<table>_<col>_fkey`).
+- **Stopping a background `npm start` (TaskStop) leaves the node child holding port 3000**
+  — it EADDRINUSEs the next start AND silently serves the stale build during curl E2E.
+  Fix: `netstat -ano | grep :3000`, `taskkill //PID x //F`, then verify probes show
+  new-build-only strings. (Also in persistent memory: windows-npm-start-orphans.)
+- Grep with a negative glob (`!Project Details/**`) silently returned false "no matches"
+  on Windows — a positive-glob re-grep found "Our XI"/"Avval Chaha" sites it had missed.
+  Don't trust negative-glob greps here.
+- This Next version fails `next build` if a page reads dynamic data (DB/cookies) outside
+  `<Suspense>` — wrap data components like the existing pages do (car-fee hit this).
+- Server-rendered counts like "60 of 61" carry `<!-- -->` separators in HTML — grep for
+  fragments, not the full sentence.
 
 ## Current state
 
-- Repo `ravk24/cricledger` `main` @ c2fb316 (496d11b first commit → splash → clear-dev
-  header → 4-tab nav → schedule flow v2 + 5-tab nav), tree clean, all pushed.
-- Dev DB: 30 migrations applied; test data intact (12 players, 1 completed match with
-  canonical fee 214 / surplus 8 / pool 1408, booking credit) — E2E-verified post-tenancy.
-- `npm test` 30/30, `npm run build` clean (benign `[auth/me]` prerender log persists).
-- `/schedule/upcoming` currently shows its empty state (no scheduled matches in dev data).
-- Inherited `.github/workflows/db-backup.yml` is live on GitHub and will fail nightly
-  (no secrets configured) — harmless noise; disable in Actions tab or park until Feature 9.
-- Cookie is `cl_session`; superadmin username `ravi_kant` (password with Ravi only).
+- Repo `ravk24/cricledger` `main` @ `7c85101`, tree clean except intentionally-local
+  planning docs; all pushed. Feature 2 fully complete and E2E-verified.
+- Dev DB: **31 migrations applied**; data intact (12 players, 1 completed **'home'** match,
+  fee 214 / surplus 8 / pool 1408, 60/61 slots open, Season 2 Nov 2026–May 2027).
+- `npm test` 30/30 (carFee now `carFee(km, rate)`, tests pass 9.6), build clean (benign
+  `[auth/me]` prerender log persists). No server left running on port 3000.
+- Cookie `cl_session` (constant in `lib/cookies.ts`); superadmin username `ravi_kant`
+  (to become megaadmin at Feature 4).
+- Inherited `.github/workflows/db-backup.yml` still fails nightly on GitHub — harmless;
+  park until Feature 9.
 
 ## Next session starts with
 
-**Feature 2 continues — config-surface step** (roadmap Phase 2): `getTeamConfig` /
-`getCurrentTeam` consuming `teams_public` + `team_grounds_public` + `team_slots_public`
-in the UI (grounds list, slot calendar from DB instead of `lib/grounds.ts` /
-`lib/groundSlots.ts`, car rate as engine parameter, copy/team-name sites from
-`constants-inventory.md`), then barne→home/other→away schema rename (migration 31,
-separate), then `/[team]/` routing (Phase 3). Alternatively Feature 1 extras (match-sheet
-share card, ledger export) if preferred.
+**Feature 3 prepare session** (build-order): product/catalog spec — products/price table
+decision (lean toward a `products` table), `payments`/`entitlements` DDL (sketch in
+products-and-payments.md §2), fate of `teams.is_sandbox`, entitlement-gate UI wrapper,
+purchase surfaces (More→Purchases card, Tournament-tab CTA). Feature 3 now also inherits
+the guest client-side sample from access model v2. Alternatively: Feature 1 extras
+(match-sheet share card, ledger export) — both still pending and independent.
 
 ## Open questions
 
-- Pricing/GST (Features 3/5); greyed-out map + sample-limit UX (deferred); public-link vs
-  login-only viewing (Feature 4); per-team DB-level read isolation (Feature 4/7).
-- Phase 0 leftovers: PostHog project for cricledger; own backup workflow (Feature 9) — and
-  the inherited backup workflow currently failing nightly on GitHub (see Current state).
+- Teams publicly listed on the Teams tab — opt-out flag? Guest schedule flow: reuse wizard
+  shell vs dedicated lightweight flow? Can a superadmin's 2 admins manage their
+  tournaments? Purchases page content + pricing + GST (Features 3/5). Post-signup
+  pre-purchase Schedule behavior. Tournament "Host a new tournament" inner pages.
+- Phase 0 leftovers: PostHog project for cricledger; own backup workflow (Feature 9).
