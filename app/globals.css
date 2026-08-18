@@ -1,0 +1,135 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* iOS home-indicator clearance for bars fixed to the true screen bottom */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@theme {
+  /* Font */
+  --font-sans: "Inter", sans-serif;
+
+  /* Page and surfaces — light theme values; dark overrides below */
+  --color-background: #f5f6f8;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f9fafb;
+
+  /* Borders */
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
+
+  /* Text */
+  --color-text-primary: #101828;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #9ca3af;
+
+  /* Accent — indigo. Primary buttons, active nav, focus rings. NOT money. */
+  --color-accent: #4f46e5;
+  --color-accent-foreground: #ffffff;
+  --color-accent-light: #e0e7ff;
+
+  /* Money + status: CREDIT / SURPLUS — green */
+  --color-credit: #16a34a;
+  --color-credit-light: #dcfce7;
+  --color-credit-foreground: #14532d;
+
+  /* Money + status: LOW balance warning — amber */
+  --color-low: #d97706;
+  --color-low-light: #fef3c7;
+  --color-low-foreground: #92400e;
+
+  /* Money + status: DEBIT / DEBT — red */
+  --color-debit: #dc2626;
+  --color-debit-light: #fee2e2;
+  --color-debit-foreground: #991b1b;
+
+  /* Status: INACTIVE / ABANDONED / locked — grey */
+  --color-inactive: #9ca3af;
+  --color-inactive-light: #f3f4f6;
+  --color-inactive-foreground: #4b5563;
+
+  /* Status: SCHEDULED / info — blue */
+  --color-scheduled: #2563eb;
+  --color-scheduled-light: #dbeafe;
+  --color-scheduled-foreground: #1e40af;
+
+  /* Role: CAPTAIN — gold (crown + "C" pill) */
+  --color-gold: #ca8a04;
+  --color-gold-light: #fef08a;
+  --color-gold-foreground: #713f12;
+
+  /* Role: VICE-CAPTAIN — silver ("VC" pill) */
+  --color-silver-light: #e5e7eb;
+  --color-silver-foreground: #374151;
+
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+
+  /* shadcn/ui compatibility aliases — components/ui/* consume these names.
+     Values always point at the project tokens above; never diverge. */
+  --color-foreground: #101828;
+  --color-card: #ffffff;
+  --color-card-foreground: #101828;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #101828;
+  --color-primary: #4f46e5;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f9fafb;
+  --color-secondary-foreground: #101828;
+  --color-muted: #f3f4f6;
+  --color-muted-foreground: #4b5563;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-input: #e5e7eb;
+  --color-ring: #4f46e5;
+}
+
+/* Dark theme — shadcn/ui class strategy */
+.dark {
+  --color-background: #0b0b0d;
+  --color-surface: #17181b;
+  --color-surface-secondary: #1f2023;
+  --color-border: #2a2b2f;
+  --color-border-strong: #3a3b40;
+  --color-text-primary: #f4f4f5;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #71717a;
+  --color-accent-light: #312e81;
+  --color-credit-light: #14532d;
+  --color-credit-foreground: #bbf7d0;
+  --color-low-light: #78350f;
+  --color-low-foreground: #fde68a;
+  --color-debit-light: #7f1d1d;
+  --color-debit-foreground: #fecaca;
+  --color-inactive-light: #27272a;
+  --color-inactive-foreground: #a1a1aa;
+  --color-scheduled-light: #1e3a8a;
+  --color-scheduled-foreground: #bfdbfe;
+  --color-gold-light: #713f12;
+  --color-gold-foreground: #fde047;
+  --color-silver-light: #3f3f46;
+  --color-silver-foreground: #d4d4d8;
+
+  /* shadcn aliases — dark */
+  --color-foreground: #f4f4f5;
+  --color-card: #17181b;
+  --color-card-foreground: #f4f4f5;
+  --color-popover: #17181b;
+  --color-popover-foreground: #f4f4f5;
+  --color-secondary: #1f2023;
+  --color-secondary-foreground: #f4f4f5;
+  --color-muted: #27272a;
+  --color-muted-foreground: #a1a1aa;
+  --color-input: #2a2b2f;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+}

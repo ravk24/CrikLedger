@@ -1,0 +1,149 @@
+import { NextRequest, NextResponse } from "next/server";
+import { withTransaction } from "@/lib/db";
+import { ceilSplit } from "@/engine/split";
+import { requireAdmin } from "@/lib/session";
+import { ApiError, handleRouteError, poolEntryEditSchema } from "@/lib/validate";
+import type { PoolClient } from "pg";
+
+const MANUAL_KINDS = [
+  "deposit",
+  "other_income",
+  "equipment",
+  "ground_booking",
+  "plain_debit",
+  "common_debit",
+  "opening_due",
+];
+
+async function loadManualEntry(client: PoolClient, id: string) {
+  const res = await client.query(
+    `SELECT id, kind, message, amount, entry_date, team_id
+     FROM pool_entries WHERE id = $1`,
+    [id],
+  );
+  const row = res.rows[0];
+  if (!row) {
+    throw new ApiError(404, "NOT_FOUND", "Ledger entry not found");
+  }
+  if (!MANUAL_KINDS.includes(row.kind)) {
+    throw new ApiError(
+      409,
+      "AUTO_ENTRY",
+      "Automatic entries change only through their source (match or common debit)",
+    );
+  }
+  return row;
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const admin = await requireAdmin();
+    const { id } = await params;
+    const body = poolEntryEditSchema.parse(await req.json());
+
+    const result = await withTransaction(async (client) => {
+      const entry = await loadManualEntry(client, id);
+      // Player-linked rows derive their ledger title from the player, so
+      // an empty message is fine there; every other kind titles from it.
+      const playerLinked =
+        entry.kind === "deposit" || entry.kind === "opening_due";
+      if (body.message === "" && !playerLinked) {
+        throw new ApiError(422, "MESSAGE_REQUIRED", "Message cannot be empty");
+      }
+      // An Other match's ground-fee debit is baked into its stored
+      // match_collection at completion — changing the amount afterwards
+      // would silently drift the pool by the difference (§3 reads the
+      // CURRENT amount only while the match's own flows run).
+      if (body.amount !== undefined && entry.kind === "plain_debit") {
+        const linked = await client.query(
+          `SELECT id FROM matches
+           WHERE other_fee_entry_id = $1 AND status = 'completed'`,
+          [id],
+        );
+        if (linked.rows[0]) {
+          throw new ApiError(
+            409,
+            "AUTO_ENTRY",
+            "This ground fee is settled inside its completed match — edit the match instead",
+          );
+        }
+      }
+      const isDebit =
+        entry.kind === "plain_debit" ||
+        entry.kind === "common_debit" ||
+        entry.kind === "opening_due";
+      const newAmount =
+        body.amount !== undefined
+          ? isDebit
+            ? -body.amount
+            : body.amount
+          : Number(entry.amount);
+
+      await client.query(
+        `UPDATE pool_entries
+         SET amount = $2,
+             message = COALESCE($3, message),
+             entry_date = COALESCE($4::date, entry_date),
+             updated_by = $5,
+             updated_at = NOW()
+         WHERE id = $1`,
+        [id, newAmount, body.message ?? null, body.entry_date ?? null, admin.id],
+      );
+
+      // Editing a common debit re-runs its split in the same transaction
+      // — against the entry's own team's current roster.
+      if (entry.kind === "common_debit") {
+        const playersRes = await client.query(
+          `SELECT id FROM players WHERE team_id = $1 AND is_active ORDER BY id`,
+          [entry.team_id],
+        );
+        const activePlayers = playersRes.rows as { id: string }[];
+        if (activePlayers.length === 0) {
+          throw new ApiError(422, "NO_PLAYERS", "No active players to split across");
+        }
+        const split = ceilSplit(Math.abs(newAmount), activePlayers.length);
+
+        await client.query(
+          `DELETE FROM expense_shares WHERE pool_entry_id = $1`,
+          [id],
+        );
+        for (const player of activePlayers) {
+          await client.query(
+            `INSERT INTO expense_shares (pool_entry_id, player_id, amount, team_id)
+             VALUES ($1, $2, $3, $4)`,
+            [id, player.id, split.share, entry.team_id],
+          );
+        }
+        return { id, share: split.share, players: split.players };
+      }
+      return { id };
+    });
+
+    return NextResponse.json({ success: true, data: result });
+  } catch (error) {
+    return handleRouteError("[pool/entries]", error);
+  }
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    await requireAdmin();
+    const { id } = await params;
+
+    await withTransaction(async (client) => {
+      await loadManualEntry(client, id);
+      // Common-debit deletes cascade their shares and recovery row via FKs.
+      await client.query(`DELETE FROM pool_entries WHERE id = $1`, [id]);
+    });
+
+    return NextResponse.json({ success: true, data: null });
+  } catch (error) {
+    return handleRouteError("[pool/entries]", error);
+  }
+}

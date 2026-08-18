@@ -1,0 +1,86 @@
+import { NextRequest, NextResponse } from "next/server";
+import { withTransaction } from "@/lib/db";
+import { requireSuperadmin } from "@/lib/session";
+import { getCurrentTeamId } from "@/lib/team";
+import { ApiError, handleRouteError } from "@/lib/validate";
+
+// Superadmin only — the vice-captain is a standing role for the
+// whole TEAM (not per match), purely a displayed title. Exactly
+// one per team, and never the same player as the captain.
+export async function POST(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    await requireSuperadmin();
+    const { id } = await params;
+
+    const result = await withTransaction(async (client) => {
+      const teamId = await getCurrentTeamId(client);
+      await client.query(
+        `UPDATE players SET is_vice_captain = FALSE
+         WHERE team_id = $1 AND is_vice_captain`,
+        [teamId],
+      );
+      const res = await client.query(
+        `UPDATE players SET is_vice_captain = TRUE
+         WHERE id = $1 AND team_id = $2 AND is_active AND NOT is_captain
+         RETURNING id, name`,
+        [id, teamId],
+      );
+      const row = res.rows[0];
+      if (!row) {
+        const probe = await client.query(
+          `SELECT is_captain FROM players WHERE id = $1 AND is_active`,
+          [id],
+        );
+        if (probe.rows[0]?.is_captain) {
+          throw new ApiError(
+            422,
+            "IS_CAPTAIN",
+            "The captain cannot also be vice-captain — transfer captaincy first",
+          );
+        }
+        throw new ApiError(
+          422,
+          "NOT_ACTIVE",
+          "Vice-captain must be an active player",
+        );
+      }
+      return row;
+    });
+
+    return NextResponse.json({ success: true, data: result });
+  } catch (error) {
+    return handleRouteError("[players/vice-captain]", error);
+  }
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    await requireSuperadmin();
+    const { id } = await params;
+
+    const res = await withTransaction((client) =>
+      client.query(
+        `UPDATE players SET is_vice_captain = FALSE
+         WHERE id = $1 AND is_vice_captain
+         RETURNING id, name`,
+        [id],
+      ),
+    );
+    if (res.rowCount === 0) {
+      throw new ApiError(
+        404,
+        "NOT_FOUND",
+        "This player is not the vice-captain",
+      );
+    }
+    return NextResponse.json({ success: true, data: res.rows[0] });
+  } catch (error) {
+    return handleRouteError("[players/vice-captain]", error);
+  }
+}
