@@ -1,6 +1,6 @@
-# Memory — Feature 2 tenancy schema built + own GitHub repo + nav v2
+# Memory — Feature 2 tenancy schema + own GitHub repo + nav/schedule v2
 
-Last updated: 2026-08-18 (session 5)
+Last updated: 2026-08-18 (session 5, end)
 
 ## What was built
 
@@ -36,24 +36,31 @@ Last updated: 2026-08-18 (session 5)
 3. **Own GitHub repo**: `ravk24/cricledger`, branch `main`, pushed (Phase 0 leftover done).
    `.gitignore` created (Next standard + `.env.local` + **`/Project Details/` and
    `/context/` are gitignored** — planning docs stay local only).
-4. **UI tweaks (committed 1092c3f, 03f5715)**: splash hold 1700→1500ms, icon shown whole
-   (removed `rounded-2xl` crop); tab bar now 4 tabs — Home, Schedule, **Tournaments**
-   (promoted from More), More; Matches + Ledger tiles moved into `/more` drawer
-   (More tab `also`-highlights /matches and /pool).
+4. **Nav/UI v2** (commits 1092c3f, 03f5715, c2fb316):
+   - Splash: hold 1500ms, icon shown whole (no `rounded-2xl` crop).
+   - Tab bar (`components/shared/TabBar.tsx`): **5 tabs — Home, Schedule, Tournaments,
+     Ledger (/pool), More**; Matches lives in the More drawer (`app/more/page.tsx`:
+     Matches + 3 calculators; Tournaments tile removed).
+   - Schedule flow: `/schedule` chooser → "Scheduled Matches" (Swords icon,
+     → `/schedule/upcoming`, new scheduled-only MatchCard list) + "Schedule a Match"
+     (→ `/schedule/new`, new chooser: "Home Matches" → `/slots`, "Away Matches" →
+     `/other-slots`). Page titles renamed: /slots = "Home Matches", /other-slots =
+     "Away Matches" (display only; DB `barne`/`other` values and routes unchanged).
 
 ## Decisions made
 
 - Tenancy spec decisions (full detail in `tenancy-schema.md`): admins get nullable team_id
   (NULL = platform); only `teams.is_sandbox` now — `payments`/`entitlements` DDL is
   Feature 3; dev data backfilled as team #1 `our-xi`; barne→home rename deferred to the
-  config-surface step; anon read model accepted interim (definer views + server-side team
-  filter; DB-level read isolation revisited Feature 4/7); team deletion = hard CASCADE
-  everywhere (sandbox purge = one DELETE; no archived status); booking ids exposed publicly
-  (heuristic dead).
+  config-surface step (schema); anon read model accepted interim (definer views +
+  server-side team filter; DB-level read isolation revisited Feature 4/7); team deletion =
+  hard CASCADE everywhere (sandbox purge = one DELETE); booking ids exposed publicly
+  (name heuristic dead).
 - **STANDING RULE (Ravi): never delete dev-DB test data during development** — data
   accumulates as the verification baseline; destructive checks only inside BEGIN…ROLLBACK;
   `db/clear-dev-data.sql` is reserved for the ONE pre-launch reset. (Also in persistent
   Claude memory + build-order.md rule 4 + the SQL file header.)
+- Home/Away is now the user-facing language for barne/other match provenance.
 - Migration files stay immutable; next migration number is **31**.
 
 ## Problems solved
@@ -64,28 +71,28 @@ Last updated: 2026-08-18 (session 5)
   (columns added at END); grants survive. No DROP VIEW needed anywhere.
 - Auto-generated FK names verified against pg_constraint before migration-28 — all were
   Postgres defaults (`<table>_<col>_fkey`).
-- `git commit` with nothing staged does nothing — `git add -A` first (initial commit).
 
 ## Current state
 
-- Repo `ravk24/cricledger` `main` = 496d11b…03f5715, tree clean, all pushed. Dev DB has
-  30 migrations applied; test data intact (12 players, 1 completed match w/ canonical
-  numbers fee 214 / surplus 8 / pool 1408, booking credit) — all E2E-verified post-tenancy.
+- Repo `ravk24/cricledger` `main` @ c2fb316 (496d11b first commit → splash → clear-dev
+  header → 4-tab nav → schedule flow v2 + 5-tab nav), tree clean, all pushed.
+- Dev DB: 30 migrations applied; test data intact (12 players, 1 completed match with
+  canonical fee 214 / surplus 8 / pool 1408, booking credit) — E2E-verified post-tenancy.
 - `npm test` 30/30, `npm run build` clean (benign `[auth/me]` prerender log persists).
-- Second-team smoke test passed (rolled back): dup names + second captain allowed across
-  teams, cross-team FK rejected (`pe_player_same_team`), team CASCADE delete clean.
-- Inherited `.github/workflows/db-backup.yml` is now live on GitHub and will fail nightly
+- `/schedule/upcoming` currently shows its empty state (no scheduled matches in dev data).
+- Inherited `.github/workflows/db-backup.yml` is live on GitHub and will fail nightly
   (no secrets configured) — harmless noise; disable in Actions tab or park until Feature 9.
-- Cookie is `cl_session`; a fresh admin login may still be needed (superadmin `ravi_kant`).
+- Cookie is `cl_session`; superadmin username `ravi_kant` (password with Ravi only).
 
 ## Next session starts with
 
 **Feature 2 continues — config-surface step** (roadmap Phase 2): `getTeamConfig` /
 `getCurrentTeam` consuming `teams_public` + `team_grounds_public` + `team_slots_public`
-in the UI (grounds list, slot calendar, car rate as engine parameter, copy/team-name
-sites from `constants-inventory.md`), then barne→home/other→away rename (migration 31,
-separate), then `/[team]/` routing (Phase 3). Alternatively Feature 1 extras (share card,
-export) if preferred.
+in the UI (grounds list, slot calendar from DB instead of `lib/grounds.ts` /
+`lib/groundSlots.ts`, car rate as engine parameter, copy/team-name sites from
+`constants-inventory.md`), then barne→home/other→away schema rename (migration 31,
+separate), then `/[team]/` routing (Phase 3). Alternatively Feature 1 extras (match-sheet
+share card, ledger export) if preferred.
 
 ## Open questions
 
