@@ -227,7 +227,7 @@ export function OtherScheduleWizard({
                 <span className="font-semibold">Note:</span> The opponent is
                 supposed to transfer Fee to{" "}
                 {captainName ? `${captainName} (c)` : "the captain"}. Enter
-                only our team's fee contribution.
+                only our team&apos;s fee contribution.
               </p>
               <button
                 type="button"
