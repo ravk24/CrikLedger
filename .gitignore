@@ -27,6 +27,7 @@ yarn-error.log*
 # local planning docs & inherited context — not part of the app source
 /Project Details/
 /context/
+/CrikLedger-docs/
 
 # vercel
 .vercel
