@@ -1,28 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { buildTabs, GUEST_NAV, type NavState } from "./nav";
+import { buildTabs } from "./nav";
 
-// Tab ORDER is the one thing entitlement changes, and it is the kind of
-// thing that silently regresses: the static prerender shell in
-// AppTabBarGate hardcodes the visitor order, and nothing else in the app
-// asserts either arrangement.
+// Nothing else in the app asserts tab order, and two things quietly
+// depend on it: the static prerender shell in AppTabBarGate hardcodes
+// the same five tabs in the same order, and Home at slot 0 is what the
+// manifest start_url and every bookmark land on.
+//
+// Ordering the tabs by entitlement was tried and reverted, so the order
+// being state-independent is the property worth pinning.
 
-const LEDGER_HOLDER: NavState = { ...GUEST_NAV, signedIn: true, hasTeamLedger: true };
-
-const slots = (nav: NavState) => buildTabs(nav).map((t) => t.slot);
-
-describe("tab order", () => {
-  it("leads with Schedule for a visitor without a Ledger", () => {
-    expect(slots(GUEST_NAV)).toEqual([
-      "schedule",
-      "primary",
-      "tournament",
-      "ledger",
-      "more",
-    ]);
-  });
-
-  it("leads with Home for a Ledger holder", () => {
-    expect(slots(LEDGER_HOLDER)).toEqual([
+describe("tab bar", () => {
+  it("is Home, Schedule, Tournament, Ledger, More — for everyone", () => {
+    expect(buildTabs().map((t) => t.slot)).toEqual([
       "primary",
       "schedule",
       "tournament",
@@ -31,17 +20,12 @@ describe("tab order", () => {
     ]);
   });
 
-  it("changes nothing but the order — same hrefs, labels and icons", () => {
-    const byslot = (nav: NavState) =>
-      Object.fromEntries(
-        buildTabs(nav).map((t) => [t.slot, `${t.label}|${t.href}|${t.icon}`]),
-      );
-    expect(byslot(GUEST_NAV)).toEqual(byslot(LEDGER_HOLDER));
+  it("opens on Home at /, matched exactly", () => {
+    const [first] = buildTabs();
+    expect(first).toMatchObject({ label: "Home", href: "/", exact: true });
   });
 
-  it("keeps every tab navigable in both states", () => {
-    for (const nav of [GUEST_NAV, LEDGER_HOLDER]) {
-      expect(buildTabs(nav).every((t) => t.href !== null)).toBe(true);
-    }
+  it("keeps every tab navigable", () => {
+    expect(buildTabs().every((t) => t.href !== null)).toBe(true);
   });
 });
