@@ -2,8 +2,7 @@
 
 Last updated: 2026-08-20 (session 8, end)
 
-Remote is **`ravk24/crikledger-old-repo`** (this repo; the *newer* CrikLedger repo is a
-separate, unrelated project). `main` @ `e67af4a`, pushed, tree clean. Five commits this
+Remote is **`ravk24/CrikLedger`** (renamed from `crikledger-old-repo` on 2026-08-20). `main` @ `e67af4a`, pushed, tree clean. Five commits this
 session:
 
 | commit | |
