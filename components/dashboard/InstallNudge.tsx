@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { X } from "lucide-react";
 
 const LEGACY_DISMISS_KEY = "cl-install-nudge-dismissed"; // v0 flag, cleared
@@ -12,8 +13,10 @@ type BeforeInstallPromptEvent = Event & {
 
 // PWA install nudge (PWA tasks doc, Task 5). Visible on every visit
 // until the app is installed (standalone); dismissing hides it for the
-// current session only. iOS has no prompt API — static instructions;
-// same fallback when Chrome hasn't offered beforeinstallprompt.
+// current session only. iOS has no prompt API, so it gets a link to the
+// illustrated walkthrough at /install — same fallback when Chrome hasn't
+// offered beforeinstallprompt. A one-line hint used to sit here instead;
+// it told you the answer but had nowhere to send you when it was wrong.
 export function InstallNudge() {
   const [show, setShow] = useState(false);
   const [installEvent, setInstallEvent] =
@@ -78,8 +81,14 @@ export function InstallNudge() {
         ) : (
           <p className="text-xs text-text-secondary">
             {isIos
-              ? "Share → Add to Home Screen"
-              : "Browser menu (⋮) → Add to Home screen"}
+              ? "Share → Add to Home Screen · "
+              : "Browser menu (⋮) → Add to Home screen · "}
+            <Link
+              href="/install"
+              className="font-medium text-accent underline underline-offset-2"
+            >
+              Show me
+            </Link>
           </p>
         )}
       </div>

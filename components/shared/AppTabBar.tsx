@@ -7,7 +7,6 @@ import {
   Home,
   LayoutGrid,
   Trophy,
-  Users,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -20,7 +19,6 @@ import type { IconKey, TabSpec } from "@/lib/nav";
 // runtime, and it is the easiest mistake to make in this file.
 const ICONS: Record<IconKey, LucideIcon> = {
   home: Home,
-  users: Users,
   calendar: CalendarDays,
   trophy: Trophy,
   wallet: Wallet,
@@ -45,9 +43,9 @@ export function AppTabBar({ tabs }: { tabs: TabSpec[] }) {
           if (!tab.href) {
             return (
               <div
-                // Keyed by SLOT, not label or href: the label is the part
-                // that mutates ("Teams" becomes "Home" on purchase), so
-                // it is the slot that is stable across states.
+                // Keyed by SLOT, not label or href: the slot is the
+                // stable identity of a position in the bar, and a label
+                // or href is free to change with entitlement.
                 key={tab.slot}
                 aria-disabled="true"
                 className={cn(className, "text-text-muted opacity-50")}

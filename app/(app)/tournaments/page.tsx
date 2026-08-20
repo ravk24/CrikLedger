@@ -51,7 +51,8 @@ async function TournamentDirectory({ hosted }: { hosted: boolean }) {
           </h2>
           <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
             {all.map((t) => (
-              // Plain text, not a control — see TeamsDirectory.
+              // Plain text, not a control: there is nothing to disable,
+              // so no aria-disabled and no <Link>.
               <li
                 key={t.id}
                 className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-text-muted opacity-60"

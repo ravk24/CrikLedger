@@ -1,19 +1,14 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import {
-  CalendarDays,
-  LayoutGrid,
-  Trophy,
-  Users,
-  Wallet,
-} from "lucide-react";
-import { buildTabs, getNavState } from "@/lib/nav";
+import { CalendarDays, Home, LayoutGrid, Trophy, Wallet } from "lucide-react";
+import { buildTabs } from "@/lib/nav";
 import { AppTabBar } from "./AppTabBar";
 
-async function Gate() {
-  // getNavState() reads cookies — it only ever runs inside the Suspense
-  // boundary below, never in the layout body.
-  return <AppTabBar tabs={buildTabs(await getNavState())} />;
+function Gate() {
+  // No session read any more — the tab set is the same for everyone.
+  // The boundary below is still required: AppTabBar calls usePathname(),
+  // which is runtime data under Cache Components.
+  return <AppTabBar tabs={buildTabs()} />;
 }
 
 // Static placeholder for the prerendered shell — same five slots, same
@@ -21,13 +16,12 @@ async function Gate() {
 // Components, so the real bar (which needs it for the active state)
 // cannot appear in the static shell at all.
 //
-// Every href here is state-independent, so all five can be real links:
-// the signed-out tab set is what an uncached first paint is, and the
-// only thing that changes when the stream lands is slot 0's label
-// ("Teams" -> "Home" for a Ledger purchaser). Same box, no width jump.
+// Every href here is state-independent, so all five can be real links,
+// and the labels no longer move either: this shell is now identical to
+// the streamed bar in every state except the active-tab highlight.
 function AppTabBarShell() {
   const tabs = [
-    { label: "Teams", icon: Users, href: "/" },
+    { label: "Home", icon: Home, href: "/" },
     { label: "Schedule", icon: CalendarDays, href: "/schedule" },
     { label: "Tournament", icon: Trophy, href: "/tournaments" },
     { label: "Ledger", icon: Wallet, href: "/pool" },

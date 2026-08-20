@@ -3,19 +3,20 @@ import { PoolSummaryCard } from "@/components/dashboard/PoolSummaryCard";
 import { PlayerGrid } from "@/components/dashboard/PlayerGrid";
 import { InstallNudge } from "@/components/dashboard/InstallNudge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TeamsDirectory } from "@/components/teams/TeamsDirectory";
+import { HomeIntro } from "@/components/install/HomeIntro";
 import { getNavState } from "@/lib/nav";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getCurrentTeam } from "@/lib/team";
 import type { PlayerPublic } from "@/types";
 
-// Slot 0 of the tab bar. Same href for everyone; what it RENDERS is
-// what changes on purchase — "Teams" for a visitor, "Home" (this team's
-// dashboard) for a Ledger holder. Keeping the href stable is why no
-// bookmark or manifest start_url ever breaks.
+// Slot 0 of the tab bar. Same href and same "Home" label for everyone;
+// what it RENDERS is what changes on purchase — the welcome-and-install
+// page for a visitor, this team's dashboard for a Ledger holder.
+// Keeping the href stable is why no bookmark or manifest start_url ever
+// breaks.
 async function HomeData() {
   const nav = await getNavState();
-  if (!nav.hasTeamLedger) return <TeamsDirectory nav={nav} />;
+  if (!nav.hasTeamLedger) return <HomeIntro nav={nav} />;
   return <DashboardData />;
 }
 

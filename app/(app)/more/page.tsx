@@ -7,6 +7,7 @@ import {
   Info,
   Receipt,
   ShoppingBag,
+  Smartphone,
   Swords,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,6 +27,15 @@ type Feature = {
 // the two calculators are pure and work for everyone.
 function buildFeatures(nav: NavState): Feature[] {
   return [
+    // Public and entitlement-free: the app is a PWA and anyone can put it
+    // on their home screen. Home shows the same guide, but only to
+    // visitors without a Ledger — this tile is how everyone else finds it.
+    {
+      label: "Install app",
+      href: "/install",
+      icon: Smartphone,
+      iconClass: "bg-accent-light text-accent",
+    },
     {
       label: "Matches",
       href: nav.hasTeamLedger ? "/matches" : null,

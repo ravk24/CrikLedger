@@ -13,7 +13,7 @@ export type TabSlot = "primary" | "schedule" | "tournament" | "ledger" | "more";
 // component reference is not serializable, and passing one from the
 // server gate to the client bar fails at runtime — the client component
 // owns the key -> component map.
-export type IconKey = "home" | "users" | "calendar" | "trophy" | "wallet" | "grid";
+export type IconKey = "home" | "calendar" | "trophy" | "wallet" | "grid";
 
 export type TabSpec = {
   slot: TabSlot;
@@ -88,6 +88,7 @@ const MORE_ALSO = [
   "/disclaimer",
   "/pricing",
   "/purchases",
+  "/install",
 ];
 
 /**
@@ -95,22 +96,20 @@ const MORE_ALSO = [
  * unavailable tab keeps its slot and renders greyed and inert
  * (href: null), which is the app-wide disabled-not-hidden rule.
  *
- * "Teams becomes Home" is the SAME slot at the SAME href: only the label
- * and icon change. Keeping the href stable is what lets the static
- * fallback shell render slot 0 as a real link, and means no bookmark or
- * manifest start_url ever breaks.
+ * Slot 0 is always Home at "/". What it RENDERS changes on purchase (the
+ * team dashboard for a Ledger holder, the welcome/install page for
+ * everyone else) but the label, icon and href do not. Keeping the href
+ * stable is what lets the static fallback shell render slot 0 as a real
+ * link, and means no bookmark or manifest start_url ever breaks.
+ *
+ * Takes no NavState: every slot is the same for everyone now that slot 0
+ * stopped swapping label on entitlement. Give it the state back the day
+ * a tab has to grey out — the rule and the TabSpec.href: null path are
+ * both still here for it.
  */
-export function buildTabs(s: NavState): TabSpec[] {
+export function buildTabs(): TabSpec[] {
   return [
-    s.hasTeamLedger
-      ? { slot: "primary", label: "Home", href: "/", icon: "home", exact: true }
-      : {
-          slot: "primary",
-          label: "Teams",
-          href: "/",
-          icon: "users",
-          exact: true,
-        },
+    { slot: "primary", label: "Home", href: "/", icon: "home", exact: true },
     {
       slot: "schedule",
       label: "Schedule",
