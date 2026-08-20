@@ -18,9 +18,10 @@ export default function Contact() {
         <dd>
           <a href="mailto:crikledger@gmail.com">crikledger@gmail.com</a>
         </dd>
-        <dt>Phone</dt>
+        <dt>Call / WhatsApp</dt>
         <dd>
-          <a href="tel:+919142349007">+91 9142349007</a>
+          <a href="tel:+919142349007">+91 9142349007</a> ·{" "}
+          <a href="https://wa.me/919142349007">Message on WhatsApp</a>
         </dd>
       </dl>
       <p>

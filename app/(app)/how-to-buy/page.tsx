@@ -46,10 +46,11 @@ export default function HowToBuy() {
       <h2>Step 2 — Contact us</h2>
       <p>
         Get in touch for the current payment instructions. Email{" "}
-        <a href="mailto:crikledger@gmail.com">crikledger@gmail.com</a> or call{" "}
-        <a href="tel:+919142349007">+91 9142349007</a>. For purchase and payment
-        requests we recommend email, so that the communication is properly
-        recorded.
+        <a href="mailto:crikledger@gmail.com">crikledger@gmail.com</a>,{" "}
+        <a href="tel:+919142349007">call +91 9142349007</a>, or{" "}
+        <a href="https://wa.me/919142349007">message us on WhatsApp</a>. For
+        purchase and payment requests we recommend email, so that the
+        communication is properly recorded.
       </p>
 
       <h2>Step 3 — Make the payment</h2>
@@ -102,7 +103,8 @@ export default function HowToBuy() {
       <h2>Need help?</h2>
       <p>
         Email <a href="mailto:crikledger@gmail.com">crikledger@gmail.com</a> ·
-        Phone <a href="tel:+919142349007">+91 9142349007</a>
+        Call <a href="tel:+919142349007">+91 9142349007</a> ·{" "}
+        <a href="https://wa.me/919142349007">WhatsApp</a>
         <br />
         Support hours: Monday–Saturday, 10:00 AM–7:00 PM IST.
       </p>

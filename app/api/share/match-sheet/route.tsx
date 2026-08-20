@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 import { z } from "zod";
+import { SITE_HOST } from "@/lib/site";
 
 // Renders a match sheet as a PNG for the share sheet / WhatsApp.
 //
@@ -170,6 +171,19 @@ export async function POST(req: NextRequest) {
           {data.otherFee > 0 ? ` · Other ₹${rupees(data.otherFee)}` : ""} ·
           Total ₹{rupees(data.totalCost)}
           {data.surplus > 0 ? ` · Surplus ₹${rupees(data.surplus)}` : ""}
+        </div>
+
+        {/* The image gets forwarded far past the team group — this is how
+            someone who receives it can find the app. */}
+        <div
+          style={{
+            display: "flex",
+            marginTop: 16,
+            fontSize: 26,
+            color: "#38bdf8",
+          }}
+        >
+          {SITE_HOST}
         </div>
       </div>
     ),

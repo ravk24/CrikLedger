@@ -65,7 +65,14 @@ export default function Pricing() {
             href="tel:+919142349007"
             className="font-medium text-accent underline underline-offset-2"
           >
-            +91 9142349007
+            Call +91 9142349007
+          </a>{" "}
+          ·{" "}
+          <a
+            href="https://wa.me/919142349007"
+            className="font-medium text-accent underline underline-offset-2"
+          >
+            WhatsApp
           </a>
         </p>
         <p className="text-xs text-text-muted">
