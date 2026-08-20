@@ -8,13 +8,14 @@ import {
   RotateCcw,
   Scale,
   Shield,
+  ShoppingCart,
   Truck,
 } from "lucide-react";
 
-// The About us card from the More drawer: the hub for every compliance
-// document Razorpay requires (terms, privacy, shipping, contact,
-// cancellation/refunds) plus pricing. Fully static — no session, no
-// cookies — so a reviewer or crawler can read all of it signed out.
+// The About us card from the More drawer: the hub for every policy
+// document (terms, privacy, shipping, contact, cancellation/refunds) plus
+// pricing and the buying instructions. Fully static — no session, no
+// cookies — so a crawler or a signed-out visitor can read all of it.
 const LINKS = [
   { href: "/about", label: "About", icon: Info },
   { href: "/contact", label: "Contact us", icon: Mail },
@@ -28,6 +29,7 @@ const LINKS = [
   { href: "/shipping-policy", label: "Shipping & delivery", icon: Truck },
   { href: "/disclaimer", label: "Disclaimer", icon: FileText },
   { href: "/pricing", label: "Pricing", icon: Receipt },
+  { href: "/how-to-buy", label: "How to purchase", icon: ShoppingCart },
 ];
 
 export default function AboutUs() {

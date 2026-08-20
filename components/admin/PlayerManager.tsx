@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { AlertCircle } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
@@ -95,7 +94,6 @@ export function PlayerManager({ players }: Props) {
       );
       return;
     }
-    posthog.capture(sheet.mode === "add" ? "player_created" : "player_updated");
     setSheet({ mode: "closed" });
     router.refresh();
   }
@@ -113,7 +111,6 @@ export function PlayerManager({ players }: Props) {
       );
       return;
     }
-    posthog.capture("player_deactivated");
     setBlocker(null);
     router.refresh();
   }
@@ -126,7 +123,6 @@ export function PlayerManager({ players }: Props) {
       setBlocker(result.error?.message ?? "Could not reactivate — try again.");
       return;
     }
-    posthog.capture("player_reactivated");
     setBlocker(null);
     router.refresh();
   }

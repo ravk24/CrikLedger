@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { ceilSplit } from "@/engine/split";
@@ -61,10 +60,6 @@ export function TournamentExpenseSheet({
         setError(body.error?.message ?? "Could not save — try again.");
         return;
       }
-      posthog.capture("tournament_expense_added", {
-        amount: value,
-        active_player_count: activePlayerCount,
-      });
       onOpenChange(false);
       setAmount("");
       setMessage("");

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 
@@ -60,7 +59,6 @@ export function TournamentDepositSheet({
         setError(body.error?.message ?? "Could not save — try again.");
         return;
       }
-      posthog.capture("tournament_deposit_added", { amount: value });
       onOpenChange(false);
       setPlayerId("");
       setAmount("");

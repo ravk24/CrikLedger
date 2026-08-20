@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { StepResult } from "@/components/wizard/StepResult";
@@ -48,7 +47,6 @@ type Props = {
   hasGuests?: boolean; // false drops the Guests step (tournaments: no guests)
   hasCosts?: boolean; // false drops the Costs step (participation-fee model)
   hasPreview?: boolean; // false drops the Fee preview; Cars submits directly
-  eventPrefix?: string; // posthog `${prefix}_result_submitted` etc.
   fundLabel?: string; // "pool" (SG) or "fund" (tournaments) in success copy
 };
 
@@ -103,7 +101,6 @@ export function MatchWizard({
   hasGuests = true,
   hasCosts = true,
   hasPreview = true,
-  eventPrefix = "match",
   fundLabel = "pool",
 }: Props) {
   const router = useRouter();
@@ -235,7 +232,6 @@ export function MatchWizard({
         setError(body.error?.message ?? "Could not abandon the match.");
         return;
       }
-      posthog.capture(`${eventPrefix}_abandoned`);
       const feeReverted = Number(body.data?.fee_reverted ?? 0);
       setSuccess(
         feeReverted > 0
@@ -279,12 +275,6 @@ export function MatchWizard({
       }
       if (!hasPreview) {
         // Attendance-only completion — no money copy.
-        posthog.capture(
-          mode === "edit"
-            ? `${eventPrefix}_updated`
-            : `${eventPrefix}_result_submitted`,
-          { result, attendee_count: selected.size },
-        );
         setSuccess(
           `Match recorded — ${selected.size} ${selected.size === 1 ? "player" : "players"}.`,
         );
@@ -293,20 +283,6 @@ export function MatchWizard({
       }
       const collected = Number(body.data.collected);
       const surplus = Number(body.data.surplus ?? collected - cashCosts);
-      posthog.capture(
-        mode === "edit"
-          ? `${eventPrefix}_updated`
-          : `${eventPrefix}_result_submitted`,
-        {
-          result,
-          attendee_count: selected.size,
-          guest_count: guests.length,
-          total_cost: totals?.total_cost ?? cashCosts, // engine Total (§3), not just cash
-          collected_amount: collected,
-          surplus_amount: surplus,
-          car_fee_ignored: ignoreAllowance,
-        },
-      );
       const guestFee = Number(body.data.guestFee ?? 0);
       const captainName = body.data.captainName as string | null;
       // Other matches recoup the pool-fronted ground fee on top of the

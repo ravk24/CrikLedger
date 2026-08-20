@@ -5,7 +5,7 @@ export const metadata = { title: "Terms & conditions · CrikLedger" };
 // Static by design — see components/legal/PolicyPage.
 export default function Terms() {
   return (
-    <PolicyPage title="Terms & conditions" updated="18 August 2026">
+    <PolicyPage title="Terms & conditions" updated="20 August 2026">
       <p>
         These Terms &amp; Conditions govern your use of CrikLedger and your
         purchase of its digital software features.
@@ -61,11 +61,16 @@ export default function Terms() {
 
       <h2>5. Payments</h2>
       <p>
-        Payments for CrikLedger features are processed through Razorpay. A
-        purchased feature is activated after CrikLedger receives confirmation of
-        successful payment. CrikLedger does not store payment-instrument
-        credentials such as card numbers, CVV, UPI credentials, or bank
-        credentials.
+        Payments for CrikLedger features are currently handled through a{" "}
+        <a href="/how-to-buy">manual payment process</a>. CrikLedger provides
+        payment instructions to customers. Customers make payment directly using
+        the payment method specified by CrikLedger and then provide payment
+        confirmation as requested. After the payment is verified, CrikLedger
+        activates the purchased feature for the customer&apos;s account.
+      </p>
+      <p>
+        CrikLedger does not store payment-instrument credentials such as card
+        numbers, CVV, UPI credentials, or bank credentials.
       </p>
 
       <h2>6. Player-to-player payments</h2>

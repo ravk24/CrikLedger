@@ -5,7 +5,7 @@ export const metadata = { title: "About · CrikLedger" };
 // Static by design — see components/legal/PolicyPage.
 export default function About() {
   return (
-    <PolicyPage title="About CrikLedger" updated="18 August 2026">
+    <PolicyPage title="About CrikLedger" updated="20 August 2026">
       <p>
         CrikLedger is a mobile-first software application designed for amateur
         cricket teams to manage team expenses, player contributions, and

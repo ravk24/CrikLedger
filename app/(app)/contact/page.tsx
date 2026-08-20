@@ -5,7 +5,7 @@ export const metadata = { title: "Contact us · CrikLedger" };
 // Static by design — see components/legal/PolicyPage.
 export default function Contact() {
   return (
-    <PolicyPage title="Contact us" updated="18 August 2026">
+    <PolicyPage title="Contact us" updated="20 August 2026">
       <p>
         If you have a question about CrikLedger, need help with a feature, have
         identified an error, or need assistance with a purchase or refund,
@@ -26,17 +26,6 @@ export default function Contact() {
       <p>
         For refund requests, account-related requests, or other matters where a
         record of communication is useful, we recommend contacting us by email.
-      </p>
-
-      <h2>Business / operating address</h2>
-      <p>
-        Ravi Kant
-        <br />
-        C-1706, R7, Kolte-Patil Life Republic
-        <br />
-        Marunji, Pune – 411057
-        <br />
-        India
       </p>
 
       <h2>Support hours</h2>

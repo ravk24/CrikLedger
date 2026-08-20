@@ -11,7 +11,7 @@ async function StubData() {
       <h1 className="text-xl font-bold text-text-primary">Payments</h1>
       <section className="rounded-lg border border-dashed border-border bg-surface p-6 text-center">
       <p className="text-sm font-semibold text-text-primary">Owned by Feature 5</p>
-      <p className="mt-1 text-sm text-text-secondary">Payment records, statuses and refund lookups arrive with the Razorpay integration.</p>
+      <p className="mt-1 text-sm text-text-secondary">Payment records, statuses and refund lookups arrive with the manual-payment records feature.</p>
       </section>
     </>
   );

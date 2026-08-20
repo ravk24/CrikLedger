@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { cn } from "@/lib/utils";
@@ -107,10 +106,6 @@ export function CreditSheet({
         setError(body.error?.message ?? "Could not save — try again.");
         return;
       }
-      posthog.capture("pool_credit_added", {
-        credit_kind: kind,
-        slot_count: kind === "ground_booking" ? slotCount : undefined,
-      });
       onOpenChange(false);
       resetForm();
       router.refresh();

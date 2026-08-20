@@ -3,11 +3,11 @@ import { PolicyPage } from "@/components/legal/PolicyPage";
 export const metadata = { title: "Cancellation & refund policy · CrikLedger" };
 
 // Static by design — see components/legal/PolicyPage.
-// Route stays /refund-policy; the title is the fuller name Razorpay asks
-// for ("Cancellation/Refunds").
+// Route stays /refund-policy; the title is the fuller legal name, because
+// the document covers cancellation as well as refunds.
 export default function RefundPolicy() {
   return (
-    <PolicyPage title="Cancellation & refund policy" updated="18 August 2026">
+    <PolicyPage title="Cancellation & refund policy" updated="20 August 2026">
       <p>
         CrikLedger provides digital software features through one-time
         purchases. There are no recurring subscriptions or automatic
@@ -55,13 +55,10 @@ export default function RefundPolicy() {
       <h2>Refund processing</h2>
       <p>
         Once a refund request is received, we review it and confirm whether it
-        falls within the 30-day refund period. If approved, the refund is
-        initiated through the payment system used for the original transaction.
-      </p>
-      <p>
-        Razorpay processes refunds on behalf of merchants through its payment
-        infrastructure. The time for the refunded amount to appear in your
-        account depends on the payment method and your bank.
+        falls within the 30-day refund period. If approved, we process the
+        refund using the appropriate method associated with the original
+        payment. The time for the refunded amount to appear in your account
+        depends on that method and on your bank.
       </p>
 
       <h2>Duplicate payments</h2>

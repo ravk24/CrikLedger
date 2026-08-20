@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { Award } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { ViceCaptainMark } from "@/components/shared/ViceCaptainMark";
@@ -47,11 +46,6 @@ export function TournamentViceCaptainTile({
         setError(body.error?.message ?? "Could not update the vice-captain.");
         return;
       }
-      posthog.capture(
-        method === "POST"
-          ? "tournament_vice_captain_set"
-          : "tournament_vice_captain_cleared",
-      );
       setOpen(false);
       router.refresh();
     } catch {

@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
-// Shared frame for the Razorpay compliance pages.
+// Shared frame for the policy and compliance pages.
 //
-// These must stay 100% STATIC — no session reads, no cookies. Razorpay's
-// reviewer and search crawlers fetch them directly, and a dynamic read
-// out here would both slow them down and fail the build under
+// These must stay 100% STATIC — no session reads, no cookies. Search
+// crawlers and signed-out visitors fetch them directly, and a dynamic
+// read out here would both slow them down and fail the build under
 // cacheComponents. If you ever want a "Signed in as…" line on one of
 // these, that is the moment it breaks.
 //

@@ -120,8 +120,9 @@ export const createAdminSchema = z.object({
 });
 
 // Self-serve signup: user id + password + email. Email is stored as the
-// recovery channel and Razorpay receipt target; nothing sends to it yet,
-// so recovery is a megaadmin-initiated reset from the operator console.
+// recovery channel and purchase-correspondence address; nothing sends to
+// it yet, so recovery is a megaadmin-initiated reset from the operator
+// console.
 export const signupSchema = z.object({
   username: usernameField,
   password: z.string().min(8).max(200),

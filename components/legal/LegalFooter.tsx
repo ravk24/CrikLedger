@@ -17,6 +17,7 @@ const LINKS = [
   { href: "/refund-policy", label: "Refunds" },
   { href: "/shipping-policy", label: "Delivery" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/how-to-buy", label: "How to buy" },
   { href: "/contact", label: "Contact" },
 ];
 

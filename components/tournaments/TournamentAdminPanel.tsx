@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import {
   CalendarPlus,
   FileText,
@@ -114,7 +113,6 @@ export function TournamentAdminPanel({
           end_date: endDate || null,
         }),
       });
-      posthog.capture("tournament_details_updated");
       setDetailsSaved(true);
       router.refresh();
     } catch (e) {
@@ -137,7 +135,6 @@ export function TournamentAdminPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newName.trim() }),
       });
-      posthog.capture("tournament_player_added");
       setNewName("");
       router.refresh();
     } catch (e) {
@@ -156,7 +153,6 @@ export function TournamentAdminPanel({
         `/api/tournaments/${tournament.id}/players/${removing.id}`,
         { method: "DELETE" },
       );
-      posthog.capture("tournament_player_removed");
       setRemoving(null);
       router.refresh();
     } catch (e) {
@@ -178,7 +174,6 @@ export function TournamentAdminPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: readOnly ? "active" : "completed" }),
       });
-      posthog.capture(readOnly ? "tournament_reopened" : "tournament_completed");
       setConfirmStatus(false);
       router.refresh();
     } catch (e) {
@@ -195,7 +190,6 @@ export function TournamentAdminPanel({
     setPending(true);
     try {
       await callApi(`/api/tournaments/${tournament.id}`, { method: "DELETE" });
-      posthog.capture("tournament_deleted");
       router.push("/tournaments");
       router.refresh();
     } catch (e) {

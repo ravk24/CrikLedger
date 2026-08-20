@@ -4,17 +4,22 @@ export const metadata = { title: "Privacy policy · CrikLedger" };
 
 // Static by design — see components/legal/PolicyPage.
 //
-// Two claims from the source draft were deliberately NOT published here,
-// because they are not true of the software today and a policy page is a
-// promise:
+// Two claims from the source draft are STILL deliberately not published
+// here — they remain in Project Details/cric_ledger/03-privacy-policy.md,
+// so re-syncing from that doc must not pull them in. They are not true of
+// the software today, and a policy page is a promise:
 //   - "you can delete your account from within the application" — there is
 //     no delete-account route or UI; the email path below is the real one.
 //   - "the database is backed up automatically every day at ~3:00 AM" — the
 //     nightly workflow has never run (see memory.md open items). The
 //     security list below states only what is demonstrably true.
+//
+// The "no third-party analytics" claim below IS true: posthog-js was
+// removed from the app when Razorpay was dropped. Re-adding any analytics
+// SDK means rewriting that section in the same commit.
 export default function Privacy() {
   return (
-    <PolicyPage title="Privacy policy" updated="18 August 2026">
+    <PolicyPage title="Privacy policy" updated="20 August 2026">
       <p>
         This Privacy Policy explains how CrikLedger collects, uses, stores, and
         protects information when you use the CrikLedger application and
@@ -64,14 +69,16 @@ export default function Privacy() {
         <li>Other payment-instrument credentials</li>
       </ul>
       <p>
-        Payments for CrikLedger features are processed through{" "}
-        <strong>Razorpay</strong>, according to its own terms and privacy
-        policy. CrikLedger receives the information necessary to confirm the
-        purchase and provide the purchased feature.
+        CrikLedger does not currently use an online payment gateway. Paid
+        feature purchases are handled through a{" "}
+        <a href="/how-to-buy">manual payment process</a>: CrikLedger provides
+        payment instructions, you pay directly using the method provided, and
+        you send us confirmation of the payment. CrikLedger has no access to
+        your payment-instrument credentials at any point.
       </p>
       <p>
-        Payment receipts are issued by Razorpay following a successful payment.
-        CrikLedger does not send email.
+        We keep the payment confirmation you send us, and the account email it
+        relates to, as the record of your purchase.
       </p>
 
       <h2>Why we use your information</h2>
@@ -85,26 +92,20 @@ export default function Privacy() {
         <li>Investigate reported technical problems</li>
         <li>Detect misuse, fraud, or attempts to compromise the application</li>
         <li>Maintain the security and reliability of the service</li>
-        <li>Improve CrikLedger and understand how its features are used</li>
       </ul>
 
       <h2>Analytics</h2>
       <p>
-        CrikLedger uses <strong>PostHog</strong> for product analytics. Analytics
-        information may be associated with your CrikLedger user ID and the name
-        associated with your account, and is used to understand product usage,
-        identify problems, and improve the application. CrikLedger does not use
-        PostHog to store payment credentials.
+        <strong>
+          CrikLedger does not use third-party product analytics or user-tracking
+          services.
+        </strong>{" "}
+        There is no PostHog, Google Analytics, or comparable analytics platform
+        in the application.
       </p>
 
       <h2>Service providers</h2>
       <ul>
-        <li>
-          <strong>Razorpay</strong> — payment processing
-        </li>
-        <li>
-          <strong>PostHog</strong> — product analytics
-        </li>
         <li>
           <strong>Vercel</strong> — application hosting
         </li>

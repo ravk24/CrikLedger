@@ -5,7 +5,7 @@ export const metadata = { title: "Disclaimer · CrikLedger" };
 // Static by design — see components/legal/PolicyPage.
 export default function Disclaimer() {
   return (
-    <PolicyPage title="Disclaimer" updated="18 August 2026">
+    <PolicyPage title="Disclaimer" updated="20 August 2026">
       <p>
         CrikLedger is a software application designed to help amateur cricket
         teams record and calculate team expenses, player contributions, and

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { LedgerRow } from "@/components/shared/LedgerRow";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
@@ -59,7 +58,6 @@ export function TournamentLedgerSection({ tournamentId, entries }: Props) {
         setError(body.error?.message ?? "Could not save — try again.");
         return;
       }
-      posthog.capture("tournament_entry_updated", { entry_kind: editing.kind });
       setEditing(null);
       router.refresh();
     } catch {
@@ -82,7 +80,6 @@ export function TournamentLedgerSection({ tournamentId, entries }: Props) {
         setError(body.error?.message ?? "Could not delete — try again.");
         return;
       }
-      posthog.capture("tournament_entry_deleted", { entry_kind: editing.kind });
       setConfirmDelete(false);
       setEditing(null);
       router.refresh();

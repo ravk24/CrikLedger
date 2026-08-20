@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import posthog from "posthog-js";
 import { Check, ChevronDown, Shield } from "lucide-react";
 import {
   DropdownMenu,
@@ -43,7 +42,6 @@ export function AccountMenu({ nav }: { nav: NavState }) {
     setBusy(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
-      posthog.reset();
       router.push("/");
       router.refresh();
     } finally {

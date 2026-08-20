@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { Crown } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { CaptainMark } from "@/components/shared/CaptainMark";
@@ -49,9 +48,6 @@ export function TournamentCaptainTile({
         setError(body.error?.message ?? "Could not update the captain.");
         return;
       }
-      posthog.capture(
-        method === "POST" ? "tournament_captain_set" : "tournament_captain_cleared",
-      );
       setOpen(false);
       router.refresh();
     } catch {

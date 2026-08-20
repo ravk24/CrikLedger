@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { Check } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
@@ -114,10 +113,6 @@ export function OtherScheduleWizard({
         setError(body.error?.message ?? "Could not schedule — try again.");
         return;
       }
-      posthog.capture("other_match_scheduled", {
-        paid_to: paidTo,
-        fee_amount: feeAmount,
-      });
       setSuccess(
         `Match scheduled · ₹${formatRupees(feeAmount)} ground fee debited from the pool`,
       );

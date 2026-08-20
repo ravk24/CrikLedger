@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { formatRupees } from "@/lib/format";
 
@@ -43,9 +42,6 @@ export function MatchFeeCard({
         setError(body.error?.message ?? "Could not clear the pending fee.");
         return;
       }
-      posthog.capture("match_fee_cleared", {
-        amount: body.data?.cleared ?? amountPending,
-      });
       setConfirmOpen(false);
       router.refresh();
     } catch {

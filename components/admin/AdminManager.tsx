@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { Copy } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
@@ -63,7 +62,6 @@ export function AdminManager({ admins, selfId }: Props) {
         );
         return;
       }
-      posthog.capture("admin_created");
       setCreateOpen(false);
       setUsername("");
       setName("");
@@ -94,9 +92,6 @@ export function AdminManager({ admins, selfId }: Props) {
         setConfirm(null);
         return;
       }
-      posthog.capture("admin_access_changed", {
-        action: confirm.kind,
-      });
       if (confirm.kind === "reset") {
         setReveal({
           name: body.data.name,

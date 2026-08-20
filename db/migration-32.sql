@@ -59,9 +59,9 @@ ALTER TABLE admins ADD CONSTRAINT admins_platform_role_check
 DROP TYPE admin_role;
 
 -- ---------- 2. Account columns ----------
--- email: the recovery channel and Razorpay receipt target. Nullable
--- because the seeded megaadmin has none; signup requires it at the
--- API layer. Uniqueness is case-insensitive and skips NULLs.
+-- email: the recovery channel and purchase-correspondence address.
+-- Nullable because the seeded megaadmin has none; signup requires it at
+-- the API layer. Uniqueness is case-insensitive and skips NULLs.
 ALTER TABLE admins ADD COLUMN email TEXT;
 ALTER TABLE admins ADD CONSTRAINT admins_email_shape
   CHECK (email IS NULL OR email ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$');

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { MatchWizard } from "@/components/wizard/MatchWizard";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { TournamentScheduleMatchSheet } from "@/components/tournaments/TournamentScheduleMatchSheet";
@@ -63,7 +62,6 @@ export function TournamentMatchAdminActions({
         setError(body.error?.message ?? "Could not delete the match.");
         return;
       }
-      posthog.capture("tournament_match_deleted", { status });
       router.push(`/tournaments/${tournamentId}/matches`);
       router.refresh();
     } catch {
@@ -89,7 +87,6 @@ export function TournamentMatchAdminActions({
       hasGuests={false}
       hasCosts={false}
       hasPreview={false}
-      eventPrefix="tournament_match"
       fundLabel="fund"
     />
   );

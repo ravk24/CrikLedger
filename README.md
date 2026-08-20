@@ -109,7 +109,7 @@ The app is installable as a **PWA** (web manifest + install nudge) and designed 
 | Validation | Zod schemas for every route body |
 | Testing | Vitest — the money engine is unit-tested before any UI |
 | Hosting | Vercel (daily cron keepalive to prevent Supabase free-tier pause) |
-| Analytics | PostHog (autocapture + pageviews via `instrumentation-client.ts`, proxied through `/ingest` rewrites) |
+| Analytics | None — no third-party analytics or user tracking, which is what the published Privacy policy states |
 
 ### Architecture rules
 
@@ -138,8 +138,6 @@ The app is installable as a **PWA** (web manifest + install nudge) and designed 
    | `SUPABASE_SERVICE_ROLE_KEY` | Server-only client, never shipped to the browser |
    | `SESSION_SECRET` | Signs the admin session JWT |
    | `CRON_SECRET` | Guards `/api/cron/keepalive` |
-   | `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` | PostHog analytics key (optional — analytics off when either PostHog var is unset) |
-   | `NEXT_PUBLIC_POSTHOG_HOST` | PostHog ingestion host (US cloud: `https://us.i.posthog.com`) |
 
 3. **Run it:**
 

@@ -144,7 +144,7 @@ export function SignupForm() {
           className={FIELD}
         />
         <span className="text-xs text-text-muted">
-          Identifies your account. Razorpay issues purchase receipts to it.
+          Identifies your account, and is where purchase and support replies go.
         </span>
       </label>
 

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { Switch } from "@/components/ui/switch";
@@ -55,11 +54,6 @@ export function DebitSheet({ open, onOpenChange, activePlayerCount }: Props) {
         setError(body.error?.message ?? "Could not save — try again.");
         return;
       }
-      posthog.capture("pool_debit_added", {
-        is_common: common,
-        amount: value,
-        active_player_count: common ? activePlayerCount : undefined,
-      });
       onOpenChange(false);
       setAmount("");
       setMessage("");

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { Minus, Plus } from "lucide-react";
 import { LedgerRow } from "@/components/shared/LedgerRow";
 import { SheetShell } from "@/components/shared/SheetShell";
@@ -72,9 +71,6 @@ export function PoolAdminSection({ entries, players, activePlayerCount }: Props)
         setError(body.error?.message ?? "Could not save — try again.");
         return;
       }
-      posthog.capture("pool_entry_updated", {
-        entry_kind: editing.kind,
-      });
       setEditing(null);
       router.refresh();
     } catch {
@@ -96,9 +92,6 @@ export function PoolAdminSection({ entries, players, activePlayerCount }: Props)
         setError(body.error?.message ?? "Could not delete — try again.");
         return;
       }
-      posthog.capture("pool_entry_deleted", {
-        entry_kind: editing.kind,
-      });
       setConfirmDelete(false);
       setEditing(null);
       router.refresh();

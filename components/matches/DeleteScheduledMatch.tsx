@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { formatRupees } from "@/lib/format";
 
@@ -47,9 +46,6 @@ export function DeleteScheduledMatch({
         setError(body.error?.message ?? "Could not delete the match.");
         return;
       }
-      posthog.capture("match_deleted", {
-        booking_share: body.data?.booking_share ?? 0,
-      });
       router.push("/matches");
       router.refresh();
     } catch {

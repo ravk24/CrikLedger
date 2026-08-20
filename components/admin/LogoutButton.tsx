@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 
 export function LogoutButton() {
   const router = useRouter();
@@ -12,7 +11,6 @@ export function LogoutButton() {
     setPending(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
-      posthog.reset();
       router.push("/");
       router.refresh();
     } finally {

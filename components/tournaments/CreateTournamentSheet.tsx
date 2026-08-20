@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { Plus } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
@@ -46,7 +45,6 @@ export function CreateTournamentSheet({ grounds }: { grounds: Ground[] }) {
         setError(body.error?.message ?? "Could not create — try again.");
         return;
       }
-      posthog.capture("tournament_created");
       setOpen(false);
       setName("");
       setTeamName("");

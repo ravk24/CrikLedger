@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { getNavState } from "@/lib/nav";
 import { AccountMenu } from "./AccountMenu";
-import { AnalyticsIdentify } from "./AnalyticsIdentify";
 
 // Brand block: fully static, so it paints in the prerendered shell.
 function Brand() {
@@ -55,12 +54,7 @@ async function HeaderAccount() {
     );
   }
 
-  return (
-    <>
-      <AnalyticsIdentify nav={nav} />
-      <AccountMenu nav={nav} />
-    </>
-  );
+  return <AccountMenu nav={nav} />;
 }
 
 export function AppHeader() {

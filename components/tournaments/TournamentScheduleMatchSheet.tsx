@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { resolveGroundInfo, type Ground } from "@/lib/grounds";
 
@@ -83,9 +82,6 @@ export function TournamentScheduleMatchSheet({
         setError(body.error?.message ?? "Could not save — try again.");
         return;
       }
-      posthog.capture(
-        editing ? "tournament_match_rescheduled" : "tournament_match_scheduled",
-      );
       onOpenChange(false);
       if (!editing) {
         setOpponent("");

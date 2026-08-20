@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import posthog from "posthog-js";
 
 export function LoginForm() {
   const router = useRouter();
@@ -38,11 +37,6 @@ export function LoginForm() {
         );
         return;
       }
-      posthog.identify(body.data.admin_id, {
-        name: body.data.name,
-        platform_role: body.data.platform_role,
-        active_team: body.data.active_team,
-      });
       // AccessGate and the proxy bounce here with ?next=, so a member
       // who was merely signed out lands back where they were.
       const next = new URLSearchParams(window.location.search).get("next");
