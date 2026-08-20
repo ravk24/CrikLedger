@@ -1,5 +1,6 @@
 import type { NavState } from "@/lib/nav";
 import { InstallGuide } from "./InstallGuide";
+import { NextSteps } from "./NextSteps";
 
 // Slot 0 of the tab bar for anyone without a Team Ledger. It replaced
 // the old TeamsDirectory, which listed every team on the platform — a
@@ -20,7 +21,9 @@ export function HomeIntro({ nav }: { nav: NavState }) {
         </p>
       </div>
 
-      <InstallGuide />
+      {/* Not installed: the walkthrough. Already installed: the
+          confirmation plus somewhere to go next. */}
+      <InstallGuide installedSlot={<NextSteps nav={nav} />} />
     </>
   );
 }

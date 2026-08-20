@@ -24,8 +24,17 @@ const PLATFORMS: Platform[] = ["android", "ios"];
  * Detection mirrors components/dashboard/InstallNudge.tsx — same
  * standalone test, same beforeinstallprompt capture. Kept as two small
  * copies rather than a shared hook while there are only two callers.
+ *
+ * installedSlot is what to show BELOW the confirmation once the app is
+ * installed. Home passes its next-steps list (the guide's job is done by
+ * then, and a bare "you are installed" card is a dead end); /install
+ * passes nothing and keeps the confirmation on its own.
  */
-export function InstallGuide() {
+export function InstallGuide({
+  installedSlot,
+}: {
+  installedSlot?: React.ReactNode;
+}) {
   // "android" on the server AND on the first client render — the sniff
   // lands in the effect below, so there is nothing to mismatch.
   const [platform, setPlatform] = useState<Platform>("android");
@@ -46,30 +55,42 @@ export function InstallGuide() {
       e.preventDefault();
       setInstallEvent(e as BeforeInstallPromptEvent);
     };
+    const installedHandler = () => setInstalled(true);
     window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", installedHandler);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", installedHandler);
+    };
   }, []);
 
   async function install() {
     if (!installEvent) return;
     await installEvent.prompt();
     setInstallEvent(null);
+    // Chrome fires appinstalled on success, but not every browser does
+    // and the media query does not re-match in this tab — so flip the
+    // view here too rather than leaving the guide up after an install.
+    setInstalled(true);
   }
 
   if (installed) {
     return (
-      <section className="flex items-start gap-3 rounded-lg border border-border bg-surface p-4">
-        <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-credit" />
-        <div>
-          <p className="text-sm font-semibold text-text-primary">
-            CrikLedger is installed
-          </p>
-          <p className="mt-1 text-sm text-text-secondary">
-            You are running it from your home screen already — nothing left
-            to do.
-          </p>
-        </div>
-      </section>
+      <>
+        <section className="flex items-start gap-3 rounded-lg border border-border bg-surface p-4">
+          <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-credit" />
+          <div>
+            <p className="text-sm font-semibold text-text-primary">
+              Installed — you are on your home screen
+            </p>
+            <p className="mt-1 text-sm text-text-secondary">
+              Nothing left to install — it opens full screen from your own
+              icon, like any other app.
+            </p>
+          </div>
+        </section>
+        {installedSlot}
+      </>
     );
   }
 
