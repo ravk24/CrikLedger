@@ -57,6 +57,7 @@ export type Match = {
   car_allowance_per_car: number;
   guest_names: string[];
   guest_cars: boolean[]; // index-aligned with guest_names; legacy = []
+  guest_shared_cars: boolean[]; // same alignment; who rode with someone
   ground_booking_id: string | null; // set = created by a ground booking
   ground: "home" | "away"; // which scheduling flow created the match
   venue: string | null; // away ground name; always NULL for home matches
@@ -69,6 +70,7 @@ export type MatchParticipantPublic = {
   match_id: string;
   player_name: string;
   brought_car: boolean;
+  shared_car: boolean;
   fee_amount: number;
   is_captain: boolean;
   is_playing: boolean; // FALSE = charge-only captain row (guest fees)

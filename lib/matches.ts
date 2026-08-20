@@ -25,8 +25,10 @@ export async function completeMatch(
   guestFee: number;
   captainName: string | null;
 }> {
-  // The guest charge is canonical — recomputed from costs and heads,
-  // never taken from the client, and unaffected by per-player fee edits.
+  // EVERY fee is canonical: recomputed here from the costs and who
+  // attended, never taken from the client. The wizard shows the same
+  // numbers because it renders this engine's output from /preview, but
+  // what gets stored is computed on this side of the wire.
   const canonical = calculateMatchFees({
     groundFee: body.ground_fee,
     ballFee: body.ball_fee,
@@ -35,16 +37,20 @@ export async function completeMatch(
     attendees: body.rows.map((r) => ({
       playerId: r.player_id,
       broughtCar: r.brought_car,
+      sharedCar: r.shared_car,
     })),
     guests: body.guests.map((g) => ({
       name: g.name,
       broughtCar: g.brought_car,
+      sharedCar: g.shared_car,
     })),
+    carSplit: "sharers",
   });
   const guestFee = canonical.captainCharge;
+  // player_id -> the fee this engine says they owe
+  const feeByPlayer = new Map(canonical.rows.map((r) => [r.playerId, r.fee]));
 
-  const collected =
-    body.rows.reduce((sum, r) => sum + r.fee, 0) + guestFee;
+  const collected = canonical.collectedTotal;
   if (collected <= 0) {
     throw new ApiError(
       422,
@@ -133,7 +139,8 @@ export async function completeMatch(
        SET status = 'completed', result = $2,
            ground_fee = $3, ball_fee = $4, other_fee = $5,
            car_allowance_per_car = $6, guest_names = $7, guest_cars = $8,
-           updated_by = $9, updated_at = NOW()
+           guest_shared_cars = $9,
+           updated_by = $10, updated_at = NOW()
        WHERE id = $1`,
       [
         matchId,
@@ -144,6 +151,7 @@ export async function completeMatch(
         body.car_allowance_per_car,
         body.guests.map((g) => g.name),
         body.guests.map((g) => g.brought_car),
+        body.guests.map((g) => g.shared_car),
         adminId,
       ],
     );
@@ -156,11 +164,14 @@ export async function completeMatch(
     for (const row of body.rows) {
       const isCaptainRow = captain !== null && row.player_id === captain.id;
       const share = isCaptainRow ? guestFee : 0;
+      const fee = feeByPlayer.get(row.player_id) ?? 0;
       await client.query(
         `INSERT INTO match_participants
-           (match_id, player_id, brought_car, fee_amount, guest_fee_share, is_playing, team_id)
-         VALUES ($1, $2, $3, $4, $5, TRUE, $6)`,
-        [matchId, row.player_id, row.brought_car, row.fee + share, share,
+           (match_id, player_id, brought_car, shared_car, fee_amount,
+            guest_fee_share, is_playing, team_id)
+         VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7)`,
+        [matchId, row.player_id, row.brought_car,
+         row.shared_car && !row.brought_car, fee + share, share,
          match.team_id],
       );
     }
@@ -169,8 +180,9 @@ export async function completeMatch(
     if (captain && !captainPlaying && guestFee !== 0) {
       await client.query(
         `INSERT INTO match_participants
-           (match_id, player_id, brought_car, fee_amount, guest_fee_share, is_playing, team_id)
-         VALUES ($1, $2, FALSE, $3, $3, FALSE, $4)`,
+           (match_id, player_id, brought_car, shared_car, fee_amount,
+            guest_fee_share, is_playing, team_id)
+         VALUES ($1, $2, FALSE, FALSE, $3, $3, FALSE, $4)`,
         [matchId, captain.id, guestFee, match.team_id],
       );
     }

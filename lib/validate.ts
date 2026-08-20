@@ -175,9 +175,13 @@ export const clearPendingSchema = z.object({
   expected_pending: z.number().int().positive(),
 });
 
+// shared_car defaults to false so the tournament routes — which never
+// ask the question — keep validating unchanged, and so an older client
+// posting without the field is accepted rather than 400ing.
 const attendeeSchema = z.object({
   player_id: z.string().uuid(),
   brought_car: z.boolean(),
+  shared_car: z.boolean().default(false),
 });
 
 // v2 guest rule: guests count in the fee split and their charges are
@@ -186,6 +190,7 @@ const attendeeSchema = z.object({
 const guestSchema = z.object({
   name: z.string().trim().min(1).max(80),
   brought_car: z.boolean(),
+  shared_car: z.boolean().default(false),
 });
 
 export const matchPreviewSchema = z.object({
@@ -203,13 +208,10 @@ export const matchSubmitSchema = z.object({
   ball_fee: z.number().int().nonnegative(),
   other_fee: z.number().int().nonnegative(),
   car_allowance_per_car: z.number().int().nonnegative(),
-  rows: z
-    .array(
-      attendeeSchema.extend({
-        fee: z.number().int(), // may be negative for drivers
-      }),
-    )
-    .min(1),
+  // No fee field: per-player fees are computed by the server from the
+  // costs and attendance, never accepted from the client. Manual fee
+  // editing was removed, and with it the reason to trust these numbers.
+  rows: z.array(attendeeSchema).min(1),
   guests: z.array(guestSchema).max(30).default([]),
 });
 

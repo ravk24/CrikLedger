@@ -177,6 +177,112 @@ describe("calculateMatchFees", () => {
   });
 });
 
+// The sharing rule: only people who rode with someone fund the cars.
+// Every test above this point runs on the default "everyone" mode and
+// must keep passing untouched — that is the back-compat proof.
+describe("calculateMatchFees — carSplit: sharers", () => {
+  const base = {
+    groundFee: 2500,
+    ballFee: 60,
+    otherFee: 0,
+    carAllowancePerCar: 250,
+    carSplit: "sharers" as const,
+  };
+
+  // 11 players, base 2560, 3 drivers, 6 of the other 8 rode along.
+  // base  2560 / 11 = 232.7 -> 233 a head
+  // cars  3 * 250 = 750, / 6 sharers = 125
+  const sharedRun = () =>
+    calculateMatchFees({
+      ...base,
+      attendees: Array.from({ length: 11 }, (_, i) => ({
+        playerId: `p${i + 1}`,
+        broughtCar: i < 3,
+        sharedCar: i >= 3 && i < 9,
+      })),
+    });
+
+  it("splits the base across every head and the cars across sharers only", () => {
+    const r = sharedRun();
+    expect(r.perPlayerFee).toBe(233);
+    expect(r.carSharePerSharer).toBe(125);
+    expect(r.sharerCount).toBe(6);
+  });
+
+  it("charges a sharer base + car share, and someone who made their own way only the base", () => {
+    const r = sharedRun();
+    expect(r.rows.find((x) => x.playerId === "p4")!.fee).toBe(233 + 125);
+    expect(r.rows.find((x) => x.playerId === "p10")!.fee).toBe(233);
+  });
+
+  it("never charges a driver toward the cars, and rebates them", () => {
+    const r = sharedRun();
+    const driver = r.rows.find((x) => x.playerId === "p1")!;
+    expect(driver.fee).toBe(233 - 250);
+    expect(driver.sharedCar).toBe(false);
+  });
+
+  it("ticking a driver as a sharer changes nothing — they provided the car", () => {
+    const withDriverTicked = calculateMatchFees({
+      ...base,
+      attendees: Array.from({ length: 11 }, (_, i) => ({
+        playerId: `p${i + 1}`,
+        broughtCar: i < 3,
+        sharedCar: i < 9,
+      })),
+    });
+    expect(withDriverTicked.sharerCount).toBe(6);
+    expect(withDriverTicked.rows[0].fee).toBe(233 - 250);
+  });
+
+  it("collects no car money and pays no rebate when nobody shared", () => {
+    const r = calculateMatchFees({
+      ...base,
+      attendees: Array.from({ length: 11 }, (_, i) => ({
+        playerId: `p${i + 1}`,
+        broughtCar: i < 3,
+        sharedCar: false,
+      })),
+    });
+    expect(r.totalCost).toBe(2560);
+    expect(r.carSharePerSharer).toBe(0);
+    expect(r.rows.every((x) => x.fee === 233)).toBe(true);
+  });
+
+  it("lets a guest share, and charges the captain for it", () => {
+    const r = calculateMatchFees({
+      ...base,
+      attendees: [
+        { playerId: "p1", broughtCar: true },
+        { playerId: "p2", broughtCar: false, sharedCar: true },
+      ],
+      guests: [{ name: "Ravi", broughtCar: false, sharedCar: true }],
+    });
+    // base 2560 / 3 heads = 853.3 -> 854; cars 250 / 2 sharers = 125
+    expect(r.perPlayerFee).toBe(854);
+    expect(r.sharerCount).toBe(2);
+    expect(r.carSharePerSharer).toBe(125);
+    expect(r.captainCharge).toBe(854 + 125);
+  });
+
+  it("keeps the pool whole — surplus is never negative", () => {
+    for (const drivers of [0, 1, 3, 5]) {
+      for (const sharers of [0, 1, 4, 6]) {
+        const r = calculateMatchFees({
+          ...base,
+          attendees: Array.from({ length: 11 }, (_, i) => ({
+            playerId: `p${i + 1}`,
+            broughtCar: i < drivers,
+            sharedCar: i >= drivers && i < drivers + sharers,
+          })),
+        });
+        expect(r.surplusToPool).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
+});
+
+
 describe("ceilSplit", () => {
   it("common-debit split 3000/14: share 215, recovered 3010, surplus 10", () => {
     const result = ceilSplit(3000, 14);
