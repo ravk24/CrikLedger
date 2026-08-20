@@ -96,27 +96,34 @@ const MORE_ALSO = [
  * unavailable tab keeps its slot and renders greyed and inert
  * (href: null), which is the app-wide disabled-not-hidden rule.
  *
- * Slot 0 is always Home at "/". What it RENDERS changes on purchase (the
- * team dashboard for a Ledger holder, the welcome/install page for
- * everyone else) but the label, icon and href do not. Keeping the href
- * stable is what lets the static fallback shell render slot 0 as a real
- * link, and means no bookmark or manifest start_url ever breaks.
+ * ORDER is the one thing entitlement changes. Without a Team Ledger the
+ * Schedule tab leads with the free sample match, which is the whole
+ * pitch, so it takes first position and Home (the shop window) follows.
+ * A Ledger holder gets Home — their team dashboard — first, as before.
  *
- * Takes no NavState: every slot is the same for everyone now that slot 0
- * stopped swapping label on entitlement. Give it the state back the day
- * a tab has to grey out — the rule and the TabSpec.href: null path are
- * both still here for it.
+ * Nothing else moves: every label, href and icon is identical in both
+ * orders. That is what keeps bookmarks, the manifest start_url and the
+ * pathname-driven active-tab test working, and it means the reorder is a
+ * key-preserving move rather than a re-render (keys are tab.slot).
  */
-export function buildTabs(): TabSpec[] {
+export function buildTabs(nav: NavState): TabSpec[] {
+  const home: TabSpec = {
+    slot: "primary",
+    label: "Home",
+    href: "/",
+    icon: "home",
+    exact: true,
+  };
+  const schedule: TabSpec = {
+    slot: "schedule",
+    label: "Schedule",
+    href: "/schedule",
+    icon: "calendar",
+    also: ["/slots", "/other-slots"],
+  };
+
   return [
-    { slot: "primary", label: "Home", href: "/", icon: "home", exact: true },
-    {
-      slot: "schedule",
-      label: "Schedule",
-      href: "/schedule",
-      icon: "calendar",
-      also: ["/slots", "/other-slots"],
-    },
+    ...(nav.hasTeamLedger ? [home, schedule] : [schedule, home]),
     // Always navigable: a guest must be able to open the directory to
     // see what is on offer. What a purchase unlocks is HOSTING, inside.
     {
