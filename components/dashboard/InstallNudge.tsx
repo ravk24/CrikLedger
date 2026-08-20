@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { X } from "lucide-react";
 
@@ -59,7 +60,7 @@ export function InstallNudge() {
 
   return (
     <div className="flex items-center gap-3 rounded-lg border border-accent-light bg-surface p-3">
-      <img
+      <Image
         src="/icon-192.png"
         alt=""
         className="size-9 rounded-md"
