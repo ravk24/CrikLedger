@@ -52,6 +52,11 @@ export default function About() {
         A Ledger purchase provides access for one team. The same account may be
         reused, but a separate purchase is required for another team.
       </p>
+      <p>
+        The Ledger is <strong>refundable within 30 days</strong> of purchase,
+        subject to the{" "}
+        <a href="/refund-policy">cancellation &amp; refund policy</a>.
+      </p>
 
       <h3>Tournament — ₹29</h3>
       <p>
@@ -69,6 +74,10 @@ export default function About() {
       <p>
         The Tournament feature is focused on financial tracking and does not
         provide tournament standings or a competition-ranking system.
+      </p>
+      <p>
+        The Tournament feature is <strong>not refundable</strong>. Please
+        review what it includes before purchasing it.
       </p>
 
       <h2>Our story</h2>

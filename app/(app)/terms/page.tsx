@@ -31,11 +31,13 @@ export default function Terms() {
       <ul>
         <li>
           <strong>Ledger — ₹99.</strong> A one-time purchase providing access to
-          the Ledger functionality for one team.
+          the Ledger functionality for one team. Refundable within 30 days of
+          purchase, subject to the cancellation &amp; refund policy.
         </li>
         <li>
           <strong>Tournament — ₹29.</strong> A one-time purchase providing
-          access to the Tournament functionality.
+          access to the Tournament functionality. This feature is not
+          refundable.
         </li>
       </ul>
       <p>
@@ -123,11 +125,15 @@ export default function Terms() {
 
       <h2>11. Refunds</h2>
       <p>
-        Customers may request a refund within{" "}
-        <strong>30 days of purchasing a CrikLedger feature</strong> if they are
-        not satisfied with the service. No refund requests will be accepted
-        after 30 days from the purchase date, except where required by
-        applicable law. See the{" "}
+        The two paid features have different refund terms. Customers may
+        request a refund of the <strong>Ledger</strong> purchase within{" "}
+        <strong>30 days of purchase</strong> if they are not satisfied with the
+        service; no such request will be accepted after 30 days from the
+        purchase date, except where required by applicable law.
+      </p>
+      <p>
+        The <strong>Tournament</strong> feature is{" "}
+        <strong>not refundable</strong>. See the{" "}
         <a href="/refund-policy">Cancellation &amp; refund policy</a> for the
         complete procedure.
       </p>

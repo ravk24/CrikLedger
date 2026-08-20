@@ -29,7 +29,7 @@ const LINKS = [
   { href: "/shipping-policy", label: "Shipping & delivery", icon: Truck },
   { href: "/disclaimer", label: "Disclaimer", icon: FileText },
   { href: "/pricing", label: "Pricing", icon: Receipt },
-  { href: "/how-to-buy", label: "How to purchase", icon: ShoppingCart },
+  { href: "/how-to-buy", label: "How payments work", icon: ShoppingCart },
 ];
 
 export default function AboutUs() {
@@ -57,6 +57,25 @@ export default function AboutUs() {
           </li>
         ))}
       </ul>
+
+      <section className="flex flex-col gap-1 rounded-lg border border-border bg-surface p-4">
+        <h2 className="text-sm font-semibold text-text-primary">
+          Refunds at a glance
+        </h2>
+        <p className="text-sm text-text-secondary">
+          The <strong className="font-semibold text-text-primary">Ledger</strong>{" "}
+          is refundable within 30 days of purchase, subject to the{" "}
+          <Link
+            href="/refund-policy"
+            className="font-medium text-accent underline underline-offset-2"
+          >
+            cancellation &amp; refund policy
+          </Link>
+          . The{" "}
+          <strong className="font-semibold text-text-primary">Tournament</strong>{" "}
+          feature is not refundable.
+        </p>
+      </section>
     </>
   );
 }

@@ -14,26 +14,39 @@ export default function RefundPolicy() {
         subscription renewals.
       </p>
 
-      <h2>Refund eligibility</h2>
+      <h2>What can be refunded</h2>
+      <p>
+        CrikLedger&apos;s two paid digital features have{" "}
+        <strong>different refund terms</strong>:
+      </p>
+      <ul>
+        <li>
+          <strong>Ledger — ₹99. Refundable.</strong> A customer may request a
+          refund within 30 days from the date of purchase if they are not
+          satisfied with the service.
+        </li>
+        <li>
+          <strong>Tournament — ₹29. Not refundable.</strong> Once the
+          Tournament feature is activated on an account, the purchase is not
+          eligible for a refund.
+        </li>
+      </ul>
+
+      <h2>Refund eligibility (Ledger)</h2>
       <p>
         A customer may request a refund within{" "}
-        <strong>30 days from the date of purchase</strong> of a CrikLedger
+        <strong>30 days from the date of purchase</strong> of the Ledger
         feature if they are not satisfied with the service.
       </p>
       <p>
         After 30 days from the purchase date, the purchase is generally
         non-refundable, except where a refund is required by applicable law.
       </p>
-
-      <h2>What can be refunded</h2>
       <p>
-        The policy applies to purchases of CrikLedger&apos;s paid digital
-        features:
+        The Tournament feature is not refundable at any point, except where a
+        refund is required by applicable law or where we were unable to
+        activate the feature at all (see below).
       </p>
-      <ul>
-        <li>Ledger — ₹99</li>
-        <li>Tournament — ₹29</li>
-      </ul>
 
       <h2>How to request a refund</h2>
       <p>
@@ -79,9 +92,11 @@ export default function RefundPolicy() {
       <h2>Cancellation</h2>
       <p>
         Because CrikLedger purchases are one-time purchases, there is no
-        recurring subscription to cancel. A customer who wishes to cancel a
-        purchase may contact us within <strong>30 days of purchase</strong> and
-        request a refund.
+        recurring subscription to cancel. A customer who wishes to cancel a{" "}
+        <strong>Ledger</strong> purchase may contact us within{" "}
+        <strong>30 days of purchase</strong> and request a refund. A{" "}
+        <strong>Tournament</strong> purchase cannot be cancelled for a refund
+        once it has been activated.
       </p>
 
       <h2>Contact</h2>

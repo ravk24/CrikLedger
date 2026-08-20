@@ -22,14 +22,14 @@ const PRODUCTS = [
     name: "Ledger",
     price: "₹99",
     blurb:
-      "Your team's full app: players, matches, slots, the pool and per-player balances. One purchase runs one team, with up to two admins.",
+      "Your team's full app: players, matches, slots, the pool and per-player balances. One purchase runs one team, with up to two admins. Refundable within 30 days.",
   },
   {
     key: "tournament_credit" as const,
     name: "Tournament",
     price: "₹29",
     blurb:
-      "Host one tournament with its own players, matches and ledger, kept separate from your team's books.",
+      "Host one tournament with its own players, matches and ledger, kept separate from your team's books. Not refundable.",
   },
 ];
 
@@ -104,7 +104,7 @@ async function PurchasesData() {
           href="/how-to-buy"
           className="text-accent underline underline-offset-2"
         >
-          how to purchase
+          how payments work
         </Link>
         ,{" "}
         <Link href="/pricing" className="text-accent underline underline-offset-2">
@@ -116,8 +116,9 @@ async function PurchasesData() {
           className="text-accent underline underline-offset-2"
         >
           refund terms
-        </Link>
-        .
+        </Link>{" "}
+        — the Ledger is refundable within 30 days, the Tournament feature is
+        not.
       </p>
     </>
   );

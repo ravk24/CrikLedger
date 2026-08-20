@@ -1,9 +1,9 @@
 import { PolicyPage } from "@/components/legal/PolicyPage";
 
 export const metadata = {
-  title: "How to purchase · CrikLedger",
+  title: "How payments work · CrikLedger",
   description:
-    "How to buy CrikLedger — Ledger ₹99 and Tournament ₹29. Contact us for payment instructions; the feature is activated once payment is verified.",
+    "How payments work on CrikLedger — Ledger ₹99, refundable within 30 days, and Tournament ₹29, non-refundable. Contact us for payment instructions; the feature is activated once payment is verified.",
 };
 
 // PUBLIC and STATIC on purpose — see components/legal/PolicyPage.
@@ -18,7 +18,7 @@ export const metadata = {
 // steps in step with /pricing and the Terms.
 export default function HowToBuy() {
   return (
-    <PolicyPage title="How to purchase" updated="20 August 2026">
+    <PolicyPage title="How payments work" updated="20 August 2026">
       <p>
         CrikLedger currently uses a simple manual payment process for its paid
         features.
@@ -27,10 +27,15 @@ export default function HowToBuy() {
       <h2>Step 1 — Choose your feature</h2>
       <dl>
         <dt>Ledger — ₹99</dt>
-        <dd>One-time purchase for managing the ledger of one team.</dd>
+        <dd>
+          One-time purchase for managing the ledger of one team. Refundable
+          within 30 days of purchase, subject to the cancellation &amp; refund
+          policy.
+        </dd>
         <dt>Tournament — ₹29</dt>
         <dd>
           One-time purchase for managing the financial side of a tournament.
+          This feature is not refundable.
         </dd>
       </dl>
       <p>
@@ -84,9 +89,14 @@ export default function HowToBuy() {
 
       <h2>Refunds</h2>
       <p>
-        Purchases are eligible for a refund if requested within 30 days of
-        purchase, subject to the{" "}
+        <strong>Ledger</strong> purchases are eligible for a refund if
+        requested within 30 days of purchase, subject to the{" "}
         <a href="/refund-policy">cancellation &amp; refund policy</a>.
+      </p>
+      <p>
+        The <strong>Tournament</strong> feature is{" "}
+        <strong>not refundable</strong>, so please check what it includes
+        before you buy it.
       </p>
 
       <h2>Need help?</h2>
