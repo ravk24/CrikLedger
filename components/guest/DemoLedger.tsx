@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { formatRupees } from "@/lib/format";
 import { DEMO_LEDGER, DEMO_POOL_BALANCE, DEMO_TEAM } from "@/lib/demo/fixtures";
 
@@ -7,14 +6,15 @@ import { DEMO_LEDGER, DEMO_POOL_BALANCE, DEMO_TEAM } from "@/lib/demo/fixtures";
 //
 // Reads lib/demo/fixtures.ts, never the database — a stranger must not
 // be shown a paying team's money, and this way they structurally cannot
-// be. View only: there is nothing to click.
+// be. View only: there is nothing to click, and no upsell after the
+// rows — the sample is the argument.
 export function DemoLedger() {
   return (
     <>
       <div>
         <h1 className="text-xl font-bold text-text-primary">Ledger</h1>
         <p className="mt-0.5 text-xs text-text-muted">
-          Sample · this is how {DEMO_TEAM.name}&apos;s pool would look.
+          Sample · this is how the {DEMO_TEAM.name} pool would look.
         </p>
       </div>
 
@@ -53,22 +53,6 @@ export function DemoLedger() {
           </li>
         ))}
       </ul>
-
-      <div className="rounded-lg border border-border bg-surface p-4">
-        <p className="text-sm font-semibold text-text-primary">
-          Your team&apos;s ledger, kept for you
-        </p>
-        <p className="mt-1 text-sm text-text-secondary">
-          Every match collection, deposit and expense — balanced after each
-          game, with each player&apos;s balance always up to date.
-        </p>
-        <Link
-          href="/purchases"
-          className="mt-3 flex h-11 items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-foreground"
-        >
-          Get the Team Ledger
-        </Link>
-      </div>
     </>
   );
 }

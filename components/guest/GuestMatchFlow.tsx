@@ -53,7 +53,7 @@ type Step =
 // paid flow reaches from the match page instead) and "sheet" sit outside
 // the count, so the counter reads the same "step N of 7" a paying
 // captain sees.
-const STEP_ORDER: Step[] = [
+const ALL_STEPS: Step[] = [
   "intro",
   "result",
   "costs",
@@ -64,7 +64,29 @@ const STEP_ORDER: Step[] = [
   "preview",
   "sheet",
 ];
-const WIZARD_STEPS = STEP_ORDER.length - 2;
+
+// Ignoring the car fee drops the cars question — with no rebate to give,
+// asking who drove decides nothing. The count shrinks with it rather
+// than skipping a number, which is how buildSteps() handles a dropped
+// step in the paid wizard.
+function buildSteps(ignoreAllowance: boolean): Step[] {
+  return ignoreAllowance ? ALL_STEPS.filter((s) => s !== "cars") : ALL_STEPS;
+}
+
+// What the Next button points at. Derived from the step list rather than
+// hardcoded per screen, so dropping the cars step relabels Car fee's
+// button too — the paid wizard derives its labels the same way.
+const STEP_NAMES: Record<Step, string> = {
+  intro: "the match",
+  result: "result",
+  costs: "costs",
+  players: "players",
+  guests: "guests",
+  carFee: "car fee",
+  cars: "cars",
+  preview: "fee preview",
+  sheet: "the match sheet",
+};
 
 const CAPTAIN = DEMO_PLAYERS.find((p) => p.is_captain) ?? null;
 
@@ -88,6 +110,12 @@ export function GuestMatchFlow() {
   // The ignore switch never clears the typed amount, so toggling it off
   // restores it — same contract as StepCarAllowance's docs.
   const allowance = ignoreAllowance ? 0 : Number(costs.allowance) || 0;
+  // Ignoring the fee ignores the cars too: no rebate, no car marks on the
+  // preview, the sheet or the shared PNG.
+  const effectiveCars = useMemo(
+    () => (ignoreAllowance ? new Set<string>() : cars),
+    [ignoreAllowance, cars],
+  );
 
   const selectedPlayers = useMemo(
     () => DEMO_PLAYERS.filter((p) => selected.has(p.id)),
@@ -103,7 +131,7 @@ export function GuestMatchFlow() {
         carAllowancePerCar: allowance,
         attendees: selectedPlayers.map((p) => ({
           playerId: p.id,
-          broughtCar: cars.has(p.id),
+          broughtCar: effectiveCars.has(p.id),
         })),
         guests: guests.map((g) => ({
           name: g.name,
@@ -114,7 +142,7 @@ export function GuestMatchFlow() {
       // NO_PLAYERS: everyone was deselected. The preview step handles it.
       return null;
     }
-  }, [costs, selectedPlayers, cars, guests, allowance]);
+  }, [costs, selectedPlayers, effectiveCars, guests, allowance]);
 
   // Engine rows with any manual edit applied on top, exactly as the paid
   // preview builds displayRows.
@@ -127,10 +155,18 @@ export function GuestMatchFlow() {
     [fees, edits],
   );
 
-  const index = STEP_ORDER.indexOf(step);
-  const back = () => setStep(STEP_ORDER[Math.max(0, index - 1)]);
-  const next = () =>
-    setStep(STEP_ORDER[Math.min(STEP_ORDER.length - 1, index + 1)]);
+  const steps = buildSteps(ignoreAllowance);
+  const wizardSteps = steps.length - 2; // intro and sheet sit outside the count
+  // Turning the switch on while standing on the cars step would strand
+  // the index; clamp to the last real step in that case.
+  // A step that just left the list (cars, when the switch goes on while
+  // standing on it) resolves to the step that now follows Car fee.
+  const found = steps.indexOf(step);
+  const index = found === -1 ? steps.indexOf("preview") : found;
+  const back = () => setStep(steps[Math.max(0, index - 1)]);
+  const next = () => setStep(steps[Math.min(steps.length - 1, index + 1)]);
+  const nextStep = steps[Math.min(steps.length - 1, index + 1)];
+  const nextLabel = `Next — ${STEP_NAMES[nextStep]}`;
 
   function toggleCar(playerId: string) {
     setCars((prev) => {
@@ -215,7 +251,7 @@ export function GuestMatchFlow() {
         <span className="ml-auto text-xs text-text-muted">
           {index === 0
             ? "Sample"
-            : `Sample · step ${index} of ${WIZARD_STEPS}`}
+            : `Sample · step ${index} of ${wizardSteps}`}
         </span>
       </div>
 
@@ -235,9 +271,9 @@ export function GuestMatchFlow() {
               <MapPin size={14} /> {DEMO_TEAM.venue}
             </p>
             <p className="mt-3 text-sm text-text-secondary">
-              {DEMO_PLAYERS.length} players played. Walk the same{" "}
-              {WIZARD_STEPS} steps a paying captain does and see how
-              CrikLedger splits the cost — then share the result.
+              {DEMO_PLAYERS.length} players played. Walk the same steps a
+              paying captain does and see how CrikLedger splits the cost —
+              then share the result.
             </p>
           </section>
           <button
@@ -269,7 +305,7 @@ export function GuestMatchFlow() {
           {abandonMode ? (
             <NextButton onClick={() => setAbandoned(true)} label="Abandon the match" />
           ) : (
-            <NextButton onClick={next} label="Next — costs" />
+            <NextButton onClick={next} label={nextLabel} />
           )}
         </>
       )}
@@ -279,8 +315,12 @@ export function GuestMatchFlow() {
           <h2 className="text-base font-semibold text-text-primary">
             What did the match cost?
           </h2>
-          <StepCosts costs={costs} onChange={setCosts} />
-          <NextButton onClick={next} label="Next — players" />
+          <StepCosts costs={costs} onChange={setCosts} locked />
+          <p className="-mt-2 text-xs text-text-muted">
+            The sample&apos;s amounts are fixed so everyone sees the same
+            split. In your own ledger you type them in.
+          </p>
+          <NextButton onClick={next} label={nextLabel} />
         </>
       )}
 
@@ -311,7 +351,7 @@ export function GuestMatchFlow() {
               })
             }
           />
-          <NextButton onClick={next} label="Next — guests" />
+          <NextButton onClick={next} label={nextLabel} />
         </>
       )}
 
@@ -340,7 +380,7 @@ export function GuestMatchFlow() {
               land on {CAPTAIN.name}&apos;s balance.
             </p>
           )}
-          <NextButton onClick={next} label="Next — car fee" />
+          <NextButton onClick={next} label={nextLabel} />
         </>
       )}
 
@@ -358,8 +398,9 @@ export function GuestMatchFlow() {
             }
             ignored={ignoreAllowance}
             onIgnoredChange={setIgnoreAllowance}
+            locked
           />
-          <NextButton onClick={next} label="Next — cars" />
+          <NextButton onClick={next} label={nextLabel} />
         </>
       )}
 
@@ -379,7 +420,7 @@ export function GuestMatchFlow() {
             onToggleCar={toggleCar}
             allowance={allowance}
           />
-          <NextButton onClick={next} label="Next — fee preview" />
+          <NextButton onClick={next} label={nextLabel} />
         </>
       )}
 

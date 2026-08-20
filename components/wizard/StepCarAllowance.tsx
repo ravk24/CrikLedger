@@ -10,6 +10,9 @@ type Props = {
   onAllowanceChange: (value: string) => void;
   ignored: boolean;
   onIgnoredChange: (on: boolean) => void;
+  // Guest sample: the amount is fixed, but the ignore switch still works
+  // — that is the branch the sample is demonstrating.
+  locked?: boolean;
 };
 
 // The ignore switch never mutates the allowance value — the wizard
@@ -22,6 +25,7 @@ export function StepCarAllowance({
   onAllowanceChange,
   ignored,
   onIgnoredChange,
+  locked = false,
 }: Props) {
   return (
     <div className="flex flex-col gap-3">
@@ -29,7 +33,7 @@ export function StepCarAllowance({
         label="Car allowance (per car)"
         value={allowance}
         onChange={onAllowanceChange}
-        disabled={ignored}
+        disabled={ignored || locked}
       />
       <p className="rounded-md bg-surface-secondary px-3 py-2 text-sm text-text-secondary">
         {known

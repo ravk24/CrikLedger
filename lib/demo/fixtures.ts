@@ -14,7 +14,7 @@ import type { WizardPlayer } from "@/components/wizard/wizardTypes";
 export const DEMO_TEAM = {
   name: "Supergiants",
   opponent: "Challengers",
-  venue: "Municipal Ground",
+  venue: "Barne",
   date: "2026-09-13",
 } as const;
 
@@ -39,7 +39,7 @@ export const DEMO_PLAYERS: WizardPlayer[] = [
 export const DEMO_DRIVERS = ["d2", "d5", "d9"] as const;
 
 export const DEMO_COSTS = {
-  ground: "2400",
+  ground: "2500",
   ball: "60", // the club default the paid wizard prefills
   other: "0",
   allowance: "250",
@@ -63,23 +63,25 @@ export const DEMO_LEDGER: DemoLedgerRow[] = [
   {
     id: "l1",
     entry_date: "2026-09-13",
-    title: "Match collection · vs Riverside CC",
+    title: "Match collection · vs Challengers",
     detail: "11 players",
-    amount: 2464,
+    // What the sample match itself collects: ceil(3310 / 11) = 301 a
+    // head, less the ₹250 rebate for each of the three drivers.
+    amount: 2561,
   },
   {
     id: "l2",
     entry_date: "2026-09-13",
-    title: "Ground fee · Municipal Ground",
+    title: "Ground fee · Barne",
     detail: "Paid from pool",
-    amount: -2400,
+    amount: -2500,
   },
   {
     id: "l3",
     entry_date: "2026-09-13",
     title: "New ball",
     detail: "Paid from pool",
-    amount: -320,
+    amount: -60,
   },
   {
     id: "l4",
