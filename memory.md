@@ -108,11 +108,23 @@ PNGs replaced by generated `app/opengraph-image.tsx`. Nine public legal/pricing 
 
 ## Current state
 
-- **Dev DB: 33 migrations applied.** Baseline intact and verified repeatedly: 12 players,
-  1 completed **`home`** match, 6 pool entries, 61 slots, pool **1408**, fee 214.
-- Two accounts only: `ravi_kant` (megaadmin, **no** memberships) and `ravi_kant_SA`
-  (superadmin + owner of `our-xi`). Passwords set directly in the DB — **never stored in the
-  repo; both transited chat and MUST be rotated before launch.**
+- **⚠ DB INCIDENT (2026-08-20 ~07:32 UTC): the Supabase project was wiped and rebuilt.**
+  The *newer* CrikLedger repo's migration/test run was pointed at this SAME Supabase
+  project; its init dropped the entire `public` schema (all tables/views/role model) and
+  left its own fixtures behind. Old rows were unrecoverable: the GitHub backup workflow
+  had never run (secrets never set) — the "deferred by decision" note below was the cost.
+  Same day, the foreign fixtures were snapshotted + dropped, migrations 1–33 replayed via
+  `node db/apply-migrations.mjs` (clean, all 33), and dev data reseeded. **Until the other
+  repo gets its own Supabase project, this can happen again.**
+- **Dev DB: 33 migrations applied (fresh replay).** New baseline: 11 players (Ramesh K.
+  captain, Priya S. vice-captain), 1 completed **`home`** match (fee 214, drivers −36,
+  surplus 8) + 1 abandoned, 7 pool entries, 61 slots, pool **2908**.
+  `db/seed-matches-dev.sql` was rewritten in place for the post-tenancy schema (the old
+  version predated migration 26 and no longer ran).
+- Three accounts: `ravi_kant` (megaadmin, **no** memberships), `ravi_kant_SA`
+  (superadmin + owner of `our-xi`), and new `ravi_kant_AD` (team admin, slot 1 — so all
+  three tiers are testable). Passwords set directly in the DB — **never stored in the
+  repo; all transited chat and MUST be rotated before launch.**
 - `npm test` 66/66 · `npx tsc --noEmit` clean · `npm run build` clean · lint at its
   pre-existing baseline (one unrelated `react/no-unescaped-entities` error in
   `OtherScheduleWizard.tsx`, present before this session).
