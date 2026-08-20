@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, Download, Share2 } from "lucide-react";
+import { Car, ChevronLeft, Download, Share2 } from "lucide-react";
 import { formatRupees } from "@/lib/format";
 import { DEMO_PLAYERS, DEMO_TEAM } from "@/lib/demo/fixtures";
-import type { MatchFeeResult } from "@/engine/calc";
+import type { FeeRow, MatchFeeResult } from "@/engine/calc";
 import type { WizardCosts } from "@/components/wizard/wizardTypes";
 
 const NAME_BY_ID = new Map(DEMO_PLAYERS.map((p) => [p.id, p.name]));
@@ -15,17 +15,32 @@ const NAME_BY_ID = new Map(DEMO_PLAYERS.map((p) => [p.id, p.name]));
 // construction rather than by discipline.
 export function GuestMatchSheet({
   result,
+  rows,
   costs,
-  cars,
+  captainName,
   onBack,
 }: {
   result: MatchFeeResult;
+  rows: FeeRow[]; // engine rows with any manual fee edit applied
   costs: WizardCosts;
-  cars: Set<string>;
+  captainName: string | null;
   onBack: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Totals follow the rows on screen, so an edited fee is reflected here
+  // rather than quietly showing the pre-edit engine numbers.
+  const cashCosts =
+    (Number(costs.ground) || 0) +
+    (Number(costs.ball) || 0) +
+    (Number(costs.other) || 0);
+  const collected =
+    rows.reduce((sum, r) => sum + r.fee, 0) + result.captainCharge;
+  const surplus = Math.max(0, collected - cashCosts);
+  const carCount =
+    rows.filter((r) => r.broughtCar).length +
+    result.guestRows.filter((g) => g.broughtCar).length;
 
   const payload = {
     team: DEMO_TEAM.name,
@@ -37,12 +52,24 @@ export function GuestMatchSheet({
     otherFee: Number(costs.other) || 0,
     perPlayerFee: result.perPlayerFee,
     totalCost: result.totalCost,
-    surplus: result.surplusToPool,
-    rows: result.rows.map((r) => ({
-      name: NAME_BY_ID.get(r.playerId) ?? r.playerId,
-      fee: r.fee,
-      broughtCar: r.broughtCar,
-    })),
+    surplus,
+    rows: [
+      ...rows.map((r) => ({
+        name: NAME_BY_ID.get(r.playerId) ?? r.playerId,
+        fee: r.fee,
+        broughtCar: r.broughtCar,
+      })),
+      ...result.guestRows.map((g) => ({
+        name: g.name,
+        fee: g.fee,
+        broughtCar: g.broughtCar,
+        guest: true,
+      })),
+    ],
+    captainNote:
+      result.captainCharge > 0 && captainName
+        ? `Guest fees charged to ${captainName}`
+        : undefined,
   };
 
   async function share(mode: "share" | "download") {
@@ -114,7 +141,7 @@ export function GuestMatchSheet({
         </div>
 
         <ul className="mt-4 divide-y divide-border">
-          {result.rows.map((r) => (
+          {rows.map((r) => (
             <li
               key={r.playerId}
               className="flex items-center justify-between py-2 text-sm"
@@ -122,7 +149,11 @@ export function GuestMatchSheet({
               <span className="text-text-primary">
                 {NAME_BY_ID.get(r.playerId)}
                 {r.broughtCar && (
-                  <span className="ml-1.5 text-xs text-text-muted">· car</span>
+                  <Car
+                    size={14}
+                    aria-label="Brought a car"
+                    className="ml-1.5 inline shrink-0 align-text-bottom text-accent"
+                  />
                 )}
               </span>
               <span
@@ -138,6 +169,38 @@ export function GuestMatchSheet({
           ))}
         </ul>
 
+        {result.guestRows.length > 0 && (
+          <ul className="divide-y divide-border border-t border-border">
+            {result.guestRows.map((g) => (
+              <li
+                key={g.name}
+                className="flex items-center justify-between py-2 text-sm"
+              >
+                <span className="text-text-primary">
+                  {g.name}
+                  <span className="ml-1.5 text-xs text-text-muted">guest</span>
+                  {g.broughtCar && (
+                    <Car
+                      size={14}
+                      aria-label="Brought a car"
+                      className="ml-1.5 inline shrink-0 align-text-bottom text-accent"
+                    />
+                  )}
+                </span>
+                <span
+                  className={
+                    g.fee < 0
+                      ? "font-medium text-credit"
+                      : "font-medium text-text-primary"
+                  }
+                >
+                  {g.fee < 0 ? "+" : ""}₹{formatRupees(g.fee)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
         <dl className="mt-4 space-y-1 border-t border-border pt-3 text-sm">
           <Line label="Ground" value={Number(costs.ground) || 0} />
           <Line label="Balls" value={Number(costs.ball) || 0} />
@@ -145,9 +208,13 @@ export function GuestMatchSheet({
             <Line label="Other" value={Number(costs.other)} />
           )}
           <Line label="Total cost" value={result.totalCost} strong />
-          {result.surplusToPool > 0 && (
-            <Line label="Surplus to pool" value={result.surplusToPool} />
+          {result.captainCharge > 0 && (
+            <Line
+              label={`Guests · charged to ${captainName ?? "the captain"}`}
+              value={result.captainCharge}
+            />
           )}
+          {surplus > 0 && <Line label="Surplus to pool" value={surplus} />}
         </dl>
       </section>
 
@@ -173,7 +240,7 @@ export function GuestMatchSheet({
       {error && <p className="text-sm text-debit">{error}</p>}
 
       <p className="text-center text-xs text-text-muted">
-        {cars.size} car{cars.size === 1 ? "" : "s"} · this was a sample —
+        {carCount} car{carCount === 1 ? "" : "s"} · this was a sample —
         nothing was saved.
       </p>
     </>

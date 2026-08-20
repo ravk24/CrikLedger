@@ -12,15 +12,17 @@ import type { WizardPlayer } from "@/components/wizard/wizardTypes";
 // teams directory, every aggregate, and every purge, forever.
 
 export const DEMO_TEAM = {
-  name: "Sunday Strikers",
-  opponent: "Riverside CC",
+  name: "Supergiants",
+  opponent: "Challengers",
   venue: "Municipal Ground",
   date: "2026-09-13",
 } as const;
 
-// Eleven names + the costs of one ordinary Sunday match.
+// Eleven names + the costs of one ordinary Sunday match. One of them is
+// the captain: the guests step charges every guest fee to the captain's
+// balance, so the sample needs one to demonstrate that rule.
 export const DEMO_PLAYERS: WizardPlayer[] = [
-  { id: "d1", name: "Arjun" },
+  { id: "d1", name: "Arjun", is_captain: true },
   { id: "d2", name: "Vikram" },
   { id: "d3", name: "Rohit" },
   { id: "d4", name: "Sameer" },
@@ -38,7 +40,7 @@ export const DEMO_DRIVERS = ["d2", "d5", "d9"] as const;
 
 export const DEMO_COSTS = {
   ground: "2400",
-  ball: "320",
+  ball: "60", // the club default the paid wizard prefills
   other: "0",
   allowance: "250",
 } as const;

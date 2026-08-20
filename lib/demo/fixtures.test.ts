@@ -55,13 +55,37 @@ describe("guest sample match", () => {
     }
   });
 
+  it("has exactly one captain — the guest charge lands on them", () => {
+    const captains = DEMO_PLAYERS.filter((p) => p.is_captain);
+    expect(captains).toHaveLength(1);
+  });
+
   it("has drivers that actually exist in the roster", () => {
     const ids = new Set(DEMO_PLAYERS.map((p) => p.id));
     for (const d of DEMO_DRIVERS) expect(ids.has(d)).toBe(true);
   });
 
-  it("has no captain charge — a sample team has no standing captain", () => {
+  it("charges nothing to the captain when nobody brought a guest", () => {
     expect(run().captainCharge).toBe(0);
+  });
+
+  // The sample's guests step adds guests to this same call. Their fees
+  // land on the captain, so the roster must keep one.
+  it("charges a guest's fee to the captain", () => {
+    const withGuest = calculateMatchFees({
+      groundFee: Number(DEMO_COSTS.ground),
+      ballFee: Number(DEMO_COSTS.ball),
+      otherFee: Number(DEMO_COSTS.other),
+      carAllowancePerCar: Number(DEMO_COSTS.allowance),
+      attendees: DEMO_PLAYERS.map((p) => ({
+        playerId: p.id,
+        broughtCar: (DEMO_DRIVERS as readonly string[]).includes(p.id),
+      })),
+      guests: [{ name: "Ravi", broughtCar: false }],
+    });
+    expect(withGuest.guestRows).toHaveLength(1);
+    expect(withGuest.captainCharge).toBe(withGuest.guestRows[0].fee);
+    expect(withGuest.captainCharge).toBeGreaterThan(0);
   });
 });
 

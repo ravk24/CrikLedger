@@ -12,6 +12,7 @@ const rowSchema = z.object({
   name: z.string().trim().min(1).max(40),
   fee: z.number().finite(),
   broughtCar: z.boolean(),
+  guest: z.boolean().optional(),
 });
 
 const payloadSchema = z.object({
@@ -26,7 +27,31 @@ const payloadSchema = z.object({
   totalCost: z.number().finite(),
   surplus: z.number().finite(),
   rows: z.array(rowSchema).min(1).max(30),
+  captainNote: z.string().trim().max(80).optional(),
 });
+
+// satori has no icon runtime, so the car mark is drawn inline. Same
+// glyph as lucide-react's <Car>, which is what the app shows on screen.
+function CarMark() {
+  return (
+    <svg
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#38bdf8"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ marginLeft: 8 }}
+    >
+      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+      <circle cx="7" cy="17" r="2" />
+      <path d="M9 17h6" />
+      <circle cx="17" cy="17" r="2" />
+    </svg>
+  );
+}
 
 const rupees = (n: number) =>
   Math.abs(Math.round(n)).toLocaleString("en-IN");
@@ -105,9 +130,20 @@ export async function POST(req: NextRequest) {
                     borderBottom: "1px solid #1e293b",
                   }}
                 >
-                  <div style={{ display: "flex", color: "#e2e8f0" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      color: "#e2e8f0",
+                    }}
+                  >
                     {r.name}
-                    {r.broughtCar ? " · car" : ""}
+                    {r.guest ? (
+                      <span style={{ color: "#94a3b8", marginLeft: 8 }}>
+                        guest
+                      </span>
+                    ) : null}
+                    {r.broughtCar ? <CarMark /> : null}
                   </div>
                   <div
                     style={{
@@ -122,6 +158,12 @@ export async function POST(req: NextRequest) {
             </div>
           ))}
         </div>
+
+        {data.captainNote ? (
+          <div style={{ display: "flex", marginTop: 20, fontSize: 24, color: "#94a3b8" }}>
+            {data.captainNote}
+          </div>
+        ) : null}
 
         <div style={{ display: "flex", marginTop: "auto", fontSize: 24, color: "#94a3b8" }}>
           Ground ₹{rupees(data.groundFee)} · Balls ₹{rupees(data.ballFee)}
