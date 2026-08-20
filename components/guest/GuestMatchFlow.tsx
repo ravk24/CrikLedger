@@ -8,6 +8,7 @@ import { StepCosts } from "@/components/wizard/StepCosts";
 import { StepFeePreview } from "@/components/wizard/StepFeePreview";
 import { StepGuests } from "@/components/wizard/StepGuests";
 import { StepPlayers } from "@/components/wizard/StepPlayers";
+import { StepSharedCar } from "@/components/wizard/StepSharedCar";
 import { StepResult } from "@/components/wizard/StepResult";
 import { GuestMatchSheet } from "@/components/guest/GuestMatchSheet";
 import { calculateMatchFees } from "@/engine/calc";
@@ -46,6 +47,7 @@ type Step =
   | "guests"
   | "carFee"
   | "cars"
+  | "shared"
   | "preview"
   | "sheet";
 
@@ -61,16 +63,19 @@ const ALL_STEPS: Step[] = [
   "guests",
   "carFee",
   "cars",
+  "shared",
   "preview",
   "sheet",
 ];
 
-// Ignoring the car fee drops the cars question — with no rebate to give,
-// asking who drove decides nothing. The count shrinks with it rather
-// than skipping a number, which is how buildSteps() handles a dropped
+// Ignoring the car fee drops BOTH car questions — with no rebate to give
+// or fund, neither decides anything. The count shrinks with them rather
+// than skipping numbers, which is how buildSteps() handles a dropped
 // step in the paid wizard.
 function buildSteps(ignoreAllowance: boolean): Step[] {
-  return ignoreAllowance ? ALL_STEPS.filter((s) => s !== "cars") : ALL_STEPS;
+  return ignoreAllowance
+    ? ALL_STEPS.filter((s) => s !== "cars" && s !== "shared")
+    : ALL_STEPS;
 }
 
 // What the Next button points at. Derived from the step list rather than
@@ -83,7 +88,8 @@ const STEP_NAMES: Record<Step, string> = {
   players: "players",
   guests: "guests",
   carFee: "car fee",
-  cars: "cars",
+  cars: "who brought the car",
+  shared: "who shared the car",
   preview: "fee preview",
   sheet: "the match sheet",
 };
@@ -103,9 +109,15 @@ export function GuestMatchFlow() {
   const [guests, setGuests] = useState<WizardGuest[]>([]);
   const [ignoreAllowance, setIgnoreAllowance] = useState(false);
   const [cars, setCars] = useState<Set<string>>(new Set(DEMO_DRIVERS));
-  // Fee edits, keyed by player id — the same override map the paid
-  // preview keeps, minus the server round-trip.
-  const [edits, setEdits] = useState<Map<string, number>>(new Map());
+  // Who rode with someone. Pre-filled with everyone who did not drive,
+  // which is the common case and the same thing Include all does.
+  const [shared, setShared] = useState<Set<string>>(
+    new Set(
+      DEMO_PLAYERS.filter(
+        (p) => !(DEMO_DRIVERS as readonly string[]).includes(p.id),
+      ).map((p) => p.id),
+    ),
+  );
 
   // The ignore switch never clears the typed amount, so toggling it off
   // restores it — same contract as StepCarAllowance's docs.
@@ -132,28 +144,23 @@ export function GuestMatchFlow() {
         attendees: selectedPlayers.map((p) => ({
           playerId: p.id,
           broughtCar: effectiveCars.has(p.id),
+          sharedCar: shared.has(p.id),
         })),
         guests: guests.map((g) => ({
           name: g.name,
           broughtCar: g.brought_car,
+          sharedCar: g.shared_car,
         })),
+        // The team flow's rule: only the people who rode fund the cars.
+        carSplit: "sharers",
       });
     } catch {
       // NO_PLAYERS: everyone was deselected. The preview step handles it.
       return null;
     }
-  }, [costs, selectedPlayers, effectiveCars, guests, allowance]);
+  }, [costs, selectedPlayers, effectiveCars, shared, guests, allowance]);
 
-  // Engine rows with any manual edit applied on top, exactly as the paid
-  // preview builds displayRows.
-  const displayRows = useMemo(
-    () =>
-      (fees?.rows ?? []).map((row) => {
-        const edited = edits.get(row.playerId);
-        return edited !== undefined ? { ...row, fee: edited } : row;
-      }),
-    [fees, edits],
-  );
+  const displayRows = fees?.rows ?? [];
 
   const steps = buildSteps(ignoreAllowance);
   const wizardSteps = steps.length - 2; // intro and sheet sit outside the count
@@ -188,7 +195,13 @@ export function GuestMatchFlow() {
     setGuests([]);
     setIgnoreAllowance(false);
     setCars(new Set(DEMO_DRIVERS));
-    setEdits(new Map());
+    setShared(
+      new Set(
+        DEMO_PLAYERS.filter(
+          (p) => !(DEMO_DRIVERS as readonly string[]).includes(p.id),
+        ).map((p) => p.id),
+      ),
+    );
   }
 
   // Abandoning skips every remaining step in the paid wizard too — there
@@ -337,12 +350,19 @@ export function GuestMatchFlow() {
                 const nextSelected = new Set(prev);
                 if (nextSelected.has(id)) {
                   nextSelected.delete(id);
-                  // A player who did not play cannot have brought a car.
+                  // A player who did not play cannot have brought a car
+                  // or ridden in one.
                   setCars((prevCars) => {
                     if (!prevCars.has(id)) return prevCars;
                     const nextCars = new Set(prevCars);
                     nextCars.delete(id);
                     return nextCars;
+                  });
+                  setShared((prevShared) => {
+                    if (!prevShared.has(id)) return prevShared;
+                    const nextShared = new Set(prevShared);
+                    nextShared.delete(id);
+                    return nextShared;
                   });
                 } else {
                   nextSelected.add(id);
@@ -361,7 +381,10 @@ export function GuestMatchFlow() {
           <StepGuests
             guests={guests}
             onAddGuest={(name) =>
-              setGuests((prev) => [...prev, { name, brought_car: false }])
+              setGuests((prev) => [
+                ...prev,
+                { name, brought_car: false, shared_car: false },
+              ])
             }
             onRemoveGuest={(i) =>
               setGuests((prev) => prev.filter((_, at) => at !== i))
@@ -411,7 +434,7 @@ export function GuestMatchFlow() {
           </h2>
           <p className="-mt-2 text-xs text-text-muted">
             {allowance > 0
-              ? `Drivers get ${formatRupees(allowance)} back per car, shared across everyone else.`
+              ? `Drivers get ${formatRupees(allowance)} back per car — funded by whoever rides with them, on the next step.`
               : "The car fee is ignored for this match — driving earns no rebate."}
           </p>
           <StepCars
@@ -419,6 +442,57 @@ export function GuestMatchFlow() {
             cars={cars}
             onToggleCar={toggleCar}
             allowance={allowance}
+          />
+          <NextButton onClick={next} label={nextLabel} />
+        </>
+      )}
+
+      {step === "shared" && (
+        <>
+          <h2 className="text-base font-semibold text-text-primary">
+            Who shared the car?
+          </h2>
+          <StepSharedCar
+            players={selectedPlayers}
+            cars={effectiveCars}
+            shared={shared}
+            onToggleShared={(id) =>
+              setShared((prev) => {
+                const nextShared = new Set(prev);
+                if (nextShared.has(id)) nextShared.delete(id);
+                else nextShared.add(id);
+                return nextShared;
+              })
+            }
+            onSetAllShared={(on) => {
+              setShared(
+                on
+                  ? new Set(
+                      selectedPlayers
+                        .filter((p) => !effectiveCars.has(p.id))
+                        .map((p) => p.id),
+                    )
+                  : new Set(),
+              );
+              setGuests((prev) =>
+                prev.map((g) =>
+                  g.brought_car ? g : { ...g, shared_car: on },
+                ),
+              );
+            }}
+            guests={guests}
+            onToggleGuestShared={(i) =>
+              setGuests((prev) =>
+                prev.map((g, at) =>
+                  at === i ? { ...g, shared_car: !g.shared_car } : g,
+                ),
+              )
+            }
+            allowance={allowance}
+            carCount={
+              selectedPlayers.filter((p) => effectiveCars.has(p.id)).length +
+              guests.filter((g) => g.brought_car).length
+            }
           />
           <NextButton onClick={next} label={nextLabel} />
         </>
@@ -434,15 +508,13 @@ export function GuestMatchFlow() {
               rows={displayRows.map((r) => ({
                 player_id: r.playerId,
                 brought_car: r.broughtCar,
+                shared_car: r.sharedCar,
                 fee: r.fee,
               }))}
               players={DEMO_PLAYERS}
-              editedKeys={new Set(edits.keys())}
-              onEditFee={(key, fee) =>
-                setEdits((prev) => new Map(prev).set(key, fee))
-              }
-              onResetEdits={() => setEdits(new Map())}
               perPlayerFee={fees.perPlayerFee}
+              carSharePerSharer={fees.carSharePerSharer}
+              sharerCount={fees.sharerCount}
               totalCost={fees.totalCost}
               cashCosts={
                 (Number(costs.ground) || 0) +
@@ -452,6 +524,7 @@ export function GuestMatchFlow() {
               guestRows={fees.guestRows.map((g) => ({
                 name: g.name,
                 brought_car: g.broughtCar,
+                shared_car: g.sharedCar,
                 fee: g.fee,
               }))}
               captainCharge={fees.captainCharge}

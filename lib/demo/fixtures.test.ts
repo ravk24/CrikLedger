@@ -13,6 +13,12 @@ import {
 // nonsensical (a negative fee, a split that doesn't balance), the sample
 // silently starts misrepresenting the product. These tests are the guard.
 
+const drove = (id: string) =>
+  (DEMO_DRIVERS as readonly string[]).includes(id);
+
+// Mirrors what the sample actually runs: the team rule, with everyone
+// who did not drive pre-marked as having ridden along (what the sample
+// opens with, and what Include all does).
 const run = () =>
   calculateMatchFees({
     groundFee: Number(DEMO_COSTS.ground),
@@ -21,9 +27,11 @@ const run = () =>
     carAllowancePerCar: Number(DEMO_COSTS.allowance),
     attendees: DEMO_PLAYERS.map((p) => ({
       playerId: p.id,
-      broughtCar: (DEMO_DRIVERS as readonly string[]).includes(p.id),
+      broughtCar: drove(p.id),
+      sharedCar: !drove(p.id),
     })),
     guests: [],
+    carSplit: "sharers",
   });
 
 describe("guest sample match", () => {
@@ -42,17 +50,26 @@ describe("guest sample match", () => {
     expect(result.surplusToPool).toBeGreaterThanOrEqual(0);
   });
 
-  it("charges non-drivers a positive fee and credits drivers the allowance", () => {
+  it("charges riders base + car share and credits drivers the allowance", () => {
     const result = run();
     const allowance = Number(DEMO_COSTS.allowance);
+    const base = result.perPlayerFee;
     for (const row of result.rows) {
-      const other = result.rows.find((r) => !r.broughtCar)!;
       if (row.broughtCar) {
-        expect(row.fee).toBe(other.fee - allowance);
+        expect(row.fee).toBe(base - allowance);
       } else {
+        expect(row.fee).toBe(base + result.carSharePerSharer);
         expect(row.fee).toBeGreaterThan(0);
       }
     }
+  });
+
+  it("funds the cars from the riders only", () => {
+    const result = run();
+    expect(result.sharerCount).toBe(
+      DEMO_PLAYERS.length - DEMO_DRIVERS.length,
+    );
+    expect(result.carSharePerSharer).toBeGreaterThan(0);
   });
 
   it("has exactly one captain — the guest charge lands on them", () => {

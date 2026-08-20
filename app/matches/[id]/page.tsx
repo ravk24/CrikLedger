@@ -17,7 +17,7 @@ import { canWrite, isScopeSuperadmin } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getTeamById, getTeamGrounds } from "@/lib/team";
-import { rowKey, type WizardInitial } from "@/components/wizard/wizardTypes";
+import type { WizardInitial } from "@/components/wizard/wizardTypes";
 import type { GroundBookingPublic, Match, MatchParticipantPublic } from "@/types";
 
 type MatchPublicRow = Match & { updated_by_name: string | null };
@@ -54,24 +54,25 @@ async function buildAdminProps(match: MatchPublicRow) {
   let initial: WizardInitial | undefined;
   if (match.status === "completed") {
     const rowsRes = await pool.query(
-      `SELECT player_id, brought_car, fee_amount, guest_fee_share, is_playing
+      `SELECT player_id, brought_car, shared_car, is_playing
        FROM match_participants WHERE match_id = $1`,
       [match.id],
     );
-    const fees: Record<string, number> = {};
     const selected: string[] = [];
     const cars: string[] = [];
+    const shared: string[] = [];
     for (const row of rowsRes.rows) {
-      // Charge-only captain rows aren't attendance; the guest share is
-      // recomputed on every submit, so strip it from the stored fee.
+      // Charge-only captain rows aren't attendance. Fees are not carried
+      // back into the wizard at all any more — the server recomputes
+      // every one of them on save.
       if (!row.is_playing) continue;
-      fees[rowKey({ player_id: row.player_id })] =
-        Number(row.fee_amount) - Number(row.guest_fee_share);
       selected.push(row.player_id);
       if (row.brought_car) cars.push(row.player_id);
+      if (row.shared_car) shared.push(row.player_id);
     }
     const guestNames = match.guest_names ?? [];
     const guestCars = match.guest_cars ?? [];
+    const guestShared = match.guest_shared_cars ?? [];
     initial = {
       result: match.result ?? "won",
       costs: {
@@ -82,11 +83,12 @@ async function buildAdminProps(match: MatchPublicRow) {
       },
       selected,
       cars,
+      shared,
       guests: guestNames.map((name, i) => ({
         name,
         brought_car: guestCars[i] ?? false,
+        shared_car: guestShared[i] ?? false,
       })),
-      fees,
     };
   }
 

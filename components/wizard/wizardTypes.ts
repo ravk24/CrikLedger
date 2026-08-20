@@ -1,21 +1,29 @@
 export type WizardPlayer = { id: string; name: string; is_captain?: boolean };
 
-export type WizardGuest = { name: string; brought_car: boolean };
+export type WizardGuest = {
+  name: string;
+  brought_car: boolean;
+  shared_car: boolean;
+};
 
 export type PreviewRow = {
   player_id: string;
   brought_car: boolean;
+  shared_car: boolean;
   fee: number;
 };
 
 export type GuestPreviewRow = {
   name: string;
   brought_car: boolean;
+  shared_car: boolean;
   fee: number;
 };
 
 export type PreviewTotals = {
-  per_player_fee: number;
+  per_player_fee: number; // the base head share
+  car_share_per_sharer: number; // what each sharer adds on top (0 if nobody shared)
+  sharer_count: number;
   total_cost: number;
   collected_total: number;
   surplus_to_pool: number;
@@ -36,8 +44,8 @@ export type WizardInitial = {
   costs: WizardCosts;
   selected: string[];
   cars: string[];
+  shared: string[];
   guests: WizardGuest[];
-  fees: Record<string, number>; // key: player_id
 };
 
 export function rowKey(row: { player_id: string }): string {

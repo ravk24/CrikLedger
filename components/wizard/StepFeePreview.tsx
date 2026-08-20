@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Car } from "lucide-react";
+import { Car, Users } from "lucide-react";
 import { Money } from "@/components/shared/Money";
 import { formatRupees } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -13,16 +12,15 @@ import {
 } from "@/components/wizard/wizardTypes";
 
 type Props = {
-  rows: PreviewRow[]; // engine rows with edits already applied
+  rows: PreviewRow[]; // engine output, shown as-is — fees are not editable
   players: WizardPlayer[];
-  editedKeys: Set<string>;
-  onEditFee: (key: string, fee: number) => void;
-  onResetEdits: () => void;
-  perPlayerFee: number;
+  perPlayerFee: number; // the base head share
+  carSharePerSharer: number; // added on top for whoever rode with someone
+  sharerCount: number;
   totalCost: number;
   cashCosts: number; // ground + balls + other (pool pays these)
   guestRows: GuestPreviewRow[];
-  captainCharge: number; // canonical — unaffected by fee edits
+  captainCharge: number; // canonical — computed by the engine
   captainName: string | null;
   fundLabel?: string; // "pool" (SG) or "fund" (tournaments)
 };
@@ -30,10 +28,9 @@ type Props = {
 export function StepFeePreview({
   rows,
   players,
-  editedKeys,
-  onEditFee,
-  onResetEdits,
   perPlayerFee,
+  carSharePerSharer,
+  sharerCount,
   totalCost,
   cashCosts,
   guestRows,
@@ -41,118 +38,70 @@ export function StepFeePreview({
   captainName,
   fundLabel = "pool",
 }: Props) {
-  const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
-  const [editError, setEditError] = useState(false);
-
   const nameOf = (id: string) =>
     players.find((p) => p.id === id)?.name ?? "Unknown";
   const collected = rows.reduce((sum, r) => sum + r.fee, 0) + captainCharge;
   const surplus = collected - cashCosts;
   const headCount = rows.length + guestRows.length;
 
-  function commitEdit(key: string) {
-    const value = Number(draft);
-    if (draft !== "" && Number.isInteger(value)) {
-      onEditFee(key, value);
-      setEditError(false);
-      setEditingKey(null);
-      return;
-    }
-    if (draft === "") {
-      // Blank = cancel the edit quietly.
-      setEditError(false);
-      setEditingKey(null);
-      return;
-    }
-    // Invalid (e.g. "1-2"): keep the editor open and say so instead of
-    // silently reverting to the engine value.
-    setEditError(true);
-  }
-
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between rounded-md bg-surface-secondary px-3 py-2">
         <span className="text-sm text-text-secondary">
-          ₹{formatRupees(totalCost)} ÷ {headCount}{" "}
-          {guestRows.length > 0 ? "heads" : "attendees"}
+          {/* With a car share the headline is the BASE split — car money
+              is funded separately, by the riders, on the line below. */}
+          ₹{formatRupees(carSharePerSharer > 0 ? cashCosts : totalCost)} ÷{" "}
+          {headCount} {guestRows.length > 0 ? "heads" : "attendees"}
         </span>
         <span className="text-sm font-semibold text-text-primary">
           ₹{formatRupees(perPlayerFee)} each
         </span>
       </div>
-      {editError && (
-        <p className="text-xs text-debit">
-          Enter a whole-rupee amount (a minus sign only at the start).
+      {carSharePerSharer > 0 && (
+        <p className="-mt-1 flex items-center gap-1.5 text-xs text-text-muted">
+          <Users size={13} className="shrink-0" />
+          Plus ₹{formatRupees(carSharePerSharer)} car share for the{" "}
+          {sharerCount} who rode with someone.
         </p>
-      )}
-      {editedKeys.size > 0 && (
-        <button
-          type="button"
-          onClick={onResetEdits}
-          className="self-end text-xs font-medium text-accent"
-        >
-          Reset edits
-        </button>
       )}
 
       <div className="overflow-hidden rounded-lg border border-border bg-surface">
         <div className="max-h-56 divide-y divide-border overflow-y-auto">
         {rows.map((row) => {
           const key = rowKey(row);
-          const edited = editedKeys.has(key);
           const isRebate = row.fee < 0;
           return (
             <div
               key={key}
-              className={cn(
-                "flex min-h-11 items-center justify-between gap-2 px-4 py-2",
-                edited && "bg-accent-light/20",
-              )}
+              className="flex min-h-11 items-center justify-between gap-2 px-4 py-2"
             >
               <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-text-primary">
                 <span className="truncate">{nameOf(row.player_id)}</span>
                 {row.brought_car && (
                   <Car size={14} className="shrink-0 text-accent" />
                 )}
-                {edited && (
-                  <span className="size-1.5 shrink-0 rounded-full bg-accent" />
+                {row.shared_car && (
+                  <Users
+                    size={13}
+                    aria-label="Shared a car"
+                    className="shrink-0 text-text-muted"
+                  />
                 )}
               </span>
-              {editingKey === key ? (
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={draft}
-                  autoFocus
-                  onChange={(e) =>
-                    setDraft(e.target.value.replace(/[^0-9-]/g, ""))
-                  }
-                  onBlur={() => commitEdit(key)}
-                  onKeyDown={(e) => e.key === "Enter" && commitEdit(key)}
-                  className="h-9 w-20 rounded-md border-[1.5px] border-accent bg-surface px-2 text-right text-base tabular-nums text-text-primary focus:outline-none"
+              <span
+                className={cn(
+                  "rounded-md border px-2 py-1",
+                  isRebate
+                    ? "border-credit-light bg-credit-light/40"
+                    : "border-border",
+                )}
+              >
+                <Money
+                  amount={row.fee}
+                  variant={isRebate ? "signed" : "neutral"}
+                  className="text-sm font-semibold"
                 />
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingKey(key);
-                    setDraft(String(row.fee));
-                    setEditError(false);
-                  }}
-                  className={cn(
-                    "rounded-md border px-2 py-1",
-                    edited ? "border-accent" : "border-border",
-                    isRebate && "border-credit-light bg-credit-light/40",
-                  )}
-                >
-                  <Money
-                    amount={row.fee}
-                    variant={isRebate ? "signed" : "neutral"}
-                    className="text-sm font-semibold"
-                  />
-                </button>
-              )}
+              </span>
             </div>
           );
         })}
@@ -174,6 +123,13 @@ export function StepFeePreview({
                   </span>
                   {guest.brought_car && (
                     <Car size={14} className="shrink-0 text-accent" />
+                  )}
+                  {guest.shared_car && (
+                    <Users
+                      size={13}
+                      aria-label="Shared a car"
+                      className="shrink-0 text-text-muted"
+                    />
                   )}
                 </span>
                 <Money
@@ -203,7 +159,7 @@ export function StepFeePreview({
           <Money amount={totalCost} className="font-semibold" />
         </div>
         <div className="mt-0.5 flex justify-between">
-          <span className="text-text-secondary">Collected after edits</span>
+          <span className="text-text-secondary">Collected</span>
           <Money amount={collected} className="font-semibold" />
         </div>
         <div className="mt-0.5 flex justify-between">

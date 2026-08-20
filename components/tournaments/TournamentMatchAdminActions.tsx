@@ -85,6 +85,9 @@ export function TournamentMatchAdminActions({
       initial={initial}
       apiBase={`/api/tournaments/${tournamentId}/matches/${matchId}`}
       hasGuests={false}
+      // No sharing question here: tournament car money keeps splitting
+      // across everyone in the match (engine/tournamentFee.ts).
+      hasSharing={false}
       hasCosts={false}
       hasPreview={false}
       fundLabel="fund"

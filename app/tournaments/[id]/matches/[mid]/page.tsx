@@ -18,7 +18,7 @@ import { canWrite, isScopeSuperadmin } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getTeamById, getTeamGrounds } from "@/lib/team";
-import { rowKey, type WizardInitial } from "@/components/wizard/wizardTypes";
+import type { WizardInitial } from "@/components/wizard/wizardTypes";
 import type {
   MatchParticipantPublic,
   TournamentMatch,
@@ -66,15 +66,13 @@ async function buildAdminProps(
   let initial: WizardInitial | undefined;
   if (match.status === "completed") {
     const rowsRes = await pool.query(
-      `SELECT player_id, brought_car, fee_amount
+      `SELECT player_id, brought_car
        FROM tournament_match_participants WHERE match_id = $1`,
       [match.id],
     );
-    const fees: Record<string, number> = {};
     const selected: string[] = [];
     const cars: string[] = [];
     for (const row of rowsRes.rows) {
-      fees[rowKey({ player_id: row.player_id })] = Number(row.fee_amount);
       selected.push(row.player_id);
       if (row.brought_car) cars.push(row.player_id);
     }
@@ -88,8 +86,11 @@ async function buildAdminProps(
       },
       selected,
       cars,
+      // Tournaments do not ask who shared a car; the sharing step is
+      // dropped for them and their car money still splits across
+      // everyone in the match.
+      shared: [],
       guests: [],
-      fees,
     };
   }
 

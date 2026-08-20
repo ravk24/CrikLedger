@@ -3,19 +3,18 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SheetShell } from "@/components/shared/SheetShell";
-import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { StepResult } from "@/components/wizard/StepResult";
 import { StepCosts } from "@/components/wizard/StepCosts";
 import { StepPlayers } from "@/components/wizard/StepPlayers";
 import { StepGuests } from "@/components/wizard/StepGuests";
 import { StepCarAllowance } from "@/components/wizard/StepCarAllowance";
 import { StepCars } from "@/components/wizard/StepCars";
+import { StepSharedCar } from "@/components/wizard/StepSharedCar";
 import { StepFeePreview } from "@/components/wizard/StepFeePreview";
 import { formatRupees } from "@/lib/format";
 import type { GroundInfo } from "@/lib/grounds";
 import { cn } from "@/lib/utils";
 import {
-  rowKey,
   type PreviewRow,
   type PreviewTotals,
   type WizardCosts,
@@ -47,6 +46,7 @@ type Props = {
   hasGuests?: boolean; // false drops the Guests step (tournaments: no guests)
   hasCosts?: boolean; // false drops the Costs step (participation-fee model)
   hasPreview?: boolean; // false drops the Fee preview; Cars submits directly
+  hasSharing?: boolean; // false drops "Who shared the car" (tournaments)
   fundLabel?: string; // "pool" (SG) or "fund" (tournaments) in success copy
 };
 
@@ -57,6 +57,7 @@ type StepKey =
   | "guests"
   | "carFee"
   | "cars"
+  | "shared"
   | "preview";
 
 // nextLabels are derived in buildSteps from whichever step follows.
@@ -66,15 +67,30 @@ const ALL_STEPS: { key: StepKey; title: string }[] = [
   { key: "players", title: "Who played?" },
   { key: "guests", title: "Guests" },
   { key: "carFee", title: "Car fee" },
-  { key: "cars", title: "Cars" },
+  { key: "cars", title: "Who brought the car" },
+  { key: "shared", title: "Who shared the car" },
   { key: "preview", title: "Fee preview" },
 ];
 
-function buildSteps(hasGuests: boolean, hasCosts: boolean, hasPreview: boolean) {
+function buildSteps(
+  hasGuests: boolean,
+  hasCosts: boolean,
+  hasPreview: boolean,
+  hasSharing: boolean,
+  ignoreAllowance: boolean,
+) {
   const dropped = new Set<StepKey>();
   if (!hasGuests) dropped.add("guests");
   if (!hasCosts) dropped.add("costs");
   if (!hasPreview) dropped.add("preview");
+  // No sharing step for callers that do not ask the question
+  // (tournaments). And ignoring the car fee drops BOTH car questions:
+  // with no rebate to hand out, neither decides anything.
+  if (!hasSharing) dropped.add("shared");
+  if (ignoreAllowance) {
+    dropped.add("cars");
+    dropped.add("shared");
+  }
   const steps = ALL_STEPS.filter((s) => !dropped.has(s.key));
   // Each step's label points at whichever step actually follows it.
   return steps.map((s, i) => ({
@@ -101,16 +117,11 @@ export function MatchWizard({
   hasGuests = true,
   hasCosts = true,
   hasPreview = true,
+  hasSharing = true,
   fundLabel = "pool",
 }: Props) {
   const router = useRouter();
   const base = apiBase ?? `/api/matches/${matchId}`;
-  const steps = buildSteps(hasGuests, hasCosts, hasPreview);
-  const LAST_STEP = steps.length;
-  const [step, setStep] = useState(mode === "edit" ? LAST_STEP : 1);
-  // Bounds-hardened: a future dynamic-prop caller must not crash the render.
-  const stepIndex = Math.min(step, LAST_STEP) - 1;
-  const stepKey = steps[stepIndex].key;
   const [result, setResult] = useState<"won" | "lost" | null>(
     initial?.result ?? null,
   );
@@ -130,25 +141,42 @@ export function MatchWizard({
   const [ignoreAllowance, setIgnoreAllowance] = useState(
     mode === "edit" && Number(initial?.costs.allowance) === 0,
   );
+  // 1-based; clamped against the step list below, which can shrink.
+  const [step, setStep] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(
     new Set(initial?.selected ?? []),
   );
   const [cars, setCars] = useState<Set<string>>(new Set(initial?.cars ?? []));
+  const [shared, setShared] = useState<Set<string>>(
+    new Set(initial?.shared ?? []),
+  );
   const [guests, setGuests] = useState<WizardGuest[]>(initial?.guests ?? []);
   const [baseRows, setBaseRows] = useState<PreviewRow[] | null>(null);
   const [totals, setTotals] = useState<PreviewTotals | null>(null);
-  const [edits, setEdits] = useState<Map<string, number>>(
-    new Map(Object.entries(initial?.fees ?? {})),
-  );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confirmReset, setConfirmReset] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // The step list depends on the ignore switch, so it is built after it.
+  const steps = buildSteps(
+    hasGuests,
+    hasCosts,
+    hasPreview,
+    hasSharing,
+    ignoreAllowance,
+  );
+  const LAST_STEP = steps.length;
+  // Bounds-hardened: the list shrinks when the ignore switch goes on, and
+  // a future dynamic-prop caller must not crash the render either.
+  const stepIndex = Math.min(step, LAST_STEP) - 1;
+  const stepKey = steps[stepIndex].key;
+
   // Guests count in the split too; their charges land on the captain.
+  // A driver is never a sharer — they provided the car.
   const attendees = [...selected].map((id) => ({
     player_id: id,
     brought_car: cars.has(id),
+    shared_car: shared.has(id) && !cars.has(id),
   }));
 
   const numericCosts = {
@@ -168,12 +196,6 @@ export function MatchWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, step, baseRows]);
 
-  const displayRows = (baseRows ?? []).map((row) => {
-    const key = rowKey(row);
-    const edited = edits.get(key);
-    return edited !== undefined ? { ...row, fee: edited } : row;
-  });
-
   async function loadPreview() {
     setPending(true);
     setError(null);
@@ -188,20 +210,11 @@ export function MatchWizard({
         setError(body.error?.message ?? "Could not calculate fees.");
         return false;
       }
-      const rows = body.data.rows as PreviewRow[];
-      setBaseRows(rows);
-      // A stored fee equal to the engine's isn't an edit — drop it so the
-      // edited-dot only marks true overrides.
-      setEdits((current) => {
-        const next = new Map(current);
-        for (const row of rows) {
-          const key = rowKey(row);
-          if (next.get(key) === row.fee) next.delete(key);
-        }
-        return next;
-      });
+      setBaseRows(body.data.rows as PreviewRow[]);
       setTotals({
         per_player_fee: body.data.per_player_fee,
+        car_share_per_sharer: Number(body.data.car_share_per_sharer ?? 0),
+        sharer_count: Number(body.data.sharer_count ?? 0),
         total_cost: body.data.total_cost,
         collected_total: body.data.collected_total,
         surplus_to_pool: body.data.surplus_to_pool,
@@ -259,11 +272,9 @@ export function MatchWizard({
           body: JSON.stringify({
             result,
             ...numericCosts,
-            // Without a preview there are no engine rows or fee edits —
-            // attendance only (the participation-fee model settles later).
-            rows: hasPreview
-              ? displayRows
-              : attendees.map((a) => ({ ...a, fee: 0 })),
+            // Attendance only — the server computes every fee from these
+            // and the costs. It never takes a fee from the client.
+            rows: attendees,
             guests,
           }),
         },
@@ -345,11 +356,6 @@ export function MatchWizard({
 
   function goBack() {
     setError(null);
-    // Fee edits only exist when there IS a fee preview.
-    if (hasPreview && step === LAST_STEP && edits.size > 0) {
-      setConfirmReset(true);
-      return;
-    }
     setStep(Math.max(1, step - 1));
   }
 
@@ -465,6 +471,9 @@ export function MatchWizard({
                     const nextCars = new Set(cars);
                     nextCars.delete(id);
                     setCars(nextCars);
+                    const nextShared = new Set(shared);
+                    nextShared.delete(id);
+                    setShared(nextShared);
                   } else {
                     next.add(id);
                   }
@@ -476,7 +485,10 @@ export function MatchWizard({
               <StepGuests
                 guests={guests}
                 onAddGuest={(name) =>
-                  setGuests([...guests, { name, brought_car: false }])
+                  setGuests([
+                    ...guests,
+                    { name, brought_car: false, shared_car: false },
+                  ])
                 }
                 onRemoveGuest={(i) => setGuests(guests.filter((_, x) => x !== i))}
                 onToggleCar={(i) =>
@@ -511,18 +523,55 @@ export function MatchWizard({
                 allowance={numericCosts.car_allowance_per_car}
               />
             )}
+            {stepKey === "shared" && (
+              <StepSharedCar
+                players={selectedPlayers}
+                cars={cars}
+                shared={shared}
+                onToggleShared={(id) => {
+                  const next = new Set(shared);
+                  if (next.has(id)) next.delete(id);
+                  else next.add(id);
+                  setShared(next);
+                }}
+                onSetAllShared={(on) => {
+                  setShared(
+                    on
+                      ? new Set(
+                          selectedPlayers
+                            .filter((p) => !cars.has(p.id))
+                            .map((p) => p.id),
+                        )
+                      : new Set(),
+                  );
+                  setGuests(
+                    guests.map((g) =>
+                      g.brought_car ? g : { ...g, shared_car: on },
+                    ),
+                  );
+                }}
+                guests={guests}
+                onToggleGuestShared={(i) =>
+                  setGuests(
+                    guests.map((g, x) =>
+                      x === i ? { ...g, shared_car: !g.shared_car } : g,
+                    ),
+                  )
+                }
+                allowance={numericCosts.car_allowance_per_car}
+                carCount={
+                  [...selected].filter((id) => cars.has(id)).length +
+                  guests.filter((g) => g.brought_car).length
+                }
+              />
+            )}
             {stepKey === "preview" && totals && (
               <StepFeePreview
-                rows={displayRows}
+                rows={baseRows ?? []}
                 players={players}
-                editedKeys={new Set(edits.keys())}
-                onEditFee={(key, fee) => {
-                  const next = new Map(edits);
-                  next.set(key, fee);
-                  setEdits(next);
-                }}
-                onResetEdits={() => setEdits(new Map())}
                 perPlayerFee={totals.per_player_fee}
+                carSharePerSharer={totals.car_share_per_sharer}
+                sharerCount={totals.sharer_count}
                 totalCost={totals.total_cost}
                 cashCosts={cashCosts}
                 guestRows={totals.guest_rows}
@@ -536,19 +585,6 @@ export function MatchWizard({
         )}
       </SheetShell>
 
-      <ConfirmDialog
-        open={confirmReset}
-        onOpenChange={setConfirmReset}
-        title="Discard fee edits?"
-        description="Going back recalculates every amount — your manual edits will be reset."
-        confirmLabel="Discard and go back"
-        destructive
-        onConfirm={() => {
-          setEdits(new Map());
-          setConfirmReset(false);
-          setStep(LAST_STEP - 1);
-        }}
-      />
     </>
   );
 }
