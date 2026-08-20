@@ -24,17 +24,8 @@ const PLATFORMS: Platform[] = ["android", "ios"];
  * Detection mirrors components/dashboard/InstallNudge.tsx — same
  * standalone test, same beforeinstallprompt capture. Kept as two small
  * copies rather than a shared hook while there are only two callers.
- *
- * installedSlot is what to show BELOW the confirmation once the app is
- * installed. Home passes its next-steps list (the guide's job is done by
- * then, and a bare "you are installed" card is a dead end); /install
- * passes nothing and keeps the confirmation on its own.
  */
-export function InstallGuide({
-  installedSlot,
-}: {
-  installedSlot?: React.ReactNode;
-}) {
+export function InstallGuide() {
   // "android" on the server AND on the first client render — the sniff
   // lands in the effect below, so there is nothing to mismatch.
   const [platform, setPlatform] = useState<Platform>("android");
@@ -76,21 +67,18 @@ export function InstallGuide({
 
   if (installed) {
     return (
-      <>
-        <section className="flex items-start gap-3 rounded-lg border border-border bg-surface p-4">
-          <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-credit" />
-          <div>
-            <p className="text-sm font-semibold text-text-primary">
-              Installed — you are on your home screen
-            </p>
-            <p className="mt-1 text-sm text-text-secondary">
-              Nothing left to install — it opens full screen from your own
-              icon, like any other app.
-            </p>
-          </div>
-        </section>
-        {installedSlot}
-      </>
+      <section className="flex items-start gap-3 rounded-lg border border-border bg-surface p-4">
+        <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-credit" />
+        <div>
+          <p className="text-sm font-semibold text-text-primary">
+            Installed — you are on your home screen
+          </p>
+          <p className="mt-1 text-sm text-text-secondary">
+            Nothing left to install — it opens full screen from your own
+            icon, like any other app.
+          </p>
+        </div>
+      </section>
     );
   }
 

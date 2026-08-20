@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { ProductCard } from "@/components/shared/ProductCard";
+import { PRODUCTS } from "@/lib/products";
 
 export const metadata = {
   title: "Pricing · CrikLedger",
   description:
-    "CrikLedger pricing — Ledger ₹99 and Tournament ₹29, one-time purchases with a 30-day refund window.",
+    "CrikLedger pricing — Ledger ₹99, refundable within 30 days, and Tournament ₹29, non-refundable. One-time purchases, no subscription.",
 };
 
 // PUBLIC and STATIC on purpose.
@@ -15,41 +16,9 @@ export const metadata = {
 // reads, nothing dynamic, so it stays crawlable and prerendered. Do NOT
 // add getNavState() here.
 //
-// Prices must stay in step with /purchases and the Terms page. When
-// Feature 3 lands a products table, this page reads from it.
-const PRODUCTS = [
-  {
-    name: "Ledger",
-    price: "₹99",
-    tagline: "One-time purchase · one team",
-    features: [
-      "Maintain your team ledger",
-      "Add players",
-      "Record matches and expenses",
-      "Record player contributions",
-      "Track payments",
-      "Calculate player balances",
-      "Identify amounts owed or surplus balances",
-      "Maintain the team's running financial record",
-    ],
-    note: "One purchase provides access for one team. The same account may be reused, but another team requires another Ledger purchase.",
-  },
-  {
-    name: "Tournament",
-    price: "₹29",
-    tagline: "One-time purchase · one tournament",
-    features: [
-      "Create a tournament",
-      "Add teams",
-      "Schedule matches",
-      "Record match results",
-      "Track player contributions",
-      "Track amounts owed or surplus amounts",
-    ],
-    note: "The Tournament feature is designed for financial management and does not provide tournament standings or rankings.",
-  },
-];
-
+// The catalogue itself lives in lib/products.ts, which /pricing, Home
+// and the refund copy all read, so a price or a refund term is stated
+// once. When Feature 3 lands a products table, that file reads from it.
 export default function Pricing() {
   return (
     <>
@@ -61,38 +30,7 @@ export default function Pricing() {
       </div>
 
       {PRODUCTS.map((p) => (
-        <section
-          key={p.name}
-          className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4"
-        >
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-base font-semibold text-text-primary">
-              {p.name}
-            </h2>
-            <span className="text-2xl font-bold text-text-primary">
-              {p.price}
-            </span>
-          </div>
-          <p className="-mt-2 text-xs text-text-muted">{p.tagline}</p>
-
-          <ul className="flex flex-col gap-1.5">
-            {p.features.map((f) => (
-              <li
-                key={f}
-                className="flex items-start gap-2 text-sm text-text-secondary"
-              >
-                <Check
-                  size={15}
-                  className="mt-0.5 shrink-0 text-credit"
-                  aria-hidden
-                />
-                {f}
-              </li>
-            ))}
-          </ul>
-
-          <p className="text-xs text-text-muted">{p.note}</p>
-        </section>
+        <ProductCard key={p.key} product={p} />
       ))}
 
       <section className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4 text-sm text-text-secondary">
@@ -138,7 +76,8 @@ export default function Pricing() {
 
         <h2 className="mt-1 text-sm font-semibold text-text-primary">Refunds</h2>
         <p>
-          Purchases are eligible for a refund if requested within 30 days of
+          <strong className="font-semibold text-text-primary">Ledger</strong>{" "}
+          purchases are eligible for a refund if requested within 30 days of
           purchase, subject to the{" "}
           <Link
             href="/refund-policy"
@@ -148,6 +87,14 @@ export default function Pricing() {
           </Link>
           .
         </p>
+        <p>
+          The{" "}
+          <strong className="font-semibold text-text-primary">
+            Tournament
+          </strong>{" "}
+          feature is <strong className="font-semibold text-text-primary">not
+          refundable</strong>. Please review what it includes before buying.
+        </p>
       </section>
 
       <p className="text-center text-xs text-text-muted">
@@ -156,7 +103,7 @@ export default function Pricing() {
           href="/how-to-buy"
           className="text-accent underline underline-offset-2"
         >
-          How to purchase
+          How payments work
         </Link>
       </p>
     </>

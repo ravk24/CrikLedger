@@ -1,14 +1,20 @@
+import Link from "next/link";
+import { ChevronRight, Smartphone } from "lucide-react";
+import { ProductCard } from "@/components/shared/ProductCard";
+import { PRODUCTS } from "@/lib/products";
 import type { NavState } from "@/lib/nav";
-import { InstallGuide } from "./InstallGuide";
-import { NextSteps } from "./NextSteps";
 
-// Slot 0 of the tab bar for anyone without a Team Ledger. It replaced
-// the old TeamsDirectory, which listed every team on the platform — a
-// list a visitor could look at but never open. The useful thing to hand
-// someone on their first visit is how to get the app onto their phone.
+// Home for anyone without a Team Ledger: three cards — how to get the
+// app onto a phone, and the two things there are to buy.
+//
+// The install walkthrough itself moved back to /install and is reached
+// through the first card. Home is a shop window now, not a chore: the
+// Schedule tab (the free sample match) sits to its left for visitors,
+// so the demo is the landing page and this is where someone goes once
+// they want to know what it costs.
 //
 // Ledger holders never see this: app/(app)/page.tsx sends them to their
-// team dashboard instead, and they reach the same guide via /install.
+// team dashboard instead.
 export function HomeIntro({ nav }: { nav: NavState }) {
   return (
     <>
@@ -21,9 +27,27 @@ export function HomeIntro({ nav }: { nav: NavState }) {
         </p>
       </div>
 
-      {/* Not installed: the walkthrough. Already installed: the
-          confirmation plus somewhere to go next. */}
-      <InstallGuide installedSlot={<NextSteps nav={nav} />} />
+      <Link
+        href="/install"
+        className="flex min-h-16 items-center gap-3 rounded-lg border border-border bg-surface p-4"
+      >
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-light text-accent">
+          <Smartphone size={18} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-text-primary">
+            How to install
+          </span>
+          <span className="block text-xs text-text-muted">
+            Put CrikLedger on your home screen — no app store needed
+          </span>
+        </span>
+        <ChevronRight size={16} className="shrink-0 text-text-muted" />
+      </Link>
+
+      {PRODUCTS.map((p) => (
+        <ProductCard key={p.key} product={p} href="/how-to-buy" />
+      ))}
     </>
   );
 }
