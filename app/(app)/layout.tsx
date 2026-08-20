@@ -1,4 +1,3 @@
-import { LegalFooter } from "@/components/legal/LegalFooter";
 import { AppHeader } from "@/components/shared/AppHeader";
 import { AppTabBarGate } from "@/components/shared/AppTabBarGate";
 
@@ -27,7 +26,6 @@ export default function AppLayout({
       <AppHeader />
       <main className="mx-auto flex max-w-md flex-col gap-4 px-4 py-4">
         {children}
-        <LegalFooter />
       </main>
       <AppTabBarGate />
     </div>
