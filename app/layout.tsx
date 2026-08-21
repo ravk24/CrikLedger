@@ -3,7 +3,6 @@ import { Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { RegisterSW } from "@/components/shared/RegisterSW";
 import { CopyrightBar } from "@/components/shared/CopyrightBar";
-import { SplashScreen } from "@/components/shared/SplashScreen";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -40,7 +39,6 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SplashScreen />
           {children}
           <CopyrightBar />
           <RegisterSW />

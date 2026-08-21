@@ -4,11 +4,12 @@
 // Bump STATIC_CACHE when icons change.
 // v3: the CricLedger -> CrikLedger rename replaced every icon and the
 // app title, so installed clients must drop the old shell.
-const STATIC_CACHE = "crikledger-static-v3";
+// v4: the splash screen is gone, so /splash.png left this list. The bump
+// is what evicts it — an installed client keeps its old addAll otherwise.
+const STATIC_CACHE = "crikledger-static-v4";
 const STATIC_ASSETS = [
   "/icon-192.png",
   "/icon-512.png",
-  "/splash.png",
   "/offline.html",
 ];
 
