@@ -1,10 +1,27 @@
 import { withTransaction } from "@/lib/db";
+import { opponentLabel } from "@/lib/format";
 import { calculateMatchFees } from "@/engine/calc";
 import { ApiError } from "@/lib/validate";
+import type { PoolClient } from "pg";
 import type { z } from "zod";
 import type { matchSubmitSchema } from "@/lib/validate";
 
 type SubmitBody = z.infer<typeof matchSubmitSchema>;
+
+// match_id -> attendee count, for the match lists. A charge-only
+// captain row (is_playing = FALSE, carrying the guests' fee share) is
+// not attendance, so it never counts. Shared by /matches and both
+// schedule lists rather than re-deriving the rule per page.
+export function buildAttendeeCounts(
+  rows: { match_id: string; is_playing: boolean }[],
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    if (!row.is_playing) continue;
+    counts.set(row.match_id, (counts.get(row.match_id) ?? 0) + 1);
+  }
+  return counts;
+}
 
 // Complete OR edit a match — identical semantics (kickoff §6). Derived
 // balances make reversal free: participants are replaced wholesale and
@@ -66,7 +83,7 @@ export async function completeMatch(
   return withTransaction(async (client) => {
     const matchRes = await client.query(
       `SELECT id, status, opponent, match_date, ground_booking_id,
-              other_fee_entry_id, team_id
+              other_fee_entry_id, fee_direction, fee_pending, team_id
        FROM matches WHERE id = $1`,
       [matchId],
     );
@@ -77,8 +94,16 @@ export async function completeMatch(
     if (match.status === "abandoned") {
       throw new ApiError(409, "ABANDONED", "An abandoned match has no fees");
     }
-    // Scheduled → completed only: the booking's pending fee must be
-    // cleared first. FOR UPDATE serializes against a concurrent clear.
+    // Scheduled → completed only: a pending fee must be cleared first.
+    // Same gate for both sources — a legacy booking's amount_pending and
+    // a match's own fee_pending (migration 36).
+    if (match.status === "scheduled" && Number(match.fee_pending) > 0) {
+      throw new ApiError(
+        409,
+        "PENDING_FEE",
+        "Clear the pending match fee before completing this match",
+      );
+    }
     if (match.status === "scheduled" && match.ground_booking_id) {
       const feeRes = await client.query(
         `SELECT amount_pending FROM ground_bookings WHERE id = $1 FOR UPDATE`,
@@ -187,14 +212,15 @@ export async function completeMatch(
       );
     }
 
-    // Other matches: the pool fronted the ground contribution at
-    // scheduling (linked plain_debit), so completion recoups it from the
-    // players' collected fees ON TOP of the usual roundoff surplus —
-    // pool nets to +surplus over the match's life. Read the entry's
-    // CURRENT amount (admins may have edited it in the ledger); a
-    // hand-deleted entry NULLs the link and recoups nothing.
+    // The pool fronted a DEBIT fee at scheduling, so completion recoups
+    // it from the players' collected fees ON TOP of the usual roundoff
+    // surplus — pool nets to +surplus over the match's life. A CREDIT
+    // fee was never fronted; recouping it would credit the pool twice
+    // for the same money, so the direction gates this block. Read the
+    // entry's CURRENT amount (admins may have edited it in the ledger);
+    // a hand-deleted entry NULLs the link and recoups nothing.
     let recouped = 0;
-    if (match.other_fee_entry_id) {
+    if (match.other_fee_entry_id && match.fee_direction !== "credit") {
       const feeRes = await client.query(
         `SELECT amount FROM pool_entries WHERE id = $1 FOR UPDATE`,
         [match.other_fee_entry_id],
@@ -218,8 +244,8 @@ export async function completeMatch(
         [
           match.match_date,
           recouped > 0
-            ? `Match collection vs ${match.opponent}`
-            : `Match surplus vs ${match.opponent}`,
+            ? `Match collection vs ${opponentLabel(match.opponent)}`
+            : `Match surplus vs ${opponentLabel(match.opponent)}`,
           credit,
           matchId,
           adminId,
@@ -241,4 +267,67 @@ export async function completeMatch(
       captainName: captain?.name ?? null,
     };
   });
+}
+
+// Clearing a match's own pending fee (migration 36). The counterpart of
+// lib/bookings.ts clearBookingPending, for matches that carry the fee
+// themselves rather than through a ground booking.
+//
+// One-way by design: the outstanding slice is posted to the pool in the
+// SAME direction as the fee it belongs to — a debit we still owed is
+// paid out, a credit still owed to us comes in — and fee_pending drops
+// to zero, which unlocks completion and turns the card's dot green.
+//
+// The caller echoes the amount it displayed (expectedPending), so a
+// stale page gets 409 PENDING_MISMATCH rather than clearing a different
+// figure. FOR UPDATE serializes two admins clearing at once.
+export async function clearMatchPending(
+  client: PoolClient,
+  adminId: string,
+  matchId: string,
+  expectedPending: number,
+) {
+  const cur = await client.query(
+    `SELECT opponent, venue, fee_direction, fee_pending, team_id
+     FROM matches WHERE id = $1 FOR UPDATE`,
+    [matchId],
+  );
+  const match = cur.rows[0];
+  if (!match) {
+    throw new ApiError(404, "NOT_FOUND", "Match not found");
+  }
+  const pending = Number(match.fee_pending);
+  if (pending <= 0) {
+    throw new ApiError(409, "NOTHING_PENDING", "This match has no pending fee");
+  }
+  if (pending !== expectedPending) {
+    throw new ApiError(
+      409,
+      "PENDING_MISMATCH",
+      `The pending amount is now ₹${pending} — reload and try again`,
+    );
+  }
+
+  const isDebit = match.fee_direction === "debit";
+  const message =
+    `Match fee (pending cleared) — vs ${opponentLabel(match.opponent)}` +
+    (match.venue ? ` at ${match.venue}` : "");
+  const entryRes = await client.query(
+    `INSERT INTO pool_entries (kind, message, amount, created_by, team_id)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id`,
+    [
+      isDebit ? "plain_debit" : "other_income",
+      message,
+      isDebit ? -pending : pending,
+      adminId,
+      match.team_id,
+    ],
+  );
+
+  await client.query(`UPDATE matches SET fee_pending = 0 WHERE id = $1`, [
+    matchId,
+  ]);
+
+  return { cleared: pending, entry_id: entryRes.rows[0].id };
 }

@@ -1,5 +1,5 @@
 import type { PoolClient } from "pg";
-import { formatDateShort, formatRupees } from "@/lib/format";
+import { formatDateShort, formatRupees, opponentLabel } from "@/lib/format";
 import { ApiError } from "@/lib/validate";
 
 // A booking's money is split evenly across its slots. The share is
@@ -212,7 +212,7 @@ export async function clearBookingPending(
      RETURNING id`,
     [
       `Pending amount cleared — ${booking.team_name} (capt. ${booking.captain})` +
-        ` · match vs ${match.opponent} on ${formatDateShort(match.match_date)}`,
+        ` · match vs ${opponentLabel(match.opponent)} on ${formatDateShort(match.match_date)}`,
       pending,
       adminId,
       booking.team_id,

@@ -47,7 +47,7 @@ export type Match = {
   id: string;
   team_id: string;
   match_date: string;
-  opponent: string;
+  opponent: string | null; // NULL = not known yet (red dot)
   status: MatchStatus;
   result: MatchResult | null;
   abandoned_reason: string | null;
@@ -60,7 +60,11 @@ export type Match = {
   guest_shared_cars: boolean[]; // same alignment; who rode with someone
   ground_booking_id: string | null; // legacy link; bookings no longer create matches
   venue: string | null; // free-text ground name, typed when scheduling
-  fee_paid_to: "opponent" | "owner" | null; // who received our ground share
+  fee_paid_to: "opponent" | "owner" | null; // legacy; nothing new writes it
+  // Which way the match fee moved. NULL = no fee recorded. Only a
+  // 'debit' is recouped at completion — the pool fronted that one.
+  fee_direction: "credit" | "debit" | null;
+  fee_pending: number; // still-outstanding slice of the fee; 0 = settled
   updated_at: string | null;
   created_at: string;
 };

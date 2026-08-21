@@ -3,33 +3,52 @@
 import { useState } from "react";
 import { CalendarPlus } from "lucide-react";
 import { ScheduleMatchWizard } from "@/components/schedule/ScheduleMatchWizard";
+import { cn } from "@/lib/utils";
 
 type Props = {
-  // Standing captain for the paid-to-owner note in the wizard.
-  captainName: string | null;
+  // Server-resolved: may this visitor schedule a match? False renders
+  // the tile dimmed and inert rather than hiding it — the app-wide
+  // disabled-not-hidden rule, and it keeps the grid from reflowing.
+  canSchedule: boolean;
+  // The hub's shared tile shape, so this button and its sibling links
+  // cannot drift apart.
+  tileClass: string;
 };
 
-// Admin-only entry point for scheduling. Opens the two-step wizard —
-// who received the ground fee, then date + opponent (+ ground name) +
-// amount; the match and the pool debit are created in one transaction.
-export function ScheduleMatch({ captainName }: Props) {
+// The Schedule tab's first card. Unlike its siblings it opens the
+// wizard in place instead of navigating — scheduling is a modal, not a
+// destination.
+export function ScheduleMatch({ canSchedule, tileClass }: Props) {
   const [open, setOpen] = useState(false);
+
+  const face = (
+    <>
+      <span
+        className={cn(
+          "flex size-9 items-center justify-center rounded-md",
+          "bg-scheduled-light text-scheduled-foreground",
+        )}
+      >
+        <CalendarPlus size={18} />
+      </span>
+      <span className="text-sm font-semibold">Schedule a Match</span>
+    </>
+  );
+
+  if (!canSchedule) {
+    return (
+      <div aria-disabled className={cn(tileClass, "opacity-50")}>
+        {face}
+      </div>
+    );
+  }
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-md bg-accent text-sm font-medium text-accent-foreground"
-      >
-        <CalendarPlus size={16} />
-        Schedule match
+      <button type="button" onClick={() => setOpen(true)} className={tileClass}>
+        {face}
       </button>
-      <ScheduleMatchWizard
-        open={open}
-        onOpenChange={setOpen}
-        captainName={captainName}
-      />
+      <ScheduleMatchWizard open={open} onOpenChange={setOpen} />
     </>
   );
 }

@@ -44,9 +44,9 @@ export async function DELETE(
       }
       await client.query(`DELETE FROM matches WHERE id = $1`, [id]);
       await revertBookingShare(client, admin.id, match.ground_booking_id);
-      // Other match: participants and the collection credit cascade with
-      // the match; deleting the fee debit completes the full reversal —
-      // the pool ends where it was before scheduling.
+      // Participants and the collection credit cascade with the match;
+      // deleting the linked fee entry completes the full reversal in
+      // either direction — the pool ends where it was before scheduling.
       if (match.other_fee_entry_id) {
         await client.query(`DELETE FROM pool_entries WHERE id = $1`, [
           match.other_fee_entry_id,

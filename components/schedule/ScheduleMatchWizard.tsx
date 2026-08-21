@@ -2,87 +2,100 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { Switch } from "@/components/ui/switch";
 import { formatRupees } from "@/lib/format";
-
-type PaidTo = "opponent" | "owner";
+import { cn } from "@/lib/utils";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  // Standing captain (players.is_captain) for the paid-to-owner note.
-  captainName: string | null;
 };
 
-// Two-step match scheduler. Step 1 records WHO received
-// our team's ground share (mutually exclusive switches — one is
-// required; the owner case gates Next behind an explicit
-// "I understand" because only OUR contribution may be entered, the
-// opponent's share flows offline to the captain). Step 2 is the
-// familiar schedule form plus the contribution amount; submit creates
-// the match and the pool debit in one transaction.
-export function ScheduleMatchWizard({
-  open,
-  onOpenChange,
-  captainName,
-}: Props) {
+const LAST_STEP = 3;
+
+const STEP_TITLES = ["Schedule match", "Match details", "Pool movement"];
+
+const inputClass =
+  "h-11 w-full rounded-md border border-border bg-surface-secondary px-3 text-base text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
+
+// The scheduling form, one decision per screen: when and where, then who
+// and how much, then which way the money moves.
+//
+// The quick case finishes on screen 1 — a bare date and ground with the
+// details switch off schedules a match with no opponent and no pool
+// entry, which the card marks with a red dot. Turning the switch on
+// disables that button, so Next becomes the only way forward.
+//
+// Pending lives on screen 2 but the direction on screen 3, so Pending is
+// deliberately NOT gated on a direction here (the edit sheet, where both
+// sit together, still gates it). The settled/pending split is computed
+// at submit, once both are known.
+export function ScheduleMatchWizard({ open, onOpenChange }: Props) {
   const router = useRouter();
-  const [step, setStep] = useState<1 | 2>(1);
-  const [paidTo, setPaidTo] = useState<PaidTo | null>(null);
-  const [understood, setUnderstood] = useState(false);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [date, setDate] = useState("");
-  const [opponent, setOpponent] = useState("");
   const [venue, setVenue] = useState("");
-  const [amount, setAmount] = useState("");
-  const [pending, setPending] = useState(false);
+  const [detailsOn, setDetailsOn] = useState(false);
+  const [opponentOn, setOpponentOn] = useState(false);
+  const [opponent, setOpponent] = useState("");
+  const [fee, setFee] = useState("");
+  const [credit, setCredit] = useState(false);
+  const [debit, setDebit] = useState(false);
+  const [pendingOn, setPendingOn] = useState(false);
+  const [pendingAmount, setPendingAmount] = useState("");
+  const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-
-  const needsUnderstanding = paidTo === "owner" && !understood;
-  const canProceed = paidTo !== null && !needsUnderstanding;
-
-  function setPaidToOpponent(on: boolean) {
-    setPaidTo(on ? "opponent" : null);
-  }
-  function setPaidToOwner(on: boolean) {
-    setPaidTo(on ? "owner" : null);
-    if (!on) setUnderstood(false);
-  }
 
   function closeAndReset(openState: boolean) {
     onOpenChange(openState);
     if (!openState) {
       setStep(1);
-      setPaidTo(null);
-      setUnderstood(false);
       setDate("");
-      setOpponent("");
       setVenue("");
-      setAmount("");
+      setDetailsOn(false);
+      setOpponentOn(false);
+      setOpponent("");
+      setFee("");
+      setCredit(false);
+      setDebit(false);
+      setPendingOn(false);
+      setPendingAmount("");
       setError(null);
       setSuccess(null);
     }
   }
 
+  // Credit and Debit are one direction of travel — turning either on
+  // clears the other rather than letting both read as active. Pending is
+  // NOT reset here: it lives on the previous screen, and silently wiping
+  // a value the admin cannot see would be worse than leaving it.
+  const hasDirection = credit || debit;
+
+  function toggleCredit(on: boolean) {
+    setCredit(on);
+    if (on) setDebit(false);
+  }
+  function toggleDebit(on: boolean) {
+    setDebit(on);
+    if (on) setCredit(false);
+  }
+
+  const feeAmount = Number(fee) || 0;
+  const pendingValue = pendingOn ? Number(pendingAmount) || 0 : 0;
+
+  // Each screen refuses to advance until its own fields are complete, so
+  // nothing invalid ever reaches the next one.
+  const canLeaveStep1 = !!date && !!venue.trim();
+  const canLeaveStep2 =
+    feeAmount > 0 &&
+    (!opponentOn || !!opponent.trim()) &&
+    (!pendingOn || (pendingValue > 0 && pendingValue <= feeAmount));
+
   async function handleSubmit() {
-    const feeAmount = Number(amount);
-    const groundName = venue.trim();
-    if (!date || !opponent.trim()) {
-      setError("Enter the match date and opponent.");
-      return;
-    }
-    if (!groundName) {
-      setError("Enter the ground name.");
-      return;
-    }
-    if (!feeAmount || feeAmount <= 0) {
-      setError("Enter the fee amount paid.");
-      return;
-    }
-    setPending(true);
+    setWorking(true);
     setError(null);
     try {
       const res = await fetch("/api/matches", {
@@ -90,10 +103,15 @@ export function ScheduleMatchWizard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           match_date: date,
-          opponent: opponent.trim(),
-          venue: groundName,
-          fee_paid_to: paidTo,
-          fee_amount: feeAmount,
+          venue: venue.trim(),
+          ...(detailsOn && opponentOn ? { opponent: opponent.trim() } : {}),
+          ...(detailsOn
+            ? {
+                fee_amount: feeAmount,
+                fee_direction: credit ? "credit" : "debit",
+                fee_pending: pendingValue,
+              }
+            : {}),
         }),
       });
       const body = await res.json();
@@ -101,68 +119,109 @@ export function ScheduleMatchWizard({
         setError(body.error?.message ?? "Could not schedule — try again.");
         return;
       }
+      const settled = feeAmount - pendingValue;
       setSuccess(
-        `Match scheduled · ₹${formatRupees(feeAmount)} ground fee debited from the pool`,
+        !detailsOn
+          ? "Match scheduled — add the opponent when you know it"
+          : settled > 0
+            ? `Match scheduled · ₹${formatRupees(settled)} ${credit ? "credited to" : "debited from"} the pool`
+            : `Match scheduled · ₹${formatRupees(pendingValue)} pending`,
       );
       router.refresh();
     } catch {
       setError("Could not reach the server — check your connection.");
     } finally {
-      setPending(false);
+      setWorking(false);
     }
   }
-
-  const inputClass =
-    "h-11 w-full rounded-md border border-border bg-surface-secondary px-3 text-base text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
   const switchRow = (
     label: string,
     checked: boolean,
-    disabled: boolean,
     onChange: (on: boolean) => void,
+    checkedClass?: string,
   ) => (
     <label className="flex min-h-11 items-center justify-between gap-3 rounded-md border border-border bg-surface-secondary px-3 py-2">
       <span className="text-sm font-medium text-text-primary">{label}</span>
-      <Switch checked={checked} disabled={disabled} onCheckedChange={onChange} />
+      <Switch
+        checked={checked}
+        onCheckedChange={onChange}
+        className={checkedClass}
+      />
     </label>
   );
+
+  const backButton = (
+    <button
+      type="button"
+      onClick={() => {
+        setError(null);
+        setStep((s) => (s === 3 ? 2 : 1));
+      }}
+      disabled={working}
+      className="h-11 rounded-md border border-border bg-surface px-5 text-sm font-medium text-text-primary disabled:opacity-60"
+    >
+      Back
+    </button>
+  );
+
+  const primaryClass =
+    "h-11 flex-1 rounded-md bg-accent text-sm font-medium text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50";
 
   const footer = success ? undefined : (
     <>
       {error && <p className="text-sm text-debit">{error}</p>}
       <div className="flex gap-2">
+        {step > 1 && backButton}
+
+        {step === 1 && (
+          <>
+            <button
+              type="button"
+              onClick={() => void handleSubmit()}
+              disabled={working || detailsOn || !canLeaveStep1}
+              className={primaryClass}
+            >
+              {working ? "Working…" : "Schedule a match"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setStep(2);
+              }}
+              disabled={!detailsOn || !canLeaveStep1}
+              className={primaryClass}
+            >
+              Next
+            </button>
+          </>
+        )}
+
         {step === 2 && (
           <button
             type="button"
             onClick={() => {
               setError(null);
-              setStep(1);
+              setStep(3);
             }}
-            disabled={pending}
-            className="h-11 rounded-md border border-border bg-surface px-5 text-sm font-medium text-text-primary disabled:opacity-60"
+            disabled={!canLeaveStep2}
+            className={primaryClass}
           >
-            Back
+            Next
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => {
-            if (step === 1) {
-              setError(null);
-              setStep(2);
-            } else {
-              void handleSubmit();
-            }
-          }}
-          disabled={pending || (step === 1 && !canProceed)}
-          className="h-11 flex-1 rounded-md bg-accent text-sm font-medium text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {pending
-            ? "Working…"
-            : step === 1
-              ? "Next — schedule match"
-              : "Schedule match"}
-        </button>
+
+        {step === 3 && (
+          <button
+            type="button"
+            onClick={() => void handleSubmit()}
+            disabled={working || !hasDirection}
+            className={primaryClass}
+          >
+            {working ? "Working…" : "Schedule Match"}
+          </button>
+        )}
       </div>
     </>
   );
@@ -171,13 +230,11 @@ export function ScheduleMatchWizard({
     <SheetShell
       open={open}
       onOpenChange={closeAndReset}
-      title={success ? "Done" : step === 1 ? "Match fee" : "Schedule match"}
+      title={success ? "Done" : STEP_TITLES[step - 1]}
       description={
         success
           ? undefined
-          : step === 1
-            ? "Who received our team's ground fee?"
-            : "The card appears publicly on the matches page right away."
+          : "The card appears publicly on the matches page right away."
       }
       footer={footer}
     >
@@ -194,106 +251,132 @@ export function ScheduleMatchWizard({
             Close
           </button>
         </div>
-      ) : step === 1 ? (
-        <div className="flex flex-col gap-3">
-          {switchRow(
-            "Paid to Opponent",
-            paidTo === "opponent",
-            paidTo === "owner",
-            setPaidToOpponent,
-          )}
-          {switchRow(
-            "Paid to ground owner",
-            paidTo === "owner",
-            paidTo === "opponent",
-            setPaidToOwner,
-          )}
-
-          {paidTo === "owner" && (
-            <div className="flex flex-col gap-2 rounded-md bg-low-light p-3">
-              <p className="text-sm text-low-foreground">
-                <span className="font-semibold">Note:</span> The opponent is
-                supposed to transfer Fee to{" "}
-                {captainName ? `${captainName} (c)` : "the captain"}. Enter
-                only our team&apos;s fee contribution.
-              </p>
-              <button
-                type="button"
-                onClick={() => setUnderstood(true)}
-                disabled={understood}
-                className={
-                  understood
-                    ? "flex h-10 items-center justify-center gap-1.5 rounded-md border border-credit bg-credit-light text-sm font-medium text-credit-foreground"
-                    : "h-10 rounded-md border border-border bg-surface text-sm font-medium text-text-primary"
-                }
-              >
-                {understood ? (
-                  <>
-                    <Check size={16} />
-                    Understood
-                  </>
-                ) : (
-                  "I understand"
-                )}
-              </button>
-            </div>
-          )}
-        </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-text-secondary">
-              Match date
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-accent">
+              Step {step} of {LAST_STEP}
             </span>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-              className={inputClass}
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-text-secondary">
-              Opponent
+            <span className="flex gap-1.5">
+              {Array.from({ length: LAST_STEP }, (_, i) => i + 1).map((s) => (
+                <span
+                  key={s}
+                  className={cn(
+                    "size-[7px] rounded-full",
+                    s === step ? "bg-accent" : "bg-border",
+                  )}
+                />
+              ))}
             </span>
-            <input
-              type="text"
-              value={opponent}
-              onChange={(e) => setOpponent(e.target.value)}
-              placeholder="Borivali Blasters"
-              required
-              className={inputClass}
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-text-secondary">
-              Ground name
-            </span>
-            <input
-              type="text"
-              value={venue}
-              onChange={(e) => setVenue(e.target.value)}
-              placeholder="Pimpri Turf"
-              required
-              className={inputClass}
-            />
-          </label>
-          <MoneyInput
-            label={
-              paidTo === "owner"
-                ? "Team fee contribution"
-                : "Fee paid to opponent"
-            }
-            value={amount}
-            onChange={setAmount}
-            required
-          />
-          <p className="text-xs text-text-muted">
-            This amount is debited from the pool now and recouped from
-            player match fees when the match is completed. Abandoning or
-            cancelling the match returns it to the pool.
-          </p>
+          </div>
+
+          {step === 1 && (
+            <>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-text-secondary">
+                  Date
+                </span>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  required
+                  className={inputClass}
+                />
+              </label>
+
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-text-secondary">
+                  Ground
+                </span>
+                <input
+                  type="text"
+                  value={venue}
+                  onChange={(e) => setVenue(e.target.value)}
+                  placeholder="Pimpri Turf"
+                  required
+                  className={inputClass}
+                />
+              </label>
+
+              {switchRow("Match details", detailsOn, setDetailsOn)}
+
+              <p className="text-xs text-text-muted">
+                {detailsOn
+                  ? "Continue to add the opponent and the fee."
+                  : "Leave this off to put the date on the calendar now — the card is marked until an opponent is added."}
+              </p>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              {switchRow("Opponent", opponentOn, setOpponentOn)}
+
+              {opponentOn && (
+                <label className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-text-secondary">
+                    Opponent Name
+                  </span>
+                  <input
+                    type="text"
+                    value={opponent}
+                    onChange={(e) => setOpponent(e.target.value)}
+                    placeholder="Borivali Blasters"
+                    required
+                    className={inputClass}
+                  />
+                </label>
+              )}
+
+              <MoneyInput label="Fee" value={fee} onChange={setFee} required />
+
+              {switchRow(
+                "Pending",
+                pendingOn,
+                setPendingOn,
+                "data-[state=checked]:bg-low",
+              )}
+
+              {pendingOn ? (
+                <MoneyInput
+                  label="Pending Amount"
+                  value={pendingAmount}
+                  onChange={setPendingAmount}
+                  required
+                />
+              ) : (
+                <p className="text-xs text-text-muted">
+                  Pending is off — the fee counts as fully paid.
+                </p>
+              )}
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              {switchRow(
+                "Credit to Pool",
+                credit,
+                toggleCredit,
+                "data-[state=checked]:bg-credit",
+              )}
+              {switchRow(
+                "Debit from Pool",
+                debit,
+                toggleDebit,
+                "data-[state=checked]:bg-debit",
+              )}
+
+              <p className="text-xs text-text-muted">
+                {hasDirection
+                  ? pendingValue > 0
+                    ? `₹${formatRupees(feeAmount - pendingValue)} ${credit ? "credited to" : "debited from"} the pool now · ₹${formatRupees(pendingValue)} pending.`
+                    : `₹${formatRupees(feeAmount)} ${credit ? "credited to" : "debited from"} the pool.`
+                  : "Choose which way the fee moves to finish."}
+              </p>
+            </>
+          )}
         </div>
       )}
     </SheetShell>

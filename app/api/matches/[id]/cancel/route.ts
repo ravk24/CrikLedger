@@ -19,7 +19,7 @@ export async function POST(
 
     const result = await withTransaction(async (client) => {
       const cur = await client.query(
-        `SELECT ground_booking_id, other_fee_entry_id FROM matches
+        `SELECT ground_booking_id, other_fee_entry_id, fee_direction FROM matches
          WHERE id = $1 AND status = 'scheduled'
          FOR UPDATE`,
         [id],
@@ -48,8 +48,9 @@ export async function POST(
         match.ground_booking_id,
       );
 
-      // Other match: the pool-fronted ground fee returns — delete its
-      // debit row (a match is never both booking-linked and other).
+      // Deleting the linked entry is the correct reversal in either
+      // direction: a debit the pool fronted comes back, a credit it
+      // received goes away. fee_direction only decides the wording.
       let feeReverted = 0;
       if (match.other_fee_entry_id) {
         const feeRes = await client.query(
@@ -62,6 +63,7 @@ export async function POST(
         booking_share:
           (reverted?.paidShare ?? 0) + (reverted?.clearedShare ?? 0),
         fee_reverted: feeReverted,
+        fee_direction: match.fee_direction as "credit" | "debit" | null,
       };
     });
 

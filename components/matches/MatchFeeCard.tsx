@@ -10,23 +10,29 @@ type Props = {
   opponent: string;
   matchDateLabel: string;
   amountPending: number;
+  // Which way the outstanding amount will move when cleared. Legacy
+  // booking-linked matches have no direction and always credit.
+  feeDirection: "credit" | "debit" | null;
 };
 
-// Admin-only match-fee state for a booking-linked match. Clearing is
-// one-way (the pending amount is credited to the pool), so the pending
-// state offers a button and the paid state is just a chip — nothing
-// that suggests it can be switched back.
+// Admin-only match-fee state. Clearing is one-way (the outstanding
+// amount is posted to the pool in the fee's own direction), so the
+// pending state offers a button and the paid state is just a chip —
+// nothing that suggests it can be switched back.
 export function MatchFeeCard({
   matchId,
   opponent,
   matchDateLabel,
   amountPending,
+  feeDirection,
 }: Props) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cleared = amountPending === 0;
+  const movement =
+    feeDirection === "debit" ? "debited from" : "credited to";
 
   async function handleConfirm() {
     setPending(true);
@@ -68,14 +74,14 @@ export function MatchFeeCard({
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium text-text-primary">Match Fee</p>
-        <p className="text-xs text-debit">
+        <p className="text-xs font-medium text-low">
           ₹{formatRupees(amountPending)} pending
         </p>
       </div>
       <button
         type="button"
         onClick={() => setConfirmOpen(true)}
-        className="h-11 w-full rounded-md bg-orange-500 text-sm font-medium text-white"
+        className="h-11 w-full rounded-md bg-low text-sm font-medium text-white"
       >
         Clear pending fee
       </button>
@@ -85,7 +91,7 @@ export function MatchFeeCard({
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title="Mark match fee as cleared?"
-        description={`vs ${opponent} · ${matchDateLabel} — ₹${formatRupees(amountPending)} pending will be credited to the pool ledger. This cannot be switched back.`}
+        description={`vs ${opponent} · ${matchDateLabel} — ₹${formatRupees(amountPending)} pending will be ${movement} the pool ledger. This cannot be switched back.`}
         confirmLabel="Clear pending fee"
         pending={pending}
         onConfirm={handleConfirm}

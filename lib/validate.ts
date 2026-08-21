@@ -130,33 +130,67 @@ export const teamSwitchSchema = z.object({
     .regex(/^[a-z0-9][a-z0-9-]*$/, "team slug"),
 });
 
-// Creating a match. Scheduling ALWAYS records the ground fee our team
-// paid (one "paid to" switch is required in the UI), so both fee fields
-// are mandatory here. Split from the edit schema in migration-35's
-// commit: they used to be one schema whose ground: .default("home") was
-// the only thing keeping this requirement off the edit path.
-export const createMatchSchema = z.object({
-  match_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "yyyy-mm-dd"),
-  opponent: z.string().trim().min(1).max(80),
-  // Free-text ground name. Optional — a match with no venue recorded
-  // simply shows none.
-  venue: z.string().trim().min(1).max(80).optional(),
-  // Who received our team's ground share, and the contribution recorded
-  // as a pool debit in the same transaction.
-  fee_paid_to: z.enum(["opponent", "owner"]),
-  fee_amount: z.number().int().positive(),
-});
+// The fee block behind the scheduling form's master switch. A fee must
+// say which way it moved, because only a 'debit' is recouped at
+// completion (the pool fronted that one). fee_pending is the
+// outstanding slice — the pool entry is written for
+// (fee_amount - fee_pending).
+const feeFields = {
+  opponent: z.string().trim().min(1).max(80).optional(),
+  fee_amount: z.number().int().positive().optional(),
+  fee_direction: z.enum(["credit", "debit"]).optional(),
+  fee_pending: z.number().int().nonnegative().optional(),
+};
 
-// Fixing an already-scheduled match. Never touches the fee: the pool
-// debit is owned by the linked entry, not by this route.
-export const editMatchSchema = z.object({
-  match_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "yyyy-mm-dd"),
-  opponent: z.string().trim().min(1).max(80),
-  // Absent = keep the stored value.
-  venue: z.string().trim().min(1).max(80).optional(),
-  // Renames the linked ground booking's captain, when there is one.
-  opponent_captain: z.string().trim().min(1).max(80).optional(),
-});
+type FeeBody = {
+  fee_amount?: number;
+  fee_direction?: "credit" | "debit";
+  fee_pending?: number;
+};
+
+// Amount and direction travel together, and a fee cannot be more
+// pending than it is large. Declared once, applied to both schemas.
+const FEE_RULES: [(b: FeeBody) => boolean, string][] = [
+  [
+    (b) => b.fee_amount === undefined || b.fee_direction !== undefined,
+    "Choose Credit to Pool or Debit from Pool",
+  ],
+  [
+    (b) => b.fee_direction === undefined || b.fee_amount !== undefined,
+    "Enter the fee amount",
+  ],
+  [
+    (b) => (b.fee_pending ?? 0) <= (b.fee_amount ?? 0),
+    "Pending amount cannot exceed the fee",
+  ],
+];
+
+// Creating a match. Everything past the date is optional: the master
+// switch left off schedules a bare date (opponent NULL, no fee, no
+// pool entry) and the card's red dot flags it.
+export const createMatchSchema = FEE_RULES.reduce(
+  (schema, [check, message]) => schema.refine(check, { message }),
+  z.object({
+    match_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "yyyy-mm-dd"),
+    // Free-text ground name; no picker since migration 35.
+    venue: z.string().trim().min(1).max(80).optional(),
+    ...feeFields,
+  }),
+);
+
+// Fixing an already-scheduled match — including filling in what
+// scheduling left blank, which is how a red dot becomes green. An
+// absent venue/opponent keeps the stored value (COALESCE server-side).
+export const editMatchSchema = FEE_RULES.reduce(
+  (schema, [check, message]) => schema.refine(check, { message }),
+  z.object({
+    match_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "yyyy-mm-dd"),
+    venue: z.string().trim().min(1).max(80).optional(),
+    // Renames the linked ground booking's captain, when there is one.
+    opponent_captain: z.string().trim().min(1).max(80).optional(),
+    ...feeFields,
+  }),
+);
 
 export const abandonMatchSchema = z.object({
   reason: z.string().trim().min(1).max(200),

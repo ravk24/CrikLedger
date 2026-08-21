@@ -5,20 +5,26 @@ import { useRouter } from "next/navigation";
 import { MatchWizard } from "@/components/wizard/MatchWizard";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { ScheduleMatchSheet } from "@/components/admin/ScheduleMatchSheet";
+import { opponentLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { WizardInitial, WizardPlayer } from "@/components/wizard/wizardTypes";
 
 type Props = {
   matchId: string;
-  opponent: string;
+  opponent: string | null; // null = not known yet (red dot)
   matchDate: string; // yyyy-mm-dd, for editing the schedule
   matchDateLabel: string;
   status: "scheduled" | "completed" | "abandoned";
   venue: string | null; // free-text ground name; null = none recorded
   // Linked ground booking's captain; null = no booking for this opponent.
   opponentCaptain: string | null;
-  // Linked booking's pending fee; 0 = fully paid or no booking.
+  // Still-outstanding fee, from the match itself or a legacy booking.
+  // Non-zero blocks completion until it is cleared.
   feePending: number;
+  // Whole agreed fee (settled + pending) and its direction, for the
+  // edit sheet's fee block.
+  feeAmount: number;
+  feeDirection: "credit" | "debit" | null;
   players: WizardPlayer[];
   isSuperadmin: boolean;
   initial?: WizardInitial; // present when status = completed
@@ -35,6 +41,8 @@ export function MatchAdminActions({
   venue,
   opponentCaptain,
   feePending,
+  feeAmount,
+  feeDirection,
   players,
   isSuperadmin,
   initial,
@@ -71,7 +79,7 @@ export function MatchAdminActions({
       open={wizardOpen}
       onOpenChange={setWizardOpen}
       matchId={matchId}
-      opponent={opponent}
+      opponent={opponentLabel(opponent)}
       matchDateLabel={matchDateLabel}
       players={players}
       mode={status === "scheduled" ? "complete" : "edit"}
@@ -143,6 +151,9 @@ export function MatchAdminActions({
             opponent,
             opponentCaptain,
             venue,
+            feeAmount,
+            feeDirection,
+            feePending,
           }}
         />
       )}
@@ -153,7 +164,11 @@ export function MatchAdminActions({
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         title="Delete this match?"
-        description="Superadmin only. All participant rows and the auto pool credit are removed, and the pool-fronted ground fee returns to the pool — every balance recalculates."
+        description={
+          feeDirection === "credit"
+            ? "Superadmin only. All participant rows and the auto pool credit are removed, and the match fee credited to the pool is taken back out — every balance recalculates."
+            : "Superadmin only. All participant rows and the auto pool credit are removed, and the pool-fronted match fee returns to the pool — every balance recalculates."
+        }
         confirmLabel="Delete match"
         destructive
         pending={pending}
