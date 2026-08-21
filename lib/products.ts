@@ -50,7 +50,7 @@ export const PRODUCTS: Product[] = [
     tagline: "One-time purchase · one tournament",
     features: [
       "Create a tournament",
-      "Add teams",
+      "Add your team",
       "Schedule matches",
       "Record match results",
       "Track player contributions",
