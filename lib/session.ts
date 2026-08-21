@@ -21,7 +21,21 @@ export { SESSION_COOKIE, TEAM_COOKIE };
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
 const SESSION_MAX_AGE_JWT = "30d"; // keep in step with the seconds above
 
-const secret = () => new TextEncoder().encode(process.env.SESSION_SECRET!);
+// Not `process.env.SESSION_SECRET!`: undefined encodes to a zero-length
+// key, and jose then fails inside its own crypto layer, so the log line
+// blames a CryptoKey rather than the variable that is actually missing.
+// Sign-in is the only path that reaches this on a healthy deployment —
+// signed-out reads never verify a token — so without this the whole site
+// looks fine and only logging in breaks.
+const secret = () => {
+  const value = process.env.SESSION_SECRET;
+  if (!value) {
+    throw new Error(
+      "SESSION_SECRET is not set — sessions cannot be signed or verified.",
+    );
+  }
+  return new TextEncoder().encode(value);
+};
 
 // The token carries identity and nothing else. Roles deliberately LEFT
 // the payload at migration 32: they now live in membership rows that can
