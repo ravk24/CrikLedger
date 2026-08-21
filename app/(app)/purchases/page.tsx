@@ -33,24 +33,20 @@ const PRODUCTS = [
   },
 ];
 
-// Prefilled so the operator gets the product name without a round trip.
-// The account email is asked for rather than injected: this is a static
-// string built at render time and the mail composer runs on the user's
-// device, so there is nothing to leak either way, but the address the
-// customer actually wants receipts on is not always the one they signed
-// up with.
-const SUPPORT_EMAIL = "crikledger@gmail.com";
+// The buy button opens WhatsApp with a prefilled message; the chat
+// happens on the user's device, so nothing is sent through our servers.
+// Same number as the contact and pricing pages.
+const WHATSAPP_NUMBER = "919142349007";
 
-function buyMailto(name: string, price: string) {
-  const subject = `CrikLedger purchase — ${name} (${price})`;
-  const body = [
-    `I would like to buy the ${name} feature (${price}).`,
+function buyWhatsApp(name: string, price: string) {
+  const text = [
+    `Hi CrikLedger, I would like to buy the ${name} feature (${price}).`,
     "",
     "My CrikLedger account email:",
     "",
     "Please send me the payment instructions.",
   ].join("\n");
-  return `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
 }
 
 async function PurchasesData() {
@@ -90,10 +86,12 @@ async function PurchasesData() {
             </div>
           ) : (
             <a
-              href={buyMailto(p.name, p.price)}
+              href={buyWhatsApp(p.name, p.price)}
+              target="_blank"
+              rel="noopener"
               className="mt-3 flex h-11 items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-foreground"
             >
-              Email us to buy
+              WhatsApp us to buy
             </a>
           )}
         </section>
