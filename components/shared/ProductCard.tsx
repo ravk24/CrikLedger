@@ -5,10 +5,13 @@ import type { Product } from "@/lib/products";
 // One paid feature, as a card: price, tagline, what it includes, the
 // product note and its refund terms.
 //
-// Static — no session read — so it is safe on the public /pricing page
-// and on Home. With `href` the whole card is one tap target (Home sends
-// both cards to the payments page); without it the card is read-only,
-// which is what /pricing wants since it is already the catalogue.
+// Static — no session read — so it is safe on the public /pricing page,
+// which is now the only caller and uses the read-only form. Home used to
+// render these two and no longer does: it links to /pricing instead, so
+// the catalogue is met on the page that exists to hold it.
+//
+// The `href` branch (whole card as one tap target) is therefore unused
+// today. Kept for the next surface that wants a linked card.
 export function ProductCard({
   product,
   href,

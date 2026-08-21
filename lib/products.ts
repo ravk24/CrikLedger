@@ -1,9 +1,10 @@
 // The paid features, in one place.
 //
 // The catalogue used to be copy-pasted into /pricing and /purchases with
-// comments asking future editors to keep them in step. Home now shows
-// the same two cards, and a third copy of a PRICE is how a price gets
-// stated wrong somewhere. Prices here must still match the Terms page's
+// comments asking future editors to keep them in step — a second copy of
+// a PRICE is how a price gets stated wrong somewhere. /pricing is the
+// only surface rendering these now (Home links to it rather than
+// repeating the cards). Prices here must still match the Terms page's
 // section 2 until Feature 3's products table becomes the source of truth.
 //
 // `refund` is deliberately part of the product rather than page copy:
