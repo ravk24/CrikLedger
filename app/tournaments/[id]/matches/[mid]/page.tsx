@@ -13,11 +13,10 @@ import {
   formatTime,
   formatWeekday,
 } from "@/lib/format";
-import { resolveGroundInfo } from "@/lib/grounds";
 import { canWrite, isScopeSuperadmin } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
-import { getTeamById, getTeamGrounds } from "@/lib/team";
+import { getTeamById } from "@/lib/team";
 import type { WizardInitial } from "@/components/wizard/wizardTypes";
 import type {
   MatchParticipantPublic,
@@ -127,18 +126,9 @@ async function TournamentMatchData({
 
   // Team from the RESOURCE, not the session — this match sheet is
   // publicly link-readable and must render with no active team.
-  const [team, grounds] = tournament.team_id
-    ? await Promise.all([
-        getTeamById(tournament.team_id),
-        getTeamGrounds(tournament.team_id),
-      ])
-    : [null, []];
-  const groundInfo = resolveGroundInfo(
-    "away",
-    tournament.venue,
-    grounds,
-    null,
-  );
+  const team = tournament.team_id
+    ? await getTeamById(tournament.team_id)
+    : null;
   const participants = (participantsRes.data ??
     []) as MatchParticipantPublic[];
   const adminProps =
@@ -166,7 +156,7 @@ async function TournamentMatchData({
           {formatTime(match.match_time)}
         </p>
         <p className="text-sm text-text-secondary">
-          Ground: {tournament.venue ? groundInfo.label : "Not set"}
+          Ground: {tournament.venue?.trim() || "Not set"}
         </p>
       </section>
 
@@ -193,8 +183,6 @@ async function TournamentMatchData({
           matchDateLabel={`${formatDateShort(match.match_date)} · ${formatTime(match.match_time)}`}
           status={match.status}
           venue={tournament.venue}
-          grounds={grounds}
-          groundInfo={groundInfo}
           players={adminProps.players}
           isSuperadmin={adminProps.isSuperadmin}
           initial={adminProps.initial}

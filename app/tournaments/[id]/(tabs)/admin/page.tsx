@@ -5,7 +5,6 @@ import { TournamentAdminPanel } from "@/components/tournaments/TournamentAdminPa
 import { canWrite, isScopeSuperadmin } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
-import { getTeamGrounds } from "@/lib/team";
 import type { TournamentPlayerPublic, TournamentPublic } from "@/types";
 
 // The tournament mini-app's admin console tab. Admin-gated server-side
@@ -44,10 +43,6 @@ async function TournamentAdminData({
     ? isScopeSuperadmin(admin, "team", tournament.team_id)
     : isScopeSuperadmin(admin, "tournament", tournament.id);
 
-  // Grounds belong to the hosting team; a standalone tournament has none.
-  const grounds = tournament.team_id
-    ? await getTeamGrounds(tournament.team_id)
-    : [];
   const players = (playersRes.data ?? []) as TournamentPlayerPublic[];
 
   return (
@@ -57,7 +52,6 @@ async function TournamentAdminData({
       <TournamentAdminPanel
         tournament={tournament}
         players={players}
-        grounds={grounds}
         isSuperadmin={isSuperadmin}
       />
     </>

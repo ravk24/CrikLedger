@@ -3,14 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SheetShell } from "@/components/shared/SheetShell";
-import { resolveGroundInfo, type Ground } from "@/lib/grounds";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tournamentId: string;
   venue: string | null; // ground comes from the tournament's Details
-  grounds: Ground[]; // team ground list, for the canonical label
   // Present when fixing an already-scheduled match instead of creating.
   editing?: {
     matchId: string;
@@ -31,7 +29,6 @@ export function TournamentScheduleMatchSheet({
   onOpenChange,
   tournamentId,
   venue,
-  grounds,
   editing,
 }: Props) {
   const router = useRouter();
@@ -41,9 +38,7 @@ export function TournamentScheduleMatchSheet({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  const groundLabel = venue
-    ? resolveGroundInfo("away", venue, grounds, null).label
-    : null;
+  const groundLabel = venue?.trim() || null;
 
   const editOpponent = editing?.opponent;
   const editDate = editing?.date;

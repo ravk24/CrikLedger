@@ -118,7 +118,6 @@ export function buildTabs(): TabSpec[] {
       label: "Schedule",
       href: "/schedule",
       icon: "calendar",
-      also: ["/slots", "/other-slots"],
     },
     // Always navigable: a guest must be able to open the directory to
     // see what is on offer. What a purchase unlocks is HOSTING, inside.

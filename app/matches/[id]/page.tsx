@@ -12,11 +12,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { computeSlotShare } from "@/lib/bookings";
 import { pool } from "@/lib/db";
 import { formatDate, formatDateShort, formatRupees, formatWeekday } from "@/lib/format";
-import { resolveGroundInfo } from "@/lib/grounds";
 import { canWrite, isScopeSuperadmin } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
-import { getTeamById, getTeamGrounds } from "@/lib/team";
+import { getTeamById } from "@/lib/team";
 import type { WizardInitial } from "@/components/wizard/wizardTypes";
 import type { GroundBookingPublic, Match, MatchParticipantPublic } from "@/types";
 
@@ -182,17 +181,7 @@ async function MatchDetailData({
   // The team comes from the MATCH, never from the session — this page is
   // publicly link-readable (the WhatsApp sharing loop), so it must render
   // for a visitor who has no active team at all.
-  const [team, grounds] = await Promise.all([
-    getTeamById(match.team_id),
-    getTeamGrounds(match.team_id),
-  ]);
-
-  const groundInfo = resolveGroundInfo(
-    match.ground,
-    match.venue ?? null,
-    grounds,
-    team.home_ground_name,
-  );
+  const team = await getTeamById(match.team_id);
 
   // Captain and booking are scoped by the match's own team; the
   // booking resolves by id (matches.ground_booking_id) — the old
@@ -286,9 +275,11 @@ async function MatchDetailData({
             )}
           </div>
         )}
-        <p className="mt-1 text-sm text-text-secondary">
-          Ground: {groundInfo.label}
-        </p>
+        {match.venue && (
+          <p className="mt-1 text-sm text-text-secondary">
+            Ground: {match.venue}
+          </p>
+        )}
       </section>
 
       {adminProps?.matchFee && (
@@ -307,10 +298,7 @@ async function MatchDetailData({
           matchDate={String(match.match_date).slice(0, 10)}
           matchDateLabel={formatDateShort(match.match_date)}
           status={match.status}
-          ground={match.ground}
           venue={match.venue ?? null}
-          grounds={grounds}
-          groundInfo={groundInfo}
           opponentCaptain={booking?.captain ?? null}
           feePending={adminProps.matchFee?.amountPending ?? 0}
           players={adminProps.players}
@@ -327,7 +315,6 @@ async function MatchDetailData({
           matchId={match.id}
           opponent={match.opponent}
           matchDateLabel={formatDateShort(match.match_date)}
-          ground={match.ground === "away" ? "away" : "home"}
           bookingShare={adminProps.bookingShare}
           otherFee={adminProps.otherFee}
         />

@@ -5,16 +5,13 @@ import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
-import { GroundSelect, OTHER_GROUND } from "@/components/shared/GroundSelect";
-import type { Ground } from "@/lib/grounds";
 
-export function CreateTournamentSheet({ grounds }: { grounds: Ground[] }) {
+export function CreateTournamentSheet() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [teamName, setTeamName] = useState("");
-  const [groundChoice, setGroundChoice] = useState("");
-  const [customName, setCustomName] = useState("");
+  const [venue, setVenue] = useState("");
   const [joiningFee, setJoiningFee] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -23,8 +20,7 @@ export function CreateTournamentSheet({ grounds }: { grounds: Ground[] }) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const venue =
-      groundChoice === OTHER_GROUND ? customName.trim() : groundChoice;
+    const groundName = venue.trim();
     setPending(true);
     setError(null);
     try {
@@ -34,7 +30,7 @@ export function CreateTournamentSheet({ grounds }: { grounds: Ground[] }) {
         body: JSON.stringify({
           name: name.trim(),
           ...(teamName.trim() ? { team_name: teamName.trim() } : {}),
-          ...(venue ? { venue } : {}),
+          ...(groundName ? { venue: groundName } : {}),
           ...(Number(joiningFee) > 0 ? { joining_fee: Number(joiningFee) } : {}),
           ...(startDate ? { start_date: startDate } : {}),
           ...(endDate ? { end_date: endDate } : {}),
@@ -48,8 +44,7 @@ export function CreateTournamentSheet({ grounds }: { grounds: Ground[] }) {
       setOpen(false);
       setName("");
       setTeamName("");
-      setGroundChoice("");
-      setCustomName("");
+      setVenue("");
       setJoiningFee("");
       setStartDate("");
       setEndDate("");
@@ -112,13 +107,19 @@ export function CreateTournamentSheet({ grounds }: { grounds: Ground[] }) {
               className={inputClass}
             />
           </label>
-          <GroundSelect
-            grounds={grounds}
-            choice={groundChoice}
-            customName={customName}
-            onChoiceChange={setGroundChoice}
-            onCustomNameChange={setCustomName}
-          />
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-text-secondary">
+              Ground name
+            </span>
+            <input
+              type="text"
+              value={venue}
+              onChange={(e) => setVenue(e.target.value)}
+              placeholder="Pimpri Turf"
+              maxLength={80}
+              className={inputClass}
+            />
+          </label>
           <MoneyInput
             label="Joining Fee (optional — settles when the tournament completes)"
             value={joiningFee}

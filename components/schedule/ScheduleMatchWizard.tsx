@@ -5,32 +5,28 @@ import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
-import { GroundSelect, OTHER_GROUND } from "@/components/shared/GroundSelect";
 import { Switch } from "@/components/ui/switch";
 import { formatRupees } from "@/lib/format";
-import type { Ground } from "@/lib/grounds";
 
 type PaidTo = "opponent" | "owner";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  grounds: Ground[]; // team ground list for the venue select
   // Standing captain (players.is_captain) for the paid-to-owner note.
   captainName: string | null;
 };
 
-// Two-step away-match scheduler. Step 1 records WHO received
+// Two-step match scheduler. Step 1 records WHO received
 // our team's ground share (mutually exclusive switches — one is
 // required; the owner case gates Next behind an explicit
 // "I understand" because only OUR contribution may be entered, the
 // opponent's share flows offline to the captain). Step 2 is the
 // familiar schedule form plus the contribution amount; submit creates
 // the match and the pool debit in one transaction.
-export function OtherScheduleWizard({
+export function ScheduleMatchWizard({
   open,
   onOpenChange,
-  grounds,
   captainName,
 }: Props) {
   const router = useRouter();
@@ -39,8 +35,7 @@ export function OtherScheduleWizard({
   const [understood, setUnderstood] = useState(false);
   const [date, setDate] = useState("");
   const [opponent, setOpponent] = useState("");
-  const [groundChoice, setGroundChoice] = useState("");
-  const [customName, setCustomName] = useState("");
+  const [venue, setVenue] = useState("");
   const [amount, setAmount] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,8 +60,7 @@ export function OtherScheduleWizard({
       setUnderstood(false);
       setDate("");
       setOpponent("");
-      setGroundChoice("");
-      setCustomName("");
+      setVenue("");
       setAmount("");
       setError(null);
       setSuccess(null);
@@ -75,17 +69,12 @@ export function OtherScheduleWizard({
 
   async function handleSubmit() {
     const feeAmount = Number(amount);
-    const venue =
-      groundChoice === OTHER_GROUND ? customName.trim() : groundChoice;
+    const groundName = venue.trim();
     if (!date || !opponent.trim()) {
       setError("Enter the match date and opponent.");
       return;
     }
-    if (!groundChoice) {
-      setError("Choose the ground.");
-      return;
-    }
-    if (groundChoice === OTHER_GROUND && !customName.trim()) {
+    if (!groundName) {
       setError("Enter the ground name.");
       return;
     }
@@ -102,8 +91,7 @@ export function OtherScheduleWizard({
         body: JSON.stringify({
           match_date: date,
           opponent: opponent.trim(),
-          ground: "away",
-          ...(venue ? { venue } : {}),
+          venue: groundName,
           fee_paid_to: paidTo,
           fee_amount: feeAmount,
         }),
@@ -183,7 +171,7 @@ export function OtherScheduleWizard({
     <SheetShell
       open={open}
       onOpenChange={closeAndReset}
-      title={success ? "Done" : step === 1 ? "Match fee" : "Schedule away match"}
+      title={success ? "Done" : step === 1 ? "Match fee" : "Schedule match"}
       description={
         success
           ? undefined
@@ -278,13 +266,19 @@ export function OtherScheduleWizard({
               className={inputClass}
             />
           </label>
-          <GroundSelect
-            grounds={grounds}
-            choice={groundChoice}
-            customName={customName}
-            onChoiceChange={setGroundChoice}
-            onCustomNameChange={setCustomName}
-          />
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-text-secondary">
+              Ground name
+            </span>
+            <input
+              type="text"
+              value={venue}
+              onChange={(e) => setVenue(e.target.value)}
+              placeholder="Pimpri Turf"
+              required
+              className={inputClass}
+            />
+          </label>
           <MoneyInput
             label={
               paidTo === "owner"

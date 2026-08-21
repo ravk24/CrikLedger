@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withTransaction } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
-import { ApiError, handleRouteError, scheduleMatchSchema } from "@/lib/validate";
+import { ApiError, editMatchSchema, handleRouteError } from "@/lib/validate";
 
-// Fix a scheduled match's date/opponent before it's played. Completed
-// and abandoned matches are edited via the wizard, never here.
+// Fix a scheduled match's date/opponent/venue before it's played.
+// Completed and abandoned matches are edited via the wizard, never here.
 // opponent_captain edits the linked ground booking (resolved via
 // matches.ground_booking_id).
 export async function PATCH(
@@ -14,11 +14,11 @@ export async function PATCH(
   try {
     const admin = await requireAdmin();
     const { id } = await params;
-    const body = scheduleMatchSchema.parse(await req.json());
+    const body = editMatchSchema.parse(await req.json());
 
     const result = await withTransaction(async (client) => {
       const cur = await client.query(
-        `SELECT opponent, ground, ground_booking_id FROM matches
+        `SELECT opponent, ground_booking_id FROM matches
          WHERE id = $1 AND status = 'scheduled'
          FOR UPDATE`,
         [id],
@@ -27,10 +27,7 @@ export async function PATCH(
         throw new ApiError(404, "NOT_FOUND", "Scheduled match not found");
       }
 
-      // ground is provenance — set at insert, never edited. Venue is only
-      // meaningful on Other matches; absent = keep the stored value.
-      const venue =
-        cur.rows[0].ground === "away" ? (body.venue ?? null) : null;
+      // Absent venue = keep the stored value (the COALESCE below).
       const res = await client.query(
         `UPDATE matches
          SET match_date = $1, opponent = $2,
@@ -38,7 +35,7 @@ export async function PATCH(
              updated_by = $4, updated_at = NOW()
          WHERE id = $5
          RETURNING id, match_date, opponent, status`,
-        [body.match_date, body.opponent, venue, admin.id, id],
+        [body.match_date, body.opponent, body.venue ?? null, admin.id, id],
       );
 
       // The booking resolves through the match's own link (the old

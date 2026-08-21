@@ -58,10 +58,9 @@ export type Match = {
   guest_names: string[];
   guest_cars: boolean[]; // index-aligned with guest_names; legacy = []
   guest_shared_cars: boolean[]; // same alignment; who rode with someone
-  ground_booking_id: string | null; // set = created by a ground booking
-  ground: "home" | "away"; // which scheduling flow created the match
-  venue: string | null; // away ground name; always NULL for home matches
-  fee_paid_to: "opponent" | "owner" | null; // who received our ground share (other only)
+  ground_booking_id: string | null; // legacy link; bookings no longer create matches
+  venue: string | null; // free-text ground name, typed when scheduling
+  fee_paid_to: "opponent" | "owner" | null; // who received our ground share
   updated_at: string | null;
   created_at: string;
 };
@@ -94,7 +93,7 @@ export type TournamentPublic = {
   player_count: number;
   created_at: string;
   team_name: string | null; // what our side is called in this tournament
-  venue: string | null; // ground name from the shared grounds dropdown
+  venue: string | null; // free-text ground name
   joining_fee: number; // one participation fee for the whole tournament
   // Null since migration 32: a Tournament-Credit buyer owns no team, so
   // a tournament can stand alone. Exposed by tournaments_public (m30).

@@ -11,7 +11,6 @@ import {
   Users,
 } from "lucide-react";
 import { LogoutButton } from "@/components/admin/LogoutButton";
-import { ScheduleMatchTile } from "@/components/admin/ScheduleMatchTile";
 import { CaptainTile } from "@/components/admin/CaptainTile";
 import { ViceCaptainTile } from "@/components/admin/ViceCaptainTile";
 import { Money } from "@/components/shared/Money";
@@ -171,7 +170,6 @@ async function ConsoleData() {
         {isSuperadmin && <CaptainTile players={captainPlayers} />}
         {isSuperadmin && <ViceCaptainTile players={captainPlayers} />}
         {tiles.map(renderTile)}
-        <ScheduleMatchTile />
         {renderTile(PASSWORD_TILE)}
       </section>
 

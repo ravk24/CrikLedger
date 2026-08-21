@@ -61,28 +61,19 @@ export const poolCreditSchema = z
     { message: "Message is required" },
   );
 
-// Ground booking: an outside team books N slots. One credit (amount
-// actually paid), one booking record, N scheduled matches — one per date.
-export const groundBookingSchema = z
-  .object({
-    kind: z.literal("ground_booking"),
-    team_name: z.string().trim().min(1).max(80),
-    captain: z.string().trim().min(1).max(80),
-    slots: z.number().int().positive().max(20),
-    amount_paid: z.number().int().nonnegative(),
-    amount_pending: z.number().int().nonnegative(),
-    match_dates: z
-      .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "yyyy-mm-dd"))
-      .min(1)
-      .max(20),
-    entry_date: entryDate,
-  })
-  .refine((body) => body.match_dates.length === body.slots, {
-    message: "One date per booked slot",
-  })
-  .refine((body) => body.amount_paid + body.amount_pending > 0, {
-    message: "Paid and pending cannot both be zero",
-  });
+// Ground booking: an outside team books N slots on the ground. One
+// credit for the amount actually paid, plus one booking record.
+// It no longer creates matches (migration-35), and because clearing a
+// pending fee was match-scoped, the paid/pending split went with it —
+// see CrikLedger-docs/dropped-home_match-feature.md.
+export const groundBookingSchema = z.object({
+  kind: z.literal("ground_booking"),
+  team_name: z.string().trim().min(1).max(80),
+  captain: z.string().trim().min(1).max(80),
+  slots: z.number().int().positive().max(20),
+  amount_paid: z.number().int().positive(),
+  entry_date: entryDate,
+});
 
 export const poolDebitSchema = z.object({
   common: z.boolean(),
@@ -139,31 +130,33 @@ export const teamSwitchSchema = z.object({
     .regex(/^[a-z0-9][a-z0-9-]*$/, "team slug"),
 });
 
-export const scheduleMatchSchema = z
-  .object({
-    match_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "yyyy-mm-dd"),
-    opponent: z.string().trim().min(1).max(80),
-    // Create only: which scheduling flow this is. Provenance — the edit
-    // route never updates it (project rule: ground is set once, at insert).
-    ground: z.enum(["home", "away"]).default("home"),
-    // Away ground name, away matches only; absent = unknown/keep current.
-    venue: z.string().trim().min(1).max(80).optional(),
-    // Away creates only: who received our team's ground share, and the
-    // contribution recorded as a pool debit in the same transaction.
-    fee_paid_to: z.enum(["opponent", "owner"]).optional(),
-    fee_amount: z.number().int().positive().optional(),
-    // Edit mode only: renames the linked ground booking's captain.
-    opponent_captain: z.string().trim().min(1).max(80).optional(),
-  })
-  // Scheduling an away match ALWAYS records the payment (one switch is
-  // required in the UI). Edit bodies never send ground, so the home
-  // default keeps this refine out of their way.
-  .refine(
-    (body) =>
-      body.ground !== "away" ||
-      (body.fee_paid_to !== undefined && body.fee_amount !== undefined),
-    { message: "fee_paid_to and fee_amount are required for away matches" },
-  );
+// Creating a match. Scheduling ALWAYS records the ground fee our team
+// paid (one "paid to" switch is required in the UI), so both fee fields
+// are mandatory here. Split from the edit schema in migration-35's
+// commit: they used to be one schema whose ground: .default("home") was
+// the only thing keeping this requirement off the edit path.
+export const createMatchSchema = z.object({
+  match_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "yyyy-mm-dd"),
+  opponent: z.string().trim().min(1).max(80),
+  // Free-text ground name. Optional — a match with no venue recorded
+  // simply shows none.
+  venue: z.string().trim().min(1).max(80).optional(),
+  // Who received our team's ground share, and the contribution recorded
+  // as a pool debit in the same transaction.
+  fee_paid_to: z.enum(["opponent", "owner"]),
+  fee_amount: z.number().int().positive(),
+});
+
+// Fixing an already-scheduled match. Never touches the fee: the pool
+// debit is owned by the linked entry, not by this route.
+export const editMatchSchema = z.object({
+  match_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "yyyy-mm-dd"),
+  opponent: z.string().trim().min(1).max(80),
+  // Absent = keep the stored value.
+  venue: z.string().trim().min(1).max(80).optional(),
+  // Renames the linked ground booking's captain, when there is one.
+  opponent_captain: z.string().trim().min(1).max(80).optional(),
+});
 
 export const abandonMatchSchema = z.object({
   reason: z.string().trim().min(1).max(200),
@@ -220,8 +213,7 @@ export const matchSubmitSchema = z.object({
 export const createTournamentSchema = z.object({
   name: z.string().trim().min(1).max(80),
   team_name: z.string().trim().min(1).max(80).optional(),
-  // Ground name from the shared grounds dropdown (custom text for
-  // "Other ground…"), same as SG scheduling.
+  // Free-text ground name, same as match scheduling.
   venue: z.string().trim().min(1).max(80).optional(),
   // One participation fee for the whole tournament (0 = none yet).
   joining_fee: z.number().int().nonnegative().optional(),

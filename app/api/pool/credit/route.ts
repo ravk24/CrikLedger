@@ -18,26 +18,26 @@ export async function POST(req: NextRequest) {
     if (raw?.kind === "ground_booking") {
       const body = groundBookingSchema.parse(raw);
 
-      // One transaction: credit (if anything was paid) -> booking -> matches.
+      // One transaction: credit -> booking. Since migration-35 a booking
+      // no longer creates matches, and amount_pending is always 0 —
+      // clearing a pending fee was match-scoped, so the split went with
+      // the matches (see dropped-home_match-feature.md).
       const result = await withTransaction(async (client) => {
         const teamId = await getCurrentTeamId(client);
         const message = buildBookingMessage(
           body.team_name,
           body.captain,
           body.slots,
-          body.amount_pending,
+          0,
         );
 
-        let entryId: string | null = null;
-        if (body.amount_paid > 0) {
-          const entryRes = await client.query(
-            `INSERT INTO pool_entries (entry_date, kind, message, amount, created_by, team_id)
-             VALUES (COALESCE($1::date, CURRENT_DATE), 'ground_booking', $2, $3, $4, $5)
-             RETURNING id`,
-            [body.entry_date ?? null, message, body.amount_paid, admin.id, teamId],
-          );
-          entryId = entryRes.rows[0].id;
-        }
+        const entryRes = await client.query(
+          `INSERT INTO pool_entries (entry_date, kind, message, amount, created_by, team_id)
+           VALUES (COALESCE($1::date, CURRENT_DATE), 'ground_booking', $2, $3, $4, $5)
+           RETURNING id`,
+          [body.entry_date ?? null, message, body.amount_paid, admin.id, teamId],
+        );
+        const entryId: string = entryRes.rows[0].id;
 
         const bookingRes = await client.query(
           `INSERT INTO ground_bookings
@@ -50,25 +50,15 @@ export async function POST(req: NextRequest) {
             body.captain,
             body.slots,
             body.amount_paid,
-            body.amount_pending,
+            0,
             admin.id,
             teamId,
           ],
         );
 
-        for (const matchDate of body.match_dates) {
-          await client.query(
-            `INSERT INTO matches
-               (match_date, opponent, status, created_by, ground_booking_id, team_id)
-             VALUES ($1, $2, 'scheduled', $3, $4, $5)`,
-            [matchDate, body.team_name, admin.id, bookingRes.rows[0].id, teamId],
-          );
-        }
-
         return {
           booking_id: bookingRes.rows[0].id,
           entry_id: entryId,
-          matches_created: body.match_dates.length,
         };
       });
 

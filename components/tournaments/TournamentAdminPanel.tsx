@@ -13,12 +13,6 @@ import {
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { SheetShell } from "@/components/shared/SheetShell";
-import {
-  GroundSelect,
-  OTHER_GROUND,
-  venueToSelection,
-} from "@/components/shared/GroundSelect";
-import type { Ground } from "@/lib/grounds";
 import { CaptainMark } from "@/components/shared/CaptainMark";
 import { ViceCaptainMark } from "@/components/shared/ViceCaptainMark";
 import { TournamentDepositSheet } from "@/components/tournaments/TournamentDepositSheet";
@@ -32,7 +26,6 @@ import type { TournamentPlayerPublic, TournamentPublic } from "@/types";
 type Props = {
   tournament: TournamentPublic;
   players: TournamentPlayerPublic[]; // full roster, active + removed
-  grounds: Ground[]; // team ground list for the venue select
   isSuperadmin: boolean;
 };
 
@@ -49,7 +42,6 @@ const tileClass =
 export function TournamentAdminPanel({
   tournament,
   players,
-  grounds,
   isSuperadmin,
 }: Props) {
   const router = useRouter();
@@ -69,9 +61,7 @@ export function TournamentAdminPanel({
       ? String(Math.round(Number(tournament.joining_fee)))
       : "",
   );
-  const initialGround = venueToSelection(grounds, tournament.venue);
-  const [groundChoice, setGroundChoice] = useState(initialGround.choice);
-  const [customName, setCustomName] = useState(initialGround.customName);
+  const [venue, setVenue] = useState(tournament.venue ?? "");
   const [startDate, setStartDate] = useState(tournament.start_date ?? "");
   const [endDate, setEndDate] = useState(tournament.end_date ?? "");
   const [newName, setNewName] = useState("");
@@ -95,8 +85,7 @@ export function TournamentAdminPanel({
 
   async function handleDetailsSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const venue =
-      groundChoice === OTHER_GROUND ? customName.trim() : groundChoice;
+    const groundName = venue.trim();
     setPending(true);
     setDetailsError(null);
     setDetailsSaved(false);
@@ -107,7 +96,7 @@ export function TournamentAdminPanel({
         body: JSON.stringify({
           name: name.trim(),
           team_name: teamName.trim() === "" ? null : teamName.trim(),
-          venue: venue === "" ? null : venue,
+          venue: groundName === "" ? null : groundName,
           joining_fee: Number(joiningFee) || 0,
           start_date: startDate || null, // null = clear (blanked input)
           end_date: endDate || null,
@@ -367,14 +356,20 @@ export function TournamentAdminPanel({
               className={inputClass}
             />
           </label>
-          <GroundSelect
-            grounds={grounds}
-            choice={groundChoice}
-            customName={customName}
-            onChoiceChange={setGroundChoice}
-            onCustomNameChange={setCustomName}
-            disabled={readOnly}
-          />
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-text-secondary">
+              Ground name
+            </span>
+            <input
+              type="text"
+              value={venue}
+              onChange={(e) => setVenue(e.target.value)}
+              placeholder="Pimpri Turf"
+              maxLength={80}
+              disabled={readOnly}
+              className={inputClass}
+            />
+          </label>
           <MoneyInput
             label="Joining Fee (settles when the tournament completes)"
             value={joiningFee}
@@ -461,7 +456,6 @@ export function TournamentAdminPanel({
         onOpenChange={setScheduleOpen}
         tournamentId={tournament.id}
         venue={tournament.venue}
-        grounds={grounds}
       />
       <TournamentDepositSheet
         open={depositOpen}

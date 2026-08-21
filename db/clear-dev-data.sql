@@ -6,9 +6,10 @@
 -- baseline. This file is reserved for the ONE deliberate pre-launch
 -- reset after the application is fully built.
 -- Keeps the megaadmin (ravi_kant), the schema (tables, views,
--- RLS, grants), AND the migration-26 team seed (teams,
--- team_grounds, team_seasons, team_slots) — deleting the team
--- would CASCADE-wipe it and the app expects 'our-xi' to exist.
+-- RLS, grants), AND the migration-26 team seed (teams) — deleting
+-- the team would CASCADE-wipe it and the app expects 'our-xi' to
+-- exist. team_grounds/team_seasons/team_slots were dropped in
+-- migration 35 (see dropped-home_match-feature.md).
 --
 -- Since migration 32 the predicate is platform_role, NOT role:
 -- 'superadmin' is now a membership, so the old

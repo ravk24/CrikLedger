@@ -3,17 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SheetShell } from "@/components/shared/SheetShell";
-import {
-  GroundSelect,
-  OTHER_GROUND,
-  venueToSelection,
-} from "@/components/shared/GroundSelect";
-import type { Ground } from "@/lib/grounds";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  grounds: Ground[]; // team ground list for the venue select
   // Present when fixing an already-scheduled match instead of creating one.
   // opponentCaptain comes from the linked ground booking; null = no booking,
   // so there is no captain record to edit.
@@ -22,19 +15,15 @@ type Props = {
     date: string;
     opponent: string;
     opponentCaptain: string | null;
-    ground: "home" | "away";
     venue: string | null;
   };
-  // Create mode only: pre-fill the date (e.g. scheduling from a slot).
-  // Creation here is always a home match — away matches go through
-  // OtherScheduleWizard, which also records the ground-fee debit.
+  // Create mode only: pre-fill the date.
   initialDate?: string;
 };
 
 export function ScheduleMatchSheet({
   open,
   onOpenChange,
-  grounds,
   editing,
   initialDate,
 }: Props) {
@@ -42,16 +31,12 @@ export function ScheduleMatchSheet({
   const [date, setDate] = useState(editing?.date ?? initialDate ?? "");
   const [opponent, setOpponent] = useState(editing?.opponent ?? "");
   const [captain, setCaptain] = useState(editing?.opponentCaptain ?? "");
-  const initialSelection = venueToSelection(grounds, editing?.venue);
-  const [groundChoice, setGroundChoice] = useState(initialSelection.choice);
-  const [customName, setCustomName] = useState(initialSelection.customName);
+  const [venue, setVenue] = useState(editing?.venue ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   // Only booking matches carry an opponent captain to edit.
   const hasCaptainField = editing?.opponentCaptain != null;
-  // Venue only exists on away matches.
-  const hasVenueField = editing?.ground === "away";
 
   const editDate = editing?.date;
   const editOpponent = editing?.opponent;
@@ -62,20 +47,17 @@ export function ScheduleMatchSheet({
       setDate(editDate);
       setOpponent(editOpponent);
       setCaptain(editCaptain ?? "");
-      const selection = venueToSelection(grounds, editVenue);
-      setGroundChoice(selection.choice);
-      setCustomName(selection.customName);
+      setVenue(editVenue ?? "");
       setError(null);
     } else if (open && editDate === undefined && initialDate !== undefined) {
       setDate(initialDate);
       setError(null);
     }
-  }, [open, editDate, editOpponent, editCaptain, editVenue, initialDate, grounds]);
+  }, [open, editDate, editOpponent, editCaptain, editVenue, initialDate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const venue =
-      groundChoice === OTHER_GROUND ? customName.trim() : groundChoice;
+    const groundName = venue.trim();
     setPending(true);
     setError(null);
     try {
@@ -87,7 +69,7 @@ export function ScheduleMatchSheet({
           body: JSON.stringify({
             match_date: date,
             opponent: opponent.trim(),
-            ...(hasVenueField && venue ? { venue } : {}),
+            ...(groundName ? { venue: groundName } : {}),
             ...(hasCaptainField && captain.trim()
               ? { opponent_captain: captain.trim() }
               : {}),
@@ -155,15 +137,18 @@ export function ScheduleMatchSheet({
             className={inputClass}
           />
         </label>
-        {hasVenueField && (
-          <GroundSelect
-            grounds={grounds}
-            choice={groundChoice}
-            customName={customName}
-            onChoiceChange={setGroundChoice}
-            onCustomNameChange={setCustomName}
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-text-secondary">
+            Ground name
+          </span>
+          <input
+            type="text"
+            value={venue}
+            onChange={(e) => setVenue(e.target.value)}
+            placeholder="Pimpri Turf"
+            className={inputClass}
           />
-        )}
+        </label>
         {hasCaptainField && (
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-text-secondary">
