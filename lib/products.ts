@@ -14,7 +14,8 @@
 export type Product = {
   key: "team_ledger" | "tournament_credit";
   name: string;
-  price: string;
+  price: string; // display form — keep in step with priceInr
+  priceInr: number; // what the operator console records per grant
   tagline: string;
   features: string[];
   note: string;
@@ -27,6 +28,7 @@ export const PRODUCTS: Product[] = [
     key: "team_ledger",
     name: "Ledger",
     price: "₹99",
+    priceInr: 99,
     tagline: "One-time purchase · one team",
     features: [
       "Maintain your team ledger",
@@ -47,6 +49,7 @@ export const PRODUCTS: Product[] = [
     key: "tournament_credit",
     name: "Tournament",
     price: "₹29",
+    priceInr: 29,
     tagline: "One-time purchase · one tournament",
     features: [
       "Create a tournament",

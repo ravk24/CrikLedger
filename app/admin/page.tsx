@@ -14,8 +14,11 @@ import {
 import { LogoutButton } from "@/components/admin/LogoutButton";
 import { CaptainTile } from "@/components/admin/CaptainTile";
 import { ViceCaptainTile } from "@/components/admin/ViceCaptainTile";
+import { PrivilegesCard } from "@/components/admin/PrivilegesCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { pool } from "@/lib/db";
+import { tournamentCreditsLeft } from "@/lib/entitlements";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getCurrentTeam } from "@/lib/team";
@@ -56,7 +59,7 @@ const TILES: Tile[] = [
   },
 ];
 
-// Rendered after Schedule match, so it stays last for every role.
+// Rendered last for every role.
 const PASSWORD_TILE: Tile = {
   label: "Change password",
   href: "/admin/password",
@@ -71,7 +74,7 @@ async function ConsoleData() {
 
   const isSuperadmin = admin.activeTeamRole === "superadmin";
   const team = await getCurrentTeam();
-  const [playersRes] = await Promise.all([
+  const [playersRes, adminCountRes] = await Promise.all([
     isSuperadmin
       ? supabaseServer
           .from("players_public")
@@ -80,7 +83,15 @@ async function ConsoleData() {
           .eq("is_active", true)
           .order("name")
       : Promise.resolve({ data: null }),
+    isSuperadmin
+      ? pool.query<{ n: string }>(
+          `SELECT count(*) AS n FROM team_memberships
+            WHERE team_id = $1 AND team_role = 'admin' AND is_active`,
+          [team.id],
+        )
+      : Promise.resolve({ rows: [{ n: "0" }] }),
   ]);
+  const adminCount = Number(adminCountRes.rows[0]?.n ?? 0);
   const captainPlayers = (playersRes.data ?? []) as {
     id: string;
     name: string;
@@ -148,6 +159,15 @@ async function ConsoleData() {
         </div>
         <LogoutButton />
       </div>
+
+      {isSuperadmin && (
+        <PrivilegesCard
+          name={admin.name}
+          teamName={team.display_name}
+          adminCount={adminCount}
+          creditsLeft={tournamentCreditsLeft(admin)}
+        />
+      )}
 
       <section className="grid grid-cols-2 gap-3">
         {isSuperadmin && <CaptainTile players={captainPlayers} />}

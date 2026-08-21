@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TournamentCard } from "@/components/tournaments/TournamentCard";
 import { CreateTournamentSheet } from "@/components/tournaments/CreateTournamentSheet";
 import Link from "next/link";
-import { getNavState } from "@/lib/nav";
+import { getNavState, type NavState } from "@/lib/nav";
 import { canWrite } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
@@ -77,10 +77,10 @@ async function TournamentsData() {
   if (!nav.hasTournamentCredit) {
     return <TournamentDirectory hosted={false} />;
   }
-  return <HostedTournaments />;
+  return <HostedTournaments nav={nav} />;
 }
 
-async function HostedTournaments() {
+async function HostedTournaments({ nav }: { nav: NavState }) {
   const team = await getCurrentTeam();
   const [res, admin] = await Promise.all([
     supabaseServer
@@ -98,7 +98,7 @@ async function HostedTournaments() {
 
   return (
     <>
-      {isAdmin && <CreateTournamentSheet />}
+      {isAdmin && <CreateTournamentSheet creditsLeft={nav.tournamentCreditsLeft} />}
 
       {tournaments.length === 0 && (
         <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">

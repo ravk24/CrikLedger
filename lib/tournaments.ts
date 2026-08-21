@@ -69,23 +69,52 @@ export async function createTournament(
 ) {
   try {
     const teamId = await getCurrentTeamId(pool);
-    const res = await pool.query(
-      `INSERT INTO tournaments
-         (name, team_name, venue, joining_fee, start_date, end_date, created_by, team_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id, name, status`,
-      [
-        body.name,
-        body.team_name ?? null,
-        body.venue ?? null,
-        body.joining_fee ?? 0,
-        body.start_date ?? null,
-        body.end_date ?? null,
-        adminId,
-        teamId,
-      ],
-    );
-    return res.rows[0];
+    return await withTransaction(async (client) => {
+      const res = await client.query(
+        `INSERT INTO tournaments
+           (name, team_name, venue, joining_fee, start_date, end_date, created_by, team_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING id, name, status`,
+        [
+          body.name,
+          body.team_name ?? null,
+          body.venue ?? null,
+          body.joining_fee ?? 0,
+          body.start_date ?? null,
+          body.end_date ?? null,
+          adminId,
+          teamId,
+        ],
+      );
+      const tournament = res.rows[0];
+
+      // One payment = one tournament (migration 37): claim the team's
+      // oldest unused credit, or roll the whole create back. SKIP
+      // LOCKED keeps two simultaneous creates from fighting over the
+      // same row. Deleting the tournament frees the credit again (the
+      // FK is ON DELETE SET NULL).
+      const credit = await client.query(
+        `UPDATE entitlements
+            SET consumed_by_tournament_id = $1, consumed_at = NOW()
+          WHERE id = (
+            SELECT id FROM entitlements
+             WHERE team_id = $2 AND product = 'tournament_credit'
+               AND consumed_at IS NULL
+             ORDER BY created_at
+             LIMIT 1
+             FOR UPDATE SKIP LOCKED)
+          RETURNING id`,
+        [tournament.id, teamId],
+      );
+      if ((credit.rowCount ?? 0) === 0) {
+        throw new ApiError(
+          402,
+          "NO_TOURNAMENT_CREDIT",
+          "No tournament credit left — one credit hosts one tournament. See Pricing.",
+        );
+      }
+      return tournament;
+    });
   } catch (error) {
     if (isUniqueViolation(error)) throw nameTaken("tournament");
     throw error;

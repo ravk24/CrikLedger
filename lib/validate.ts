@@ -110,6 +110,18 @@ export const createAdminSchema = z.object({
   name: z.string().trim().min(1).max(80),
 });
 
+// Operator console grant (app/api/ops/grants): which product, to whom.
+export const grantSchema = z.object({
+  product: z.enum(["team_ledger", "tournament_credit"]),
+  username: usernameField,
+  name: z.string().trim().min(1).max(80),
+});
+
+// Superadmin renames their own team (app/api/sa/team).
+export const teamNameSchema = z.object({
+  display_name: z.string().trim().min(2).max(60),
+});
+
 // Self-serve signup: user id + password + email. Email is stored as the
 // recovery channel and purchase-correspondence address; nothing sends to
 // it yet, so recovery is a megaadmin-initiated reset from the operator
