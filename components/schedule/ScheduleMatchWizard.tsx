@@ -6,6 +6,7 @@ import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { Switch } from "@/components/ui/switch";
 import { formatRupees } from "@/lib/format";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -16,6 +17,11 @@ type Props = {
 const LAST_STEP = 3;
 
 const STEP_TITLES = ["Schedule match", "Match details", "Pool movement"];
+
+function formatDateChip(iso: string) {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
 
 const inputClass =
   "h-11 w-full rounded-md border border-border bg-surface-secondary px-3 text-base text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
@@ -32,10 +38,17 @@ const inputClass =
 // deliberately NOT gated on a direction here (the edit sheet, where both
 // sit together, still gates it). The settled/pending split is computed
 // at submit, once both are known.
+//
+// "Multiple dates" covers the same ground booked for several slots: the
+// admin enters every date once, each becomes a bare match (no opponent,
+// no pool entry), and the details get filled in later from the card's
+// edit sheet. Match details are therefore hidden in that mode.
 export function ScheduleMatchWizard({ open, onOpenChange }: Props) {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [date, setDate] = useState("");
+  const [multiOn, setMultiOn] = useState(false);
+  const [dates, setDates] = useState<string[]>([]);
   const [venue, setVenue] = useState("");
   const [detailsOn, setDetailsOn] = useState(false);
   const [opponentOn, setOpponentOn] = useState(false);
@@ -54,6 +67,8 @@ export function ScheduleMatchWizard({ open, onOpenChange }: Props) {
     if (!openState) {
       setStep(1);
       setDate("");
+      setMultiOn(false);
+      setDates([]);
       setVenue("");
       setDetailsOn(false);
       setOpponentOn(false);
@@ -89,6 +104,52 @@ export function ScheduleMatchWizard({ open, onOpenChange }: Props) {
   // Each screen refuses to advance until its own fields are complete, so
   // nothing invalid ever reaches the next one.
   const canLeaveStep1 = !!date && !!venue.trim();
+  const canScheduleMany = dates.length > 0 && !!venue.trim();
+
+  function addDate() {
+    if (!date || dates.includes(date)) return;
+    setDates((d) => [...d, date].sort());
+    setDate("");
+  }
+
+  async function postMatch(body: Record<string, unknown>) {
+    const res = await fetch("/api/matches", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json();
+    if (!json.success) {
+      throw new Error(json.error?.message ?? "Could not schedule — try again.");
+    }
+  }
+
+  // One POST per date, in order, stopping at the first failure so the
+  // admin sees exactly which dates made it onto the calendar.
+  async function handleSubmitMany() {
+    setWorking(true);
+    setError(null);
+    const done: string[] = [];
+    try {
+      for (const d of dates) {
+        await postMatch({ match_date: d, venue: venue.trim() });
+        done.push(d);
+      }
+      setSuccess(
+        `${dates.length} matches scheduled — add opponents and fees from each card`,
+      );
+      router.refresh();
+    } catch (e) {
+      setDates((all) => all.filter((d) => !done.includes(d)));
+      setError(
+        (e instanceof Error ? e.message : "Could not reach the server.") +
+          (done.length ? ` ${done.length} scheduled so far.` : ""),
+      );
+      if (done.length) router.refresh();
+    } finally {
+      setWorking(false);
+    }
+  }
   const canLeaveStep2 =
     feeAmount > 0 &&
     (!opponentOn || !!opponent.trim()) &&
@@ -174,7 +235,22 @@ export function ScheduleMatchWizard({ open, onOpenChange }: Props) {
       <div className="flex gap-2">
         {step > 1 && backButton}
 
-        {step === 1 && (
+        {step === 1 && multiOn && (
+          <button
+            type="button"
+            onClick={() => void handleSubmitMany()}
+            disabled={working || !canScheduleMany}
+            className={primaryClass}
+          >
+            {working
+              ? "Working…"
+              : dates.length > 1
+                ? `Schedule ${dates.length} matches`
+                : "Schedule a match"}
+          </button>
+        )}
+
+        {step === 1 && !multiOn && (
           <>
             <button
               type="button"
@@ -276,14 +352,55 @@ export function ScheduleMatchWizard({ open, onOpenChange }: Props) {
                 <span className="text-xs font-medium text-text-secondary">
                   Date
                 </span>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                  className={inputClass}
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (multiOn && e.key === "Enter") {
+                        e.preventDefault();
+                        addDate();
+                      }
+                    }}
+                    required
+                    className={inputClass}
+                  />
+                  {multiOn && (
+                    <button
+                      type="button"
+                      onClick={addDate}
+                      disabled={!date || dates.includes(date)}
+                      className="h-11 shrink-0 rounded-md border border-accent px-4 text-sm font-medium text-accent disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                  )}
+                </div>
               </label>
+
+              {multiOn && dates.length > 0 && (
+                <ul className="flex flex-wrap gap-2">
+                  {dates.map((d) => (
+                    <li
+                      key={d}
+                      className="flex items-center gap-1 rounded-full bg-surface-secondary py-1 pl-3 pr-1 text-sm text-text-primary"
+                    >
+                      {formatDateChip(d)}
+                      <button
+                        type="button"
+                        aria-label={`Remove ${d}`}
+                        onClick={() =>
+                          setDates((all) => all.filter((x) => x !== d))
+                        }
+                        className="flex size-6 items-center justify-center rounded-full text-text-muted hover:text-text-primary"
+                      >
+                        <X size={14} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
 
               <label className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-text-secondary">
@@ -299,13 +416,28 @@ export function ScheduleMatchWizard({ open, onOpenChange }: Props) {
                 />
               </label>
 
-              {switchRow("Match details", detailsOn, setDetailsOn)}
+              {switchRow("Multiple dates", multiOn, (on) => {
+                setMultiOn(on);
+                if (on) setDetailsOn(false);
+                else setDates([]);
+              })}
 
-              <p className="text-xs text-text-muted">
-                {detailsOn
-                  ? "Continue to add the opponent and the fee."
-                  : "Leave this off to put the date on the calendar now — the card is marked until an opponent is added."}
-              </p>
+              {multiOn ? (
+                <p className="text-xs text-text-muted">
+                  Same ground booked for several slots — add each date, then
+                  fill in opponents and fees later from each card.
+                </p>
+              ) : (
+                <>
+                  {switchRow("Match details", detailsOn, setDetailsOn)}
+
+                  <p className="text-xs text-text-muted">
+                    {detailsOn
+                      ? "Continue to add the opponent and the fee."
+                      : "Leave this off to put the date on the calendar now — the card is marked until an opponent is added."}
+                  </p>
+                </>
+              )}
             </>
           )}
 
