@@ -37,3 +37,6 @@ yarn-error.log*
 
 .vercel
 .env*
+
+# local working plan (not for the repo)
+performance-improvement-plan.md

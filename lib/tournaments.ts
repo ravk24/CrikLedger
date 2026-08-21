@@ -1,13 +1,12 @@
 import type { PoolClient } from "pg";
 import { z } from "zod";
-import { pool, withTransaction } from "@/lib/db";
+import { withTransaction } from "@/lib/db";
 import { ceilSplit } from "@/engine/split";
 import {
   calculateTournamentFees,
   type TournamentFeeMatch,
 } from "@/engine/tournamentFee";
 import { formatRupees } from "@/lib/format";
-import { getCurrentTeamId } from "@/lib/team";
 import {
   ApiError,
   addTournamentPlayerSchema,
@@ -65,10 +64,10 @@ export async function lockTournament(
 
 export async function createTournament(
   adminId: string,
+  teamId: string,
   body: z.infer<typeof createTournamentSchema>,
 ) {
   try {
-    const teamId = await getCurrentTeamId(pool);
     return await withTransaction(async (client) => {
       const res = await client.query(
         `INSERT INTO tournaments

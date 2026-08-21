@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { handleRouteError } from "@/lib/validate";
 import { requireTeamAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
-import { getCurrentTeam } from "@/lib/team";
+import { getTeamById } from "@/lib/team";
 import {
   ShareFrame,
   SHARE_WIDTH,
@@ -22,8 +22,8 @@ export async function GET() {
   // prerender pass from reaching the try/catch below.
   await connection();
   try {
-    await requireTeamAdmin();
-    const team = await getCurrentTeam();
+    const admin = await requireTeamAdmin();
+    const team = await getTeamById(admin.scopeId);
     const { data } = await supabaseServer
       .from("players_public")
       .select("*")

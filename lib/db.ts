@@ -22,7 +22,19 @@ function getPool(): Pool {
     }
     instance = new Pool({
       connectionString,
-      max: 3,
+      // Under Fluid Compute one instance serves many concurrent requests,
+      // and a single page render can issue several queries at once. Three
+      // was enough to self-starve (a 4th query queued behind the rest);
+      // the transaction pooler is built for many short-lived sessions.
+      max: 12,
+      // Idle sockets silently dropped by NAT/pooler cost a full
+      // TCP+TLS+SCRAM handshake on the next query. Keep them warm.
+      keepAlive: true,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 5_000,
+      // No statement_timeout here: the transaction pooler ignores it as a
+      // startup parameter (verified — SHOW still reports the project
+      // default), so it would only look like protection.
       ssl: { rejectUnauthorized: false },
     });
   }

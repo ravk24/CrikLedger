@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
-import { getCurrentTeamId } from "@/lib/team";
 import { ApiError, addPlayerSchema, handleRouteError } from "@/lib/validate";
 
 function isUniqueViolation(error: unknown): boolean {
@@ -15,10 +14,10 @@ function isUniqueViolation(error: unknown): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin();
+    const admin = await requireAdmin();
     const { name } = addPlayerSchema.parse(await req.json());
 
-    const teamId = await getCurrentTeamId(pool);
+    const teamId = admin.scopeId;
 
     try {
       const res = await pool.query(

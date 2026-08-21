@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { pool, withTransaction } from "@/lib/db";
+import { withTransaction } from "@/lib/db";
 import { opponentLabel } from "@/lib/format";
 import { requireAdmin } from "@/lib/session";
-import { getCurrentTeamId } from "@/lib/team";
 import { createMatchSchema, handleRouteError } from "@/lib/validate";
 
 // One scheduling flow. Date and ground are all that is required — a
@@ -14,7 +13,7 @@ export async function POST(req: NextRequest) {
   try {
     const admin = await requireAdmin();
     const body = createMatchSchema.parse(await req.json());
-    const teamId = await getCurrentTeamId(pool);
+    const teamId = admin.scopeId;
 
     const feeAmount = body.fee_amount ?? 0;
     const feePending = body.fee_pending ?? 0;

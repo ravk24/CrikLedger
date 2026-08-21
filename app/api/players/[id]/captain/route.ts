@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withTransaction } from "@/lib/db";
 import { requireSuperadmin } from "@/lib/session";
-import { getCurrentTeamId } from "@/lib/team";
 import { ApiError, handleRouteError } from "@/lib/validate";
 
 // Superadmin only — the captain is a standing role for the whole
@@ -12,11 +11,13 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireSuperadmin();
+    // The team id rides the session row; resolving it INSIDE the
+    // transaction used to open a second pooled connection while the
+    // first was held — three concurrent calls could deadlock the pool.
+    const { scopeId: teamId } = await requireSuperadmin();
     const { id } = await params;
 
     const result = await withTransaction(async (client) => {
-      const teamId = await getCurrentTeamId(client);
       await client.query(
         `UPDATE players SET is_captain = FALSE
          WHERE team_id = $1 AND is_captain`,

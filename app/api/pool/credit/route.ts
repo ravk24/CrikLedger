@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { pool, withTransaction } from "@/lib/db";
 import { buildBookingMessage } from "@/lib/bookings";
 import { requireAdmin } from "@/lib/session";
-import { getCurrentTeamId } from "@/lib/team";
 import {
   ApiError,
   handleRouteError,
@@ -13,6 +12,9 @@ import {
 export async function POST(req: NextRequest) {
   try {
     const admin = await requireAdmin();
+    // Already on the session row — never re-resolve it, and never from
+    // inside withTransaction (that opened a second pooled connection).
+    const teamId = admin.scopeId;
     const raw = await req.json();
 
     if (raw?.kind === "ground_booking") {
@@ -23,7 +25,6 @@ export async function POST(req: NextRequest) {
       // clearing a pending fee was match-scoped, so the split went with
       // the matches (see dropped-home_match-feature.md).
       const result = await withTransaction(async (client) => {
-        const teamId = await getCurrentTeamId(client);
         const message = buildBookingMessage(
           body.team_name,
           body.captain,
@@ -66,7 +67,6 @@ export async function POST(req: NextRequest) {
     }
 
     const body = poolCreditSchema.parse(raw);
-    const teamId = await getCurrentTeamId(pool);
 
     const playerLinked = body.kind === "deposit" || body.kind === "opening_due";
     if (playerLinked) {
