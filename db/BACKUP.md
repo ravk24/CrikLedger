@@ -1,6 +1,6 @@
 # Database backups
 
-The Supabase database is the single source of truth for the club ledger, so it is backed up automatically every day by the GitHub Actions workflow [`.github/workflows/db-backup.yml`](../.github/workflows/db-backup.yml).
+The Supabase database is the single source of truth for the club ledger, so it is backed up automatically every 5th day by the GitHub Actions workflow [`.github/workflows/db-backup.yml`](../.github/workflows/db-backup.yml).
 
 - **Schedule:** daily at 21:30 UTC (3:00 AM IST).
 - **What is backed up:** a full `pg_dump` of the `public` schema — all tables, views, functions, and RLS policies, plus every row of data.

@@ -1,8 +1,8 @@
-name: Daily DB Backup
+name: DB Backup (every 5 days)
 
 on:
   schedule:
-    - cron: "30 21 * * *" # 21:30 UTC = 3:00 AM IST, low-activity window
+    - cron: "30 21 */5 * *" # every 5th day at 21:30 UTC = 3:00 AM IST, low-activity window
   workflow_dispatch: {} # manual "Run workflow" button for on-demand backups
 
 jobs:
