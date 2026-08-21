@@ -83,9 +83,6 @@ export function FeeTable({ participants, guests }: Props) {
               <span className="truncate text-sm font-medium text-text-primary">
                 {guest.name}
               </span>
-              <span className="shrink-0 rounded-[4px] bg-low-light px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-low-foreground">
-                GUEST
-              </span>
               {guest.brought_car && (
                 <Car
                   size={16}

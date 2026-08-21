@@ -13,7 +13,6 @@ const rowSchema = z.object({
   name: z.string().trim().min(1).max(40),
   fee: z.number().finite(),
   broughtCar: z.boolean(),
-  guest: z.boolean().optional(),
 });
 
 const payloadSchema = z.object({
@@ -139,11 +138,6 @@ export async function POST(req: NextRequest) {
                     }}
                   >
                     {r.name}
-                    {r.guest ? (
-                      <span style={{ color: "#94a3b8", marginLeft: 8 }}>
-                        guest
-                      </span>
-                    ) : null}
                     {r.broughtCar ? <CarMark /> : null}
                   </div>
                   <div

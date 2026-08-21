@@ -63,7 +63,6 @@ export function GuestMatchSheet({
         name: g.name,
         fee: g.fee,
         broughtCar: g.broughtCar,
-        guest: true,
       })),
     ],
     captainNote:
@@ -178,7 +177,6 @@ export function GuestMatchSheet({
               >
                 <span className="text-text-primary">
                   {g.name}
-                  <span className="ml-1.5 text-xs text-text-muted">guest</span>
                   {g.broughtCar && (
                     <Car
                       size={14}

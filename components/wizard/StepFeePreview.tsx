@@ -118,9 +118,6 @@ export function StepFeePreview({
               >
                 <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-text-primary">
                   <span className="truncate">{guest.name}</span>
-                  <span className="shrink-0 rounded-[4px] bg-low-light px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-low-foreground">
-                    GUEST
-                  </span>
                   {guest.brought_car && (
                     <Car size={14} className="shrink-0 text-accent" />
                   )}

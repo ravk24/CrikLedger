@@ -374,7 +374,7 @@ async function MatchDetailData({
                     key={`guest-car-${g.name}`}
                     className="rounded-full bg-low-light px-2 py-0.5 text-xs font-medium text-low-foreground"
                   >
-                    {g.name} (guest)
+                    {g.name}
                   </span>
                 ))}
               <span className="text-xs text-text-muted">
