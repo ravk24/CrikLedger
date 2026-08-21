@@ -176,8 +176,8 @@ async function ConsoleData() {
         {renderTile(PASSWORD_TILE)}
       </section>
 
-      <p className="flex items-center justify-center gap-1.5 text-center text-xs text-text-muted">
-        <DatabaseBackup size={14} />
+      <p className="text-center text-xs text-text-muted">
+        <DatabaseBackup size={18} className="mr-1.5 inline-block align-text-bottom" />
         Your data is protected — database backed up every 5th day.
       </p>
 
