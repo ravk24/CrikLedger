@@ -12,6 +12,7 @@ import {
   formatDateShort,
   formatTime,
   formatWeekday,
+  teamLabel,
 } from "@/lib/format";
 import { canWrite, isScopeSuperadmin } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
@@ -143,7 +144,7 @@ async function TournamentMatchData({
       <section className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-semibold text-text-primary">
-            {tournament.team_name ?? team?.short_name ?? team?.display_name ?? "Our side"} vs{" "}
+            {tournament.team_name ?? (team ? teamLabel(team) : "Our side")} vs{" "}
             {match.opponent}
           </h1>
           <ResultBadge match={match} />

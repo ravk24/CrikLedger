@@ -1,19 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 import { requireTeamSuperadmin } from "@/lib/session";
-import { handleRouteError, teamNameSchema } from "@/lib/validate";
+import { ApiError, handleRouteError, teamNameSchema } from "@/lib/validate";
 
-// The superadmin renames their own team. Only display_name moves — the
-// slug is the cookie/URL key and stays put, so nothing bookmarked breaks.
+// The superadmin renames their own team. display_name and short_name
+// move together (match titles read short_name first) — the slug is the
+// cookie/URL key and stays put, so nothing bookmarked breaks.
 export async function PATCH(req: NextRequest) {
   try {
     const superadmin = await requireTeamSuperadmin();
     const { display_name } = teamNameSchema.parse(await req.json());
     const res = await pool.query<{ id: string; display_name: string }>(
-      `UPDATE teams SET display_name = $1 WHERE id = $2
+      `UPDATE teams SET display_name = $1, short_name = $1 WHERE id = $2
        RETURNING id, display_name`,
       [display_name, superadmin.scopeId],
     );
+    if (!res.rows[0]) {
+      throw new ApiError(404, "NOT_FOUND", "Team not found");
+    }
     return NextResponse.json({ success: true, data: res.rows[0] });
   } catch (error) {
     return handleRouteError("[sa/team]", error);

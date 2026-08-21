@@ -151,7 +151,7 @@ async function ConsoleData() {
         </Link>
         <div className="min-w-0 text-center">
           <h1 className="truncate text-lg font-bold text-text-primary">
-            Hello, {admin.name}
+            Hello, {admin.name.split(" ")[0]} · {team.display_name}
           </h1>
           <p className="text-xs capitalize text-text-secondary">
             {admin.activeTeamRole ?? admin.platformRole}
@@ -162,7 +162,7 @@ async function ConsoleData() {
 
       {isSuperadmin && (
         <PrivilegesCard
-          name={admin.name}
+          name={admin.name.split(" ")[0]}
           teamName={team.display_name}
           adminCount={adminCount}
           creditsLeft={tournamentCreditsLeft(admin)}

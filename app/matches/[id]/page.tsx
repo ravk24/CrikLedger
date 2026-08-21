@@ -17,6 +17,7 @@ import {
   formatRupees,
   formatWeekday,
   opponentLabel,
+  teamLabel,
 } from "@/lib/format";
 import { canWrite, isScopeSuperadmin } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
@@ -247,7 +248,7 @@ async function MatchDetailData({
       <section className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-semibold text-text-primary">
-            {team.short_name ?? team.display_name} vs{" "}
+            {teamLabel(team)} vs{" "}
             {opponentLabel(match.opponent)}
           </h1>
           <ResultBadge match={match} />

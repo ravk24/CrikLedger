@@ -1,8 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Crown, ShieldCheck, Trophy, UserPlus, Users } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Crown,
+  ShieldCheck,
+  Trophy,
+  UserPlus,
+  Users,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Props = {
   name: string;
@@ -20,6 +29,12 @@ export function PrivilegesCard({ name, teamName, adminCount, creditsLeft }: Prop
   const [pending, setPending] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+
+  // The server re-renders with the saved name after refresh; follow it.
+  useEffect(() => {
+    setValue(teamName);
+  }, [teamName]);
 
   const trimmed = value.trim();
   const dirty = trimmed !== teamName && trimmed.length >= 2;
@@ -42,7 +57,7 @@ export function PrivilegesCard({ name, teamName, adminCount, creditsLeft }: Prop
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
     } finally {
@@ -140,19 +155,38 @@ export function PrivilegesCard({ name, teamName, adminCount, creditsLeft }: Prop
           </button>
         </div>
         <p className="text-xs text-text-muted">
-          Shown in the header, on shared images and on player statements.
+          Shown in the header, on match pages and on shared images.
         </p>
         {error && <p className="text-sm text-debit">{error}</p>}
       </form>
 
-      <ul className="flex flex-col gap-2.5">
-        {rules.map(({ icon: Icon, text }, i) => (
-          <li key={i} className="flex items-start gap-2.5 text-sm text-text-secondary">
-            <Icon size={16} className="mt-0.5 shrink-0 text-accent" />
-            <span>{text}</span>
-          </li>
-        ))}
-      </ul>
+      <div className="-mx-4 -mb-4 border-t border-border">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className="flex min-h-11 w-full items-center justify-between px-4 text-left text-sm font-medium text-text-primary"
+        >
+          What you can do
+          <ChevronDown
+            size={16}
+            className={cn(
+              "text-text-muted transition-transform",
+              expanded && "rotate-180",
+            )}
+          />
+        </button>
+        {expanded && (
+          <ul className="flex flex-col gap-2.5 bg-surface-secondary px-4 py-3">
+            {rules.map(({ icon: Icon, text }, i) => (
+              <li key={i} className="flex items-start gap-2.5 text-sm text-text-secondary">
+                <Icon size={16} className="mt-0.5 shrink-0 text-accent" />
+                <span>{text}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </section>
   );
 }
