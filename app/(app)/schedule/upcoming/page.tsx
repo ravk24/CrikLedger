@@ -4,11 +4,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabaseServer } from "@/lib/supabase-server";
 import { AccessGate } from "@/components/shared/AccessGate";
 import { checkActiveTeamRead } from "@/lib/access";
+import { buildAttendeeCounts } from "@/lib/matches";
 import { getCurrentTeam } from "@/lib/team";
 import type { Match, MatchParticipantPublic } from "@/types";
 
-// Scheduled-only view of the matches list (played matches live on
-// /matches) — same data pattern as app/matches/page.tsx.
+// Scheduled-only view of the matches list (played ones live on
+// /schedule/completed) — same data pattern as its sibling.
 async function ScheduledMatchesData() {
   // Team data needs a session whose membership matches. Renders a panel
   // rather than throwing — a member who is merely signed out should see
@@ -30,15 +31,12 @@ async function ScheduledMatchesData() {
       .eq("team_id", team.id),
   ]);
 
-  const counts = new Map<string, number>();
-  for (const row of (participantsRes.data ?? []) as Pick<
-    MatchParticipantPublic,
-    "match_id" | "is_playing"
-  >[]) {
-    // Charge-only captain rows aren't attendance.
-    if (!row.is_playing) continue;
-    counts.set(row.match_id, (counts.get(row.match_id) ?? 0) + 1);
-  }
+  const counts = buildAttendeeCounts(
+    (participantsRes.data ?? []) as Pick<
+      MatchParticipantPublic,
+      "match_id" | "is_playing"
+    >[],
+  );
 
   // Upcoming soonest first.
   const scheduled = ((matchesRes.data ?? []) as Match[]).sort((a, b) =>
@@ -79,9 +77,7 @@ export default function ScheduledMatches() {
   return (
     <>
       <div>
-        <h1 className="text-xl font-bold text-text-primary">
-          Scheduled Matches
-        </h1>
+        <h1 className="text-xl font-bold text-text-primary">Scheduled</h1>
         <p className="mt-0.5 text-xs text-text-muted">
           Upcoming matches, soonest first.
         </p>

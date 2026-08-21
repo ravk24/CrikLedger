@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabaseServer } from "@/lib/supabase-server";
 import { AccessGate } from "@/components/shared/AccessGate";
 import { checkActiveTeamRead } from "@/lib/access";
+import { buildAttendeeCounts } from "@/lib/matches";
 import { getCurrentTeam } from "@/lib/team";
 import type { Match, MatchParticipantPublic } from "@/types";
 
@@ -25,15 +26,12 @@ async function MatchesData() {
   ]);
 
   const matches = (matchesRes.data ?? []) as Match[];
-  const counts = new Map<string, number>();
-  for (const row of (participantsRes.data ?? []) as Pick<
-    MatchParticipantPublic,
-    "match_id" | "is_playing"
-  >[]) {
-    // Charge-only captain rows aren't attendance.
-    if (!row.is_playing) continue;
-    counts.set(row.match_id, (counts.get(row.match_id) ?? 0) + 1);
-  }
+  const counts = buildAttendeeCounts(
+    (participantsRes.data ?? []) as Pick<
+      MatchParticipantPublic,
+      "match_id" | "is_playing"
+    >[],
+  );
 
   // Upcoming soonest first; played newest first.
   const scheduled = matches

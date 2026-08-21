@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { calculateMatchFees } from "@/engine/calc";
 import { pool } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
-import { getCurrentTeamId } from "@/lib/team";
 import { ApiError, handleRouteError, matchPreviewSchema } from "@/lib/validate";
 
 // The calc engine over the wire — NO writes. Called on every wizard
@@ -12,12 +11,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireAdmin();
+    const admin = await requireAdmin();
     const { id } = await params;
     void id; // the preview is stateless; the id only scopes the URL
     const body = matchPreviewSchema.parse(await req.json());
 
-    const teamId = await getCurrentTeamId(pool);
+    const teamId = admin.scopeId;
     const playerIds = [...new Set(body.attendees.map((a) => a.player_id))];
     const activeRes = await pool.query(
       `SELECT id FROM players

@@ -5,10 +5,15 @@
 -- before running. Never commit a real password — this file is a
 -- template, exactly like db/seed-superadmin.sql.
 --
--- Why this exists: since migration 32 the megaadmin (ravi_kant) is
+-- SUPERSEDED by the operator console (migration 37): /ops "Grant
+-- Ledger" creates the account, the team and the entitlement in one
+-- transaction. Keep this only as a break-glass template — and if you
+-- do use it, insert a matching `entitlements` row or the team will
+-- have a superadmin and no Ledger.
+--
+-- Why it existed: since migration 32 the megaadmin (ravi_kant) is
 -- platform-level only and may not own or administer a team. Team
--- rights therefore need their own account. Until Feature 5 wires
--- purchase -> provisioning, this is how a team gets its superadmin.
+-- rights therefore need their own account.
 --
 -- What it does, in one transaction:
 --   1. creates the account (platform_role 'user' — an ordinary human)

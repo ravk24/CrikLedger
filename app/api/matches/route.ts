@@ -1,62 +1,69 @@
 import { NextRequest, NextResponse } from "next/server";
-import { pool, withTransaction } from "@/lib/db";
+import { withTransaction } from "@/lib/db";
+import { opponentLabel } from "@/lib/format";
 import { requireAdmin } from "@/lib/session";
-import { getCurrentTeamId } from "@/lib/team";
-import { handleRouteError, scheduleMatchSchema } from "@/lib/validate";
+import { createMatchSchema, handleRouteError } from "@/lib/validate";
 
+// One scheduling flow. Date and ground are all that is required — a
+// match can go on the calendar before an opponent is known, and before
+// any money is agreed. When a fee IS given it moves in one declared
+// direction, and only the settled part reaches the pool now: a pending
+// slice is held on matches.fee_pending until someone clears it.
 export async function POST(req: NextRequest) {
   try {
     const admin = await requireAdmin();
-    const body = scheduleMatchSchema.parse(await req.json());
-    const teamId = await getCurrentTeamId(pool);
+    const body = createMatchSchema.parse(await req.json());
+    const teamId = admin.scopeId;
 
-    if (body.ground === "away") {
-      // Away matches are pay-per-ground: scheduling records the pool's
-      // payment too. One transaction — debit (our team's contribution
-      // only; the opponent's share never enters the app) -> match.
-      const result = await withTransaction(async (client) => {
+    const feeAmount = body.fee_amount ?? 0;
+    const feePending = body.fee_pending ?? 0;
+    const settled = feeAmount - feePending;
+
+    const result = await withTransaction(async (client) => {
+      // A fully pending fee has nothing to post yet — the entry is
+      // written when the remainder is cleared. pool_entries' sign CHECK
+      // rejects a zero amount either way, so guard on settled > 0.
+      let entryId: string | null = null;
+      if (body.fee_direction && settled > 0) {
+        const isDebit = body.fee_direction === "debit";
         const message =
-          `Ground fee — vs ${body.opponent}` +
-          (body.venue ? ` at ${body.venue}` : "") +
-          ` · paid to ${body.fee_paid_to === "owner" ? "ground owner" : "opponent"}`;
+          `Match fee — vs ${opponentLabel(body.opponent)}` +
+          (body.venue ? ` at ${body.venue}` : "");
         const entryRes = await client.query(
           `INSERT INTO pool_entries (kind, message, amount, created_by, team_id)
-           VALUES ('plain_debit', $1, $2, $3, $4)
+           VALUES ($1, $2, $3, $4, $5)
            RETURNING id`,
-          [message, -body.fee_amount!, admin.id, teamId],
-        );
-
-        const matchRes = await client.query(
-          `INSERT INTO matches
-             (match_date, opponent, ground, venue, fee_paid_to,
-              other_fee_entry_id, created_by, team_id)
-           VALUES ($1, $2, 'away', $3, $4, $5, $6, $7)
-           RETURNING id, match_date, opponent, status, ground`,
           [
-            body.match_date,
-            body.opponent,
-            body.venue ?? null,
-            body.fee_paid_to,
-            entryRes.rows[0].id,
+            isDebit ? "plain_debit" : "other_income",
+            message,
+            isDebit ? -settled : settled,
             admin.id,
             teamId,
           ],
         );
-        return { ...matchRes.rows[0], fee_recorded: body.fee_amount };
-      });
-      return NextResponse.json({ success: true, data: result }, { status: 201 });
-    }
+        entryId = entryRes.rows[0].id;
+      }
 
-    const res = await pool.query(
-      `INSERT INTO matches (match_date, opponent, ground, created_by, team_id)
-       VALUES ($1, $2, 'home', $3, $4)
-       RETURNING id, match_date, opponent, status, ground`,
-      [body.match_date, body.opponent, admin.id, teamId],
-    );
-    return NextResponse.json(
-      { success: true, data: res.rows[0] },
-      { status: 201 },
-    );
+      const matchRes = await client.query(
+        `INSERT INTO matches
+           (match_date, opponent, venue, fee_direction, fee_pending,
+            other_fee_entry_id, created_by, team_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING id, match_date, opponent, status`,
+        [
+          body.match_date,
+          body.opponent ?? null,
+          body.venue ?? null,
+          body.fee_direction ?? null,
+          feePending,
+          entryId,
+          admin.id,
+          teamId,
+        ],
+      );
+      return { ...matchRes.rows[0], fee_recorded: settled };
+    });
+    return NextResponse.json({ success: true, data: result }, { status: 201 });
   } catch (error) {
     return handleRouteError("[matches/schedule]", error);
   }

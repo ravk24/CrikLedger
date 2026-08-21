@@ -9,7 +9,8 @@
 -- predated migration 26 and no longer ran): every row is scoped to
 -- the 'our-xi' team, the guest lives in matches.guest_names with the
 -- fee charged to the captain via guest_fee_share (migrations 6–7),
--- and ground is 'home' (migration 31). Run AFTER seed-dev.sql.
+-- and matches carry a free-text venue (matches.ground was dropped in
+-- migration 35). Run AFTER seed-dev.sql.
 -- ============================================================
 
 -- Six more players so the squad reaches 11 (12th attendee is a guest)
@@ -41,10 +42,10 @@ FROM players WHERE name = 'Deepak R.';
 -- guest_fee_share row below.
 INSERT INTO matches (id, match_date, opponent, status, result,
                      ground_fee, ball_fee, other_fee, car_allowance_per_car,
-                     ground, guest_names, guest_cars, team_id)
+                     venue, guest_names, guest_cars, team_id)
 SELECT '11111111-1111-4111-8111-111111111111', '2026-08-09',
        'Andheri Warriors', 'completed', 'won', 2000, 60, 0, 250,
-       'home', ARRAY['Arjun'], ARRAY[FALSE], t.id
+       'Barne, Pusane', ARRAY['Arjun'], ARRAY[FALSE], t.id
 FROM teams t WHERE t.slug = 'our-xi';
 
 -- 11 self rows: Ramesh + Priya drove (fee -36 = 214 - 250 rebate);
@@ -71,7 +72,7 @@ SELECT '2026-08-09', 'match_collection',
 FROM teams t WHERE t.slug = 'our-xi';
 
 -- One abandoned match
-INSERT INTO matches (match_date, opponent, status, abandoned_reason, ground, team_id)
+INSERT INTO matches (match_date, opponent, status, abandoned_reason, venue, team_id)
 SELECT '2026-08-02', 'Malad Strikers', 'abandoned', 'Rain, ground unplayable',
-       'home', t.id
+       'Barne, Pusane', t.id
 FROM teams t WHERE t.slug = 'our-xi';

@@ -11,12 +11,17 @@ import { DeleteScheduledMatch } from "@/components/matches/DeleteScheduledMatch"
 import { Skeleton } from "@/components/ui/skeleton";
 import { computeSlotShare } from "@/lib/bookings";
 import { pool } from "@/lib/db";
-import { formatDate, formatDateShort, formatRupees, formatWeekday } from "@/lib/format";
-import { resolveGroundInfo } from "@/lib/grounds";
+import {
+  formatDate,
+  formatDateShort,
+  formatRupees,
+  formatWeekday,
+  opponentLabel,
+} from "@/lib/format";
 import { canWrite, isScopeSuperadmin } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
-import { getTeamById, getTeamGrounds } from "@/lib/team";
+import { getTeamById } from "@/lib/team";
 import type { WizardInitial } from "@/components/wizard/wizardTypes";
 import type { GroundBookingPublic, Match, MatchParticipantPublic } from "@/types";
 
@@ -122,6 +127,12 @@ async function buildAdminProps(match: MatchPublicRow) {
     [match.id],
   );
   const booking = bookingRes.rows[0];
+  // A match carries its own pending fee since migration 36; a legacy
+  // booking-linked one still reports through the booking. Either way the
+  // card and the completion gate read one number.
+  if (Number(match.fee_pending) > 0) {
+    matchFee = { amountPending: Number(match.fee_pending) };
+  }
   if (booking) {
     matchFee = { amountPending: Number(booking.amount_pending) };
     // Completion prefill: this match's slot share of everything the
@@ -182,17 +193,7 @@ async function MatchDetailData({
   // The team comes from the MATCH, never from the session — this page is
   // publicly link-readable (the WhatsApp sharing loop), so it must render
   // for a visitor who has no active team at all.
-  const [team, grounds] = await Promise.all([
-    getTeamById(match.team_id),
-    getTeamGrounds(match.team_id),
-  ]);
-
-  const groundInfo = resolveGroundInfo(
-    match.ground,
-    match.venue ?? null,
-    grounds,
-    team.home_ground_name,
-  );
+  const team = await getTeamById(match.team_id);
 
   // Captain and booking are scoped by the match's own team; the
   // booking resolves by id (matches.ground_booking_id) — the old
@@ -246,7 +247,8 @@ async function MatchDetailData({
       <section className="flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
           <h1 className="text-xl font-semibold text-text-primary">
-            {team.short_name ?? team.display_name} vs {match.opponent}
+            {team.short_name ?? team.display_name} vs{" "}
+            {opponentLabel(match.opponent)}
           </h1>
           <ResultBadge match={match} />
         </div>
@@ -255,12 +257,24 @@ async function MatchDetailData({
           {" · "}
           {formatDate(match.match_date)}
         </p>
-        {match.fee_paid_to && (
+        {match.fee_direction ? (
           <p className="text-xs text-text-muted">
-            Ground fee paid to the{" "}
-            {match.fee_paid_to === "owner" ? "ground owner" : "opponent"} —
-            recouped from match fees on completion
+            Match fee{" "}
+            {match.fee_direction === "credit"
+              ? "credited to the pool"
+              : "debited from the pool — recouped from match fees on completion"}
+            {Number(match.fee_pending) > 0 &&
+              ` · ₹${formatRupees(Number(match.fee_pending))} still pending`}
           </p>
+        ) : (
+          // Pre-migration-36 matches carry the old paid-to field instead.
+          match.fee_paid_to && (
+            <p className="text-xs text-text-muted">
+              Ground fee paid to the{" "}
+              {match.fee_paid_to === "owner" ? "ground owner" : "opponent"} —
+              recouped from match fees on completion
+            </p>
+          )
         )}
         {(teamCaptain || booking) && (
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-secondary">
@@ -286,17 +300,20 @@ async function MatchDetailData({
             )}
           </div>
         )}
-        <p className="mt-1 text-sm text-text-secondary">
-          Ground: {groundInfo.label}
-        </p>
+        {match.venue && (
+          <p className="mt-1 text-sm text-text-secondary">
+            Ground: {match.venue}
+          </p>
+        )}
       </section>
 
       {adminProps?.matchFee && (
         <MatchFeeCard
           matchId={match.id}
-          opponent={match.opponent}
+          opponent={opponentLabel(match.opponent)}
           matchDateLabel={formatDateShort(match.match_date)}
           amountPending={adminProps.matchFee.amountPending}
+          feeDirection={match.fee_direction}
         />
       )}
 
@@ -307,12 +324,11 @@ async function MatchDetailData({
           matchDate={String(match.match_date).slice(0, 10)}
           matchDateLabel={formatDateShort(match.match_date)}
           status={match.status}
-          ground={match.ground}
           venue={match.venue ?? null}
-          grounds={grounds}
-          groundInfo={groundInfo}
           opponentCaptain={booking?.captain ?? null}
           feePending={adminProps.matchFee?.amountPending ?? 0}
+          feeAmount={adminProps.otherFee + Number(match.fee_pending)}
+          feeDirection={match.fee_direction}
           players={adminProps.players}
           isSuperadmin={adminProps.isSuperadmin}
           initial={adminProps.initial}
@@ -325,9 +341,8 @@ async function MatchDetailData({
       {match.status === "scheduled" && adminProps?.isSuperadmin && (
         <DeleteScheduledMatch
           matchId={match.id}
-          opponent={match.opponent}
+          opponent={opponentLabel(match.opponent)}
           matchDateLabel={formatDateShort(match.match_date)}
-          ground={match.ground === "away" ? "away" : "home"}
           bookingShare={adminProps.bookingShare}
           otherFee={adminProps.otherFee}
         />

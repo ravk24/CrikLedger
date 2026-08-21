@@ -1,4 +1,4 @@
-import { hasEntitlement } from "@/lib/entitlements";
+import { hasEntitlement, tournamentCreditsLeft } from "@/lib/entitlements";
 import { isMegaadmin, teamMemberships, type Membership } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 
@@ -32,6 +32,7 @@ export type NavState = {
   mustChangePassword: boolean;
   hasTeamLedger: boolean;
   hasTournamentCredit: boolean;
+  tournamentCreditsLeft: number; // unused credits on the active team
   teams: Membership[];
   activeTeamId: string | null;
   activeTeamName: string | null;
@@ -45,6 +46,7 @@ export const GUEST_NAV: NavState = {
   mustChangePassword: false,
   hasTeamLedger: false,
   hasTournamentCredit: false,
+  tournamentCreditsLeft: 0,
   teams: [],
   activeTeamId: null,
   activeTeamName: null,
@@ -63,6 +65,7 @@ export async function getNavState(): Promise<NavState> {
     mustChangePassword: admin.mustChangePassword,
     hasTeamLedger: hasEntitlement(admin, "team_ledger"),
     hasTournamentCredit: hasEntitlement(admin, "tournament_credit"),
+    tournamentCreditsLeft: tournamentCreditsLeft(admin),
     teams,
     activeTeamId: admin.activeTeamId,
     activeTeamName:
@@ -118,7 +121,6 @@ export function buildTabs(): TabSpec[] {
       label: "Schedule",
       href: "/schedule",
       icon: "calendar",
-      also: ["/slots", "/other-slots"],
     },
     // Always navigable: a guest must be able to open the directory to
     // see what is on offer. What a purchase unlocks is HOSTING, inside.

@@ -1,5 +1,4 @@
 import { cache } from "react";
-import type { Ground } from "@/lib/grounds";
 import { supabaseServer } from "@/lib/supabase-server";
 import { ApiError } from "@/lib/validate";
 import { getSessionAdmin } from "@/lib/session";
@@ -20,8 +19,6 @@ export type TeamPublic = {
   slug: string;
   display_name: string;
   short_name: string | null;
-  home_ground_name: string | null;
-  home_ground_label: string | null;
   meeting_point: string | null;
   status_threshold: number;
   car_rate_per_km: number;
@@ -107,51 +104,3 @@ export async function getCurrentTeam(): Promise<TeamPublic> {
   }
   return team;
 }
-
-// The team's active grounds as the UI's Ground shape (name + per-car
-// allowance), replacing the old lib/grounds.ts GROUNDS literal.
-export const getTeamGrounds = cache(
-  async (teamId: string): Promise<Ground[]> => {
-    const { data, error } = await supabaseServer
-      .from("team_grounds_public")
-      .select("name, car_allowance, sort_order")
-      .eq("team_id", teamId)
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true });
-    if (error) {
-      throw new Error(`Could not load team grounds: ${error.message}`);
-    }
-    return (data ?? []).map((g) => ({
-      name: g.name as string,
-      allowance: Number(g.car_allowance),
-    }));
-  },
-);
-
-export type TeamSlot = {
-  slot_date: string; // yyyy-mm-dd
-  season_label: string;
-  starts_on: string;
-  ends_on: string;
-};
-
-// The team's bookable slot dates with their season window, replacing
-// the old lib/groundSlots.ts GROUND_SLOTS literal.
-export const getTeamSlots = cache(
-  async (teamId: string): Promise<TeamSlot[]> => {
-    const { data, error } = await supabaseServer
-      .from("team_slots_public")
-      .select("slot_date, season_label, starts_on, ends_on")
-      .eq("team_id", teamId)
-      .order("slot_date", { ascending: true });
-    if (error) {
-      throw new Error(`Could not load team slots: ${error.message}`);
-    }
-    return (data ?? []).map((s) => ({
-      slot_date: String(s.slot_date).slice(0, 10),
-      season_label: s.season_label as string,
-      starts_on: String(s.starts_on).slice(0, 10),
-      ends_on: String(s.ends_on).slice(0, 10),
-    }));
-  },
-);

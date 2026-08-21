@@ -26,10 +26,20 @@ export type Membership = {
   role: ScopeRole;
 };
 
+// One (team, product) summary from the entitlements table (migration
+// 37). `unused` only means something for tournament credits.
+export type EntitlementSummary = {
+  teamId: string;
+  product: "team_ledger" | "tournament_credit";
+  total: number;
+  unused: number;
+};
+
 export type Principal = {
   id: string;
   platformRole: PlatformRole;
   memberships: Membership[]; // ACTIVE rows only — revoked ones never load
+  entitlements?: EntitlementSummary[]; // per member team; absent = none
 };
 
 export function isMegaadmin(p: Principal | null): boolean {

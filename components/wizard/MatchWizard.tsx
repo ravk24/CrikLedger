@@ -12,7 +12,6 @@ import { StepCars } from "@/components/wizard/StepCars";
 import { StepSharedCar } from "@/components/wizard/StepSharedCar";
 import { StepFeePreview } from "@/components/wizard/StepFeePreview";
 import { formatRupees } from "@/lib/format";
-import type { GroundInfo } from "@/lib/grounds";
 import { cn } from "@/lib/utils";
 import {
   type PreviewRow,
@@ -31,9 +30,10 @@ type Props = {
   matchDateLabel: string;
   players: WizardPlayer[]; // all active players
   mode: "complete" | "edit";
-  // Resolved server-side from the team's ground list (lib/grounds.ts
-  // resolveGroundInfo) — drives the Car fee step's prefill and label.
-  groundInfo: GroundInfo;
+  // The match's ground name ("" when none was recorded) — labels the
+  // Car fee step. There is no allowance prefill any more: the grounds
+  // list it came from was dropped (dropped-home_match-feature.md).
+  groundLabel: string;
   initial?: WizardInitial;
   // Pre-fills the Costs step's ground fee on completion; editable.
   // Away matches: the pool-fronted fee (linked debit's current amount)
@@ -110,7 +110,7 @@ export function MatchWizard({
   matchDateLabel,
   players,
   mode,
-  groundInfo,
+  groundLabel,
   initial,
   initialGroundFee,
   apiBase,
@@ -132,8 +132,7 @@ export function MatchWizard({
       ground: initialGroundFee ? String(initialGroundFee) : "",
       ball: "60", // club default ball cost — editable like every prefill
       other: "0",
-      allowance:
-        groundInfo.allowance !== null ? String(groundInfo.allowance) : "",
+      allowance: "",
     },
   );
   // Edit mode: a stored allowance of 0 means it was ignored (or genuinely
@@ -502,8 +501,8 @@ export function MatchWizard({
             )}
             {stepKey === "carFee" && (
               <StepCarAllowance
-                groundLabel={groundInfo.label}
-                known={groundInfo.known}
+                groundLabel={groundLabel}
+                known={false}
                 allowance={costs.allowance}
                 onAllowanceChange={(v) => setCosts({ ...costs, allowance: v })}
                 ignored={ignoreAllowance}

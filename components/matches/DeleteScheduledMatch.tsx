@@ -9,23 +9,21 @@ type Props = {
   matchId: string;
   opponent: string;
   matchDateLabel: string;
-  ground: "home" | "away";
   // This match's per-slot share of the booking credit; 0 = no booking.
   bookingShare: number;
-  // Other matches: the pool-fronted ground fee that returns on delete.
+  // The pool-fronted ground fee that returns on delete.
   otherFee: number;
 };
 
 // Superadmin only — red button at the bottom of a scheduled match page.
-// Home: deletes the match (its slot reopens) and the server returns the
-// slot's share of the booking credit; the captain settles the opponent's
-// cash offline. Other: no slot exists — the fee debit is deleted, so the
-// paid ground fee returns to the pool.
+// Deleting removes the pool-fronted ground fee debit, so the fee returns
+// to the pool. Legacy booking-linked matches instead give back the
+// slot's share of the booking credit, and the captain settles the
+// opponent's cash offline.
 export function DeleteScheduledMatch({
   matchId,
   opponent,
   matchDateLabel,
-  ground,
   bookingShare,
   otherFee,
 }: Props) {
@@ -69,17 +67,11 @@ export function DeleteScheduledMatch({
         open={open}
         onOpenChange={setOpen}
         title="Delete match"
-        description={
-          ground === "home"
-            ? `vs ${opponent} · ${matchDateLabel} — the date reopens on Home Matches. Superadmin only.`
-            : `vs ${opponent} · ${matchDateLabel} — away match. Superadmin only.`
-        }
+        description={`vs ${opponent} · ${matchDateLabel}. Superadmin only.`}
       >
         <p className="text-sm text-text-secondary">
-          {ground === "away"
-            ? otherFee > 0
-              ? `₹${formatRupees(otherFee)} — the ground fee paid for this match — will be returned to the pool ledger automatically.`
-              : "No pool entry is affected."
+          {otherFee > 0
+            ? `₹${formatRupees(otherFee)} — the ground fee paid for this match — will be returned to the pool ledger automatically.`
             : bookingShare > 0
               ? `₹${formatRupees(bookingShare)} — this match's share of the booking credit — will be deducted from the pool ledger automatically. The captain settles the opponent's cash offline.`
               : "No pool entry is affected."}

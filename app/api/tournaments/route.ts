@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   try {
     const admin = await requireAdmin();
     const body = createTournamentSchema.parse(await req.json());
-    const result = await createTournament(admin.id, body);
+    const result = await createTournament(admin.id, admin.scopeId, body);
     return NextResponse.json({ success: true, data: result }, { status: 201 });
   } catch (error) {
     return handleRouteError("[tournaments]", error);

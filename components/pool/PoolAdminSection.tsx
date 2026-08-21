@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { CreditSheet } from "@/components/pool/CreditSheet";
 import { DebitSheet } from "@/components/pool/DebitSheet";
+import { DownloadImageButton } from "@/components/shared/DownloadImageButton";
 import type { PoolLedgerRow } from "@/types";
 
 type PlayerOption = { id: string; name: string };
@@ -104,7 +105,7 @@ export function PoolAdminSection({ entries, players, activePlayerCount }: Props)
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
         <button
           type="button"
           onClick={() => setCreditOpen(true)}
@@ -119,6 +120,11 @@ export function PoolAdminSection({ entries, players, activePlayerCount }: Props)
         >
           <Minus size={16} /> Debit
         </button>
+        <DownloadImageButton
+          endpoint="/api/share/ledger"
+          filename="ledger.png"
+          title="Ledger"
+        />
       </div>
 
       <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">

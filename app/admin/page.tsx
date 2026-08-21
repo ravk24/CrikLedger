@@ -7,17 +7,18 @@ import {
   KeyRound,
   MinusCircle,
   PlusCircle,
+  DatabaseBackup,
   ShieldCheck,
   Users,
 } from "lucide-react";
 import { LogoutButton } from "@/components/admin/LogoutButton";
-import { ScheduleMatchTile } from "@/components/admin/ScheduleMatchTile";
 import { CaptainTile } from "@/components/admin/CaptainTile";
 import { ViceCaptainTile } from "@/components/admin/ViceCaptainTile";
-import { Money } from "@/components/shared/Money";
+import { PrivilegesCard } from "@/components/admin/PrivilegesCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { formatDateShort } from "@/lib/format";
+import { pool } from "@/lib/db";
+import { tournamentCreditsLeft } from "@/lib/entitlements";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getCurrentTeam } from "@/lib/team";
@@ -58,7 +59,7 @@ const TILES: Tile[] = [
   },
 ];
 
-// Rendered after Schedule match, so it stays last for every role.
+// Rendered last for every role.
 const PASSWORD_TILE: Tile = {
   label: "Change password",
   href: "/admin/password",
@@ -73,18 +74,7 @@ async function ConsoleData() {
 
   const isSuperadmin = admin.activeTeamRole === "superadmin";
   const team = await getCurrentTeam();
-  const [poolRes, lastEntryRes, playersRes] = await Promise.all([
-    supabaseServer
-      .from("pool_balance")
-      .select("balance")
-      .eq("team_id", team.id)
-      .single(),
-    supabaseServer
-      .from("pool_ledger_public")
-      .select("entry_date, edited_by")
-      .eq("team_id", team.id)
-      .limit(1)
-      .maybeSingle(),
+  const [playersRes, adminCountRes] = await Promise.all([
     isSuperadmin
       ? supabaseServer
           .from("players_public")
@@ -93,18 +83,21 @@ async function ConsoleData() {
           .eq("is_active", true)
           .order("name")
       : Promise.resolve({ data: null }),
+    isSuperadmin
+      ? pool.query<{ n: string }>(
+          `SELECT count(*) AS n FROM team_memberships
+            WHERE team_id = $1 AND team_role = 'admin' AND is_active`,
+          [team.id],
+        )
+      : Promise.resolve({ rows: [{ n: "0" }] }),
   ]);
+  const adminCount = Number(adminCountRes.rows[0]?.n ?? 0);
   const captainPlayers = (playersRes.data ?? []) as {
     id: string;
     name: string;
     is_captain: boolean;
     is_vice_captain: boolean;
   }[];
-  const poolBalance = Number(poolRes.data?.balance ?? 0);
-  const lastEntry = lastEntryRes.data as {
-    entry_date: string;
-    edited_by: string | null;
-  } | null;
 
   const tiles = TILES.filter(
     (t) => !t.superadminOnly || isSuperadmin,
@@ -167,35 +160,26 @@ async function ConsoleData() {
         <LogoutButton />
       </div>
 
+      {isSuperadmin && (
+        <PrivilegesCard
+          name={admin.name}
+          teamName={team.display_name}
+          adminCount={adminCount}
+          creditsLeft={tournamentCreditsLeft(admin)}
+        />
+      )}
+
       <section className="grid grid-cols-2 gap-3">
         {isSuperadmin && <CaptainTile players={captainPlayers} />}
         {isSuperadmin && <ViceCaptainTile players={captainPlayers} />}
         {tiles.map(renderTile)}
-        <ScheduleMatchTile />
         {renderTile(PASSWORD_TILE)}
       </section>
 
-      <section className="flex items-center justify-between rounded-lg border border-border bg-surface p-4">
-        <div>
-          <p className="text-sm text-text-secondary">
-            Pool balance{" "}
-            <Money
-              amount={poolBalance}
-              variant="balance"
-              className="font-semibold"
-            />
-          </p>
-          {lastEntry && (
-            <p className="text-xs text-text-muted">
-              Last entry {formatDateShort(lastEntry.entry_date)}
-              {lastEntry.edited_by && ` · ${lastEntry.edited_by}`}
-            </p>
-          )}
-        </div>
-        <Link href="/pool" className="text-sm font-medium text-accent">
-          Open ledger
-        </Link>
-      </section>
+      <p className="flex items-center justify-center gap-1.5 text-center text-xs text-text-muted">
+        <DatabaseBackup size={14} />
+        Your data is protected — database backed up every 5th day.
+      </p>
 
       <p className="flex items-center justify-center gap-1.5 text-center text-xs text-text-muted">
         <Image src="/logo.png" alt="" width={16} height={16} />

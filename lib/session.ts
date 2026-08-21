@@ -10,6 +10,7 @@ import {
   isEpochValid,
   isMegaadmin,
   resolveActiveTeamId,
+  type EntitlementSummary,
   scopeRoleFor,
   type Membership,
   type Principal,
@@ -122,6 +123,7 @@ type AdminRow = {
   is_active: boolean;
   session_epoch: number;
   memberships: Membership[] | null;
+  entitlements: EntitlementSummary[] | null;
 };
 
 // Fresh-row lookup on EVERY REQUEST — the is_active re-check is what
@@ -155,7 +157,20 @@ const loadSessionAdmin = cache(async (): Promise<SessionAdmin | null> => {
                   JOIN tournaments tr ON tr.id = tnm.tournament_id
                  WHERE tnm.admin_id = a.id AND tnm.is_active
               ) m
-            ), '[]'::json) AS memberships
+            ), '[]'::json) AS memberships,
+            COALESCE((
+              SELECT json_agg(e)
+              FROM (
+                SELECT en.team_id AS "teamId", en.product,
+                       count(*)::int AS total,
+                       count(*) FILTER (WHERE en.consumed_at IS NULL)::int AS unused
+                  FROM entitlements en
+                 WHERE en.team_id IN (
+                   SELECT tm.team_id FROM team_memberships tm
+                    WHERE tm.admin_id = a.id AND tm.is_active)
+                 GROUP BY en.team_id, en.product
+              ) e
+            ), '[]'::json) AS entitlements
        FROM admins a
       WHERE a.id = $1`,
     [payload.adminId],
@@ -170,6 +185,7 @@ const loadSessionAdmin = cache(async (): Promise<SessionAdmin | null> => {
     id: row.id,
     platformRole: row.platform_role,
     memberships: row.memberships ?? [],
+    entitlements: row.entitlements ?? [],
   };
 
   const cookieSlug = store.get(TEAM_COOKIE)?.value ?? null;

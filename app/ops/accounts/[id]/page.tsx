@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { pool } from "@/lib/db";
 import { Skeleton } from "@/components/ui/skeleton";
-import { OpsHeader } from "@/components/ops/OpsHeader";
+import { OpsChrome } from "@/components/ops/OpsChrome";
 import { requireMegaadminPage } from "@/components/ops/guard";
 import { AccountActions } from "@/components/ops/AccountActions";
 
@@ -53,8 +53,7 @@ async function AccountData({ params }: { params: Promise<{ id: string }> }) {
   if (!account) notFound();
 
   return (
-    <>
-      <OpsHeader />
+    <OpsChrome backHref="/ops">
       <section className="flex flex-col gap-1 rounded-lg border border-border bg-surface p-4">
         <h1 className="text-lg font-bold text-text-primary">
           {account.username}
@@ -114,7 +113,7 @@ async function AccountData({ params }: { params: Promise<{ id: string }> }) {
         isActive={account.is_active}
         isSelf={account.id === self.id}
       />
-    </>
+    </OpsChrome>
   );
 }
 
@@ -133,7 +132,13 @@ export default function OpsAccount({
   params: Promise<{ id: string }>;
 }) {
   return (
-    <Suspense fallback={<Skeleton className="h-96 rounded-lg" />}>
+    <Suspense
+      fallback={
+        <main className="mx-auto flex max-w-md flex-col gap-4 px-4 py-4">
+          <Skeleton className="h-96 rounded-lg" />
+        </main>
+      }
+    >
       <AccountData params={params} />
     </Suspense>
   );

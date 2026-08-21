@@ -61,28 +61,19 @@ export const poolCreditSchema = z
     { message: "Message is required" },
   );
 
-// Ground booking: an outside team books N slots. One credit (amount
-// actually paid), one booking record, N scheduled matches — one per date.
-export const groundBookingSchema = z
-  .object({
-    kind: z.literal("ground_booking"),
-    team_name: z.string().trim().min(1).max(80),
-    captain: z.string().trim().min(1).max(80),
-    slots: z.number().int().positive().max(20),
-    amount_paid: z.number().int().nonnegative(),
-    amount_pending: z.number().int().nonnegative(),
-    match_dates: z
-      .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "yyyy-mm-dd"))
-      .min(1)
-      .max(20),
-    entry_date: entryDate,
-  })
-  .refine((body) => body.match_dates.length === body.slots, {
-    message: "One date per booked slot",
-  })
-  .refine((body) => body.amount_paid + body.amount_pending > 0, {
-    message: "Paid and pending cannot both be zero",
-  });
+// Ground booking: an outside team books N slots on the ground. One
+// credit for the amount actually paid, plus one booking record.
+// It no longer creates matches (migration-35), and because clearing a
+// pending fee was match-scoped, the paid/pending split went with it —
+// see CrikLedger-docs/dropped-home_match-feature.md.
+export const groundBookingSchema = z.object({
+  kind: z.literal("ground_booking"),
+  team_name: z.string().trim().min(1).max(80),
+  captain: z.string().trim().min(1).max(80),
+  slots: z.number().int().positive().max(20),
+  amount_paid: z.number().int().positive(),
+  entry_date: entryDate,
+});
 
 export const poolDebitSchema = z.object({
   common: z.boolean(),
@@ -119,6 +110,18 @@ export const createAdminSchema = z.object({
   name: z.string().trim().min(1).max(80),
 });
 
+// Operator console grant (app/api/ops/grants): which product, to whom.
+export const grantSchema = z.object({
+  product: z.enum(["team_ledger", "tournament_credit"]),
+  username: usernameField,
+  name: z.string().trim().min(1).max(80),
+});
+
+// Superadmin renames their own team (app/api/sa/team).
+export const teamNameSchema = z.object({
+  display_name: z.string().trim().min(2).max(60),
+});
+
 // Self-serve signup: user id + password + email. Email is stored as the
 // recovery channel and purchase-correspondence address; nothing sends to
 // it yet, so recovery is a megaadmin-initiated reset from the operator
@@ -139,31 +142,67 @@ export const teamSwitchSchema = z.object({
     .regex(/^[a-z0-9][a-z0-9-]*$/, "team slug"),
 });
 
-export const scheduleMatchSchema = z
-  .object({
+// The fee block behind the scheduling form's master switch. A fee must
+// say which way it moved, because only a 'debit' is recouped at
+// completion (the pool fronted that one). fee_pending is the
+// outstanding slice — the pool entry is written for
+// (fee_amount - fee_pending).
+const feeFields = {
+  opponent: z.string().trim().min(1).max(80).optional(),
+  fee_amount: z.number().int().positive().optional(),
+  fee_direction: z.enum(["credit", "debit"]).optional(),
+  fee_pending: z.number().int().nonnegative().optional(),
+};
+
+type FeeBody = {
+  fee_amount?: number;
+  fee_direction?: "credit" | "debit";
+  fee_pending?: number;
+};
+
+// Amount and direction travel together, and a fee cannot be more
+// pending than it is large. Declared once, applied to both schemas.
+const FEE_RULES: [(b: FeeBody) => boolean, string][] = [
+  [
+    (b) => b.fee_amount === undefined || b.fee_direction !== undefined,
+    "Choose Credit to Pool or Debit from Pool",
+  ],
+  [
+    (b) => b.fee_direction === undefined || b.fee_amount !== undefined,
+    "Enter the fee amount",
+  ],
+  [
+    (b) => (b.fee_pending ?? 0) <= (b.fee_amount ?? 0),
+    "Pending amount cannot exceed the fee",
+  ],
+];
+
+// Creating a match. Everything past the date is optional: the master
+// switch left off schedules a bare date (opponent NULL, no fee, no
+// pool entry) and the card's red dot flags it.
+export const createMatchSchema = FEE_RULES.reduce(
+  (schema, [check, message]) => schema.refine(check, { message }),
+  z.object({
     match_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "yyyy-mm-dd"),
-    opponent: z.string().trim().min(1).max(80),
-    // Create only: which scheduling flow this is. Provenance — the edit
-    // route never updates it (project rule: ground is set once, at insert).
-    ground: z.enum(["home", "away"]).default("home"),
-    // Away ground name, away matches only; absent = unknown/keep current.
+    // Free-text ground name; no picker since migration 35.
     venue: z.string().trim().min(1).max(80).optional(),
-    // Away creates only: who received our team's ground share, and the
-    // contribution recorded as a pool debit in the same transaction.
-    fee_paid_to: z.enum(["opponent", "owner"]).optional(),
-    fee_amount: z.number().int().positive().optional(),
-    // Edit mode only: renames the linked ground booking's captain.
+    ...feeFields,
+  }),
+);
+
+// Fixing an already-scheduled match — including filling in what
+// scheduling left blank, which is how a red dot becomes green. An
+// absent venue/opponent keeps the stored value (COALESCE server-side).
+export const editMatchSchema = FEE_RULES.reduce(
+  (schema, [check, message]) => schema.refine(check, { message }),
+  z.object({
+    match_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "yyyy-mm-dd"),
+    venue: z.string().trim().min(1).max(80).optional(),
+    // Renames the linked ground booking's captain, when there is one.
     opponent_captain: z.string().trim().min(1).max(80).optional(),
-  })
-  // Scheduling an away match ALWAYS records the payment (one switch is
-  // required in the UI). Edit bodies never send ground, so the home
-  // default keeps this refine out of their way.
-  .refine(
-    (body) =>
-      body.ground !== "away" ||
-      (body.fee_paid_to !== undefined && body.fee_amount !== undefined),
-    { message: "fee_paid_to and fee_amount are required for away matches" },
-  );
+    ...feeFields,
+  }),
+);
 
 export const abandonMatchSchema = z.object({
   reason: z.string().trim().min(1).max(200),
@@ -220,8 +259,7 @@ export const matchSubmitSchema = z.object({
 export const createTournamentSchema = z.object({
   name: z.string().trim().min(1).max(80),
   team_name: z.string().trim().min(1).max(80).optional(),
-  // Ground name from the shared grounds dropdown (custom text for
-  // "Other ground…"), same as SG scheduling.
+  // Free-text ground name, same as match scheduling.
   venue: z.string().trim().min(1).max(80).optional(),
   // One participation fee for the whole tournament (0 = none yet).
   joining_fee: z.number().int().nonnegative().optional(),

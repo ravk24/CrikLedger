@@ -9,11 +9,19 @@ type Props = {
   players: PlayerPublic[];
   hrefBase?: string; // forwarded to PlayerCard; tournaments override it
   emptyCopy?: string;
+  // Admin-only "save as image" control, supplied by the server page so
+  // the gate never runs on the client.
+  downloadSlot?: React.ReactNode;
 };
 
 // Searchable player list, active first, inactive greyed at the bottom.
 // Players arrive pre-sorted from the server; search filters client-side.
-export function PlayerGrid({ players, hrefBase, emptyCopy }: Props) {
+export function PlayerGrid({
+  players,
+  hrefBase,
+  emptyCopy,
+  downloadSlot,
+}: Props) {
   const [query, setQuery] = useState("");
 
   const filtered = players.filter((p) =>
@@ -23,8 +31,9 @@ export function PlayerGrid({ players, hrefBase, emptyCopy }: Props) {
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="relative">
-        <Search
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search
           size={16}
           className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
         />
@@ -34,7 +43,9 @@ export function PlayerGrid({ players, hrefBase, emptyCopy }: Props) {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search players"
           className="h-11 w-full rounded-md border border-border bg-surface-secondary pl-9 pr-3 text-base text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-        />
+          />
+        </div>
+        {downloadSlot}
       </div>
 
       <div className="flex items-baseline justify-between px-1">

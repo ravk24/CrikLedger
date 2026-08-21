@@ -55,3 +55,10 @@ export function initials(name: string): string {
     .join("")
     .toUpperCase();
 }
+
+// A match may be scheduled before an opponent is known (migration 36),
+// so every "vs …" render goes through here rather than interpolating a
+// null into the page. The card's red dot signals the same state.
+export function opponentLabel(opponent: string | null | undefined): string {
+  return opponent?.trim() || "Opponent TBD";
+}

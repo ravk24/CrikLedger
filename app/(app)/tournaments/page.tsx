@@ -3,11 +3,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TournamentCard } from "@/components/tournaments/TournamentCard";
 import { CreateTournamentSheet } from "@/components/tournaments/CreateTournamentSheet";
 import Link from "next/link";
-import { getNavState } from "@/lib/nav";
+import { getNavState, type NavState } from "@/lib/nav";
 import { canWrite } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
-import { getCurrentTeam, getTeamGrounds } from "@/lib/team";
+import { getCurrentTeam } from "@/lib/team";
 import type { TournamentPublic } from "@/types";
 
 function CardList({ tournaments }: { tournaments: TournamentPublic[] }) {
@@ -77,19 +77,18 @@ async function TournamentsData() {
   if (!nav.hasTournamentCredit) {
     return <TournamentDirectory hosted={false} />;
   }
-  return <HostedTournaments />;
+  return <HostedTournaments nav={nav} />;
 }
 
-async function HostedTournaments() {
+async function HostedTournaments({ nav }: { nav: NavState }) {
   const team = await getCurrentTeam();
-  const [res, admin, grounds] = await Promise.all([
+  const [res, admin] = await Promise.all([
     supabaseServer
       .from("tournaments_public")
       .select("*")
       .eq("team_id", team.id)
       .order("created_at", { ascending: false }),
     getSessionAdmin(),
-    getTeamGrounds(team.id),
   ]);
   const tournaments = (res.data ?? []) as TournamentPublic[];
   const active = tournaments.filter((t) => t.status === "active");
@@ -99,7 +98,7 @@ async function HostedTournaments() {
 
   return (
     <>
-      {isAdmin && <CreateTournamentSheet grounds={grounds} />}
+      {isAdmin && <CreateTournamentSheet creditsLeft={nav.tournamentCreditsLeft} />}
 
       {tournaments.length === 0 && (
         <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">

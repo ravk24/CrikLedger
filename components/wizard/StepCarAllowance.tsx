@@ -4,8 +4,8 @@ import { MoneyInput } from "@/components/shared/MoneyInput";
 import { Switch } from "@/components/ui/switch";
 
 type Props = {
-  groundLabel: string;
-  known: boolean; // prefill came from the grounds list
+  groundLabel: string; // "" when the match has no ground name recorded
+  known: boolean; // an amount was prefilled for this ground
   allowance: string; // string per MoneyInput convention
   onAllowanceChange: (value: string) => void;
   ignored: boolean;
@@ -38,7 +38,9 @@ export function StepCarAllowance({
       <p className="rounded-md bg-surface-secondary px-3 py-2 text-sm text-text-secondary">
         {known
           ? `Car fee for "${groundLabel}" is above. Type a different amount or just proceed.`
-          : `No preset car fee for "${groundLabel}" — enter the per-car amount (or ignore it below).`}
+          : groundLabel
+            ? `No preset car fee for "${groundLabel}" — enter the per-car amount (or ignore it below).`
+            : "Enter the per-car amount for this match (or ignore it below)."}
       </p>
       <label className="flex min-h-11 items-center justify-between gap-3 rounded-md border border-border bg-surface-secondary px-3 py-2">
         <span className="text-sm font-medium text-text-primary">

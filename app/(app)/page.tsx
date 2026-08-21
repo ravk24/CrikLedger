@@ -2,9 +2,11 @@ import { Suspense } from "react";
 import { PoolSummaryCard } from "@/components/dashboard/PoolSummaryCard";
 import { PlayerGrid } from "@/components/dashboard/PlayerGrid";
 import { InstallNudge } from "@/components/dashboard/InstallNudge";
+import { DownloadImageButton } from "@/components/shared/DownloadImageButton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeIntro } from "@/components/install/HomeIntro";
 import { getNavState } from "@/lib/nav";
+import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getCurrentTeam } from "@/lib/team";
 import type { PlayerPublic } from "@/types";
@@ -22,7 +24,7 @@ async function HomeData() {
 
 async function DashboardData() {
   const team = await getCurrentTeam();
-  const [poolRes, playersRes, countRes, lastMatchRes] = await Promise.all([
+  const [poolRes, playersRes, countRes, lastMatchRes, admin] = await Promise.all([
     supabaseServer
       .from("pool_balance")
       .select("balance")
@@ -44,6 +46,7 @@ async function DashboardData() {
       .order("entry_date", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    getSessionAdmin(),
   ]);
 
   const balance = Number(poolRes.data?.balance ?? 0);
@@ -68,7 +71,18 @@ async function DashboardData() {
         lastCollection={lastCollection}
       />
       <InstallNudge />
-      <PlayerGrid players={players} />
+      <PlayerGrid
+        players={players}
+        downloadSlot={
+          admin && !admin.mustChangePassword ? (
+            <DownloadImageButton
+              endpoint="/api/share/balances"
+              filename="player-balances.png"
+              title="Player balances"
+            />
+          ) : null
+        }
+      />
     </>
   );
 }

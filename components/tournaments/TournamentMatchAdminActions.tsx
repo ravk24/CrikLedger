@@ -6,7 +6,6 @@ import { MatchWizard } from "@/components/wizard/MatchWizard";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { TournamentScheduleMatchSheet } from "@/components/tournaments/TournamentScheduleMatchSheet";
 import { cn } from "@/lib/utils";
-import type { Ground, GroundInfo } from "@/lib/grounds";
 import type { WizardInitial, WizardPlayer } from "@/components/wizard/wizardTypes";
 
 type Props = {
@@ -18,8 +17,6 @@ type Props = {
   matchDateLabel: string;
   status: "scheduled" | "completed" | "abandoned";
   venue: string | null; // tournament venue — drives the car-fee prefill
-  grounds: Ground[]; // team ground list for the schedule sheet's label
-  groundInfo: GroundInfo; // resolved server-side for the wizard prefill
   players: WizardPlayer[];
   isSuperadmin: boolean;
   initial?: WizardInitial; // present when status = completed
@@ -37,8 +34,6 @@ export function TournamentMatchAdminActions({
   matchDateLabel,
   status,
   venue,
-  grounds,
-  groundInfo,
   players,
   isSuperadmin,
   initial,
@@ -81,7 +76,7 @@ export function TournamentMatchAdminActions({
       matchDateLabel={matchDateLabel}
       players={players}
       mode={status === "scheduled" ? "complete" : "edit"}
-      groundInfo={groundInfo}
+      groundLabel={venue ?? ""}
       initial={initial}
       apiBase={`/api/tournaments/${tournamentId}/matches/${matchId}`}
       hasGuests={false}
@@ -165,7 +160,6 @@ export function TournamentMatchAdminActions({
           onOpenChange={setEditScheduleOpen}
           tournamentId={tournamentId}
           venue={venue}
-          grounds={grounds}
           editing={{
             matchId,
             opponent,

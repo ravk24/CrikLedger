@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
@@ -12,13 +12,11 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   players: PlayerOption[]; // active players only
-  // Reuse from other entry points (e.g. the Schedule match tile):
-  // preselect a kind, hide the kind picker, and retitle the sheet.
+  // Reuse from other entry points: preselect a kind, hide the kind
+  // picker, and retitle the sheet.
   title?: string;
   initialKind?: CreditKind;
   lockKind?: boolean;
-  // Pre-fill slot 1's date (scheduling from the available-slots page).
-  initialSlotDate?: string;
 };
 
 type CreditKind =
@@ -43,7 +41,6 @@ export function CreditSheet({
   title = "Pool credit",
   initialKind = "deposit",
   lockKind = false,
-  initialSlotDate,
 }: Props) {
   const router = useRouter();
   const [kind, setKind] = useState<CreditKind>(initialKind);
@@ -56,29 +53,10 @@ export function CreditSheet({
   const [captain, setCaptain] = useState("");
   const [slots, setSlots] = useState("1");
   const [amountPaid, setAmountPaid] = useState("");
-  const [amountPending, setAmountPending] = useState("0");
-  const [slotDates, setSlotDates] = useState<string[]>([""]);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   const slotCount = Math.min(Math.max(Number(slots) || 0, 0), MAX_SLOTS);
-
-  // Each open may come from tapping a different slot — refresh slot 1.
-  useEffect(() => {
-    if (open && initialSlotDate) {
-      setSlotDates((dates) =>
-        dates.map((d, i) => (i === 0 ? initialSlotDate : d)),
-      );
-    }
-  }, [open, initialSlotDate]);
-
-  function changeSlots(value: string) {
-    setSlots(value);
-    const count = Math.min(Math.max(Number(value) || 0, 0), MAX_SLOTS);
-    setSlotDates((dates) =>
-      Array.from({ length: count }, (_, i) => dates[i] ?? ""),
-    );
-  }
 
   function resetForm() {
     setAmount("");
@@ -88,8 +66,6 @@ export function CreditSheet({
     setCaptain("");
     setSlots("1");
     setAmountPaid("");
-    setAmountPending("0");
-    setSlotDates([""]);
   }
 
   async function post(payload: unknown) {
@@ -121,7 +97,6 @@ export function CreditSheet({
 
     if (kind === "ground_booking") {
       const paid = Number(amountPaid) || 0;
-      const owed = Number(amountPending) || 0;
       if (!teamName.trim() || !captain.trim()) {
         setError("Enter the team name and captain.");
         return;
@@ -130,12 +105,8 @@ export function CreditSheet({
         setError("Book at least one slot.");
         return;
       }
-      if (slotDates.some((d) => !d)) {
-        setError("Pick a date for every booked slot.");
-        return;
-      }
-      if (paid + owed <= 0) {
-        setError("Paid and pending amounts cannot both be zero.");
+      if (paid <= 0) {
+        setError("Enter the amount paid.");
         return;
       }
       await post({
@@ -144,8 +115,6 @@ export function CreditSheet({
         captain: captain.trim(),
         slots: slotCount,
         amount_paid: paid,
-        amount_pending: owed,
-        match_dates: slotDates,
         entry_date: date || undefined,
       });
       return;
@@ -280,7 +249,7 @@ export function CreditSheet({
                   min={1}
                   max={MAX_SLOTS}
                   value={slots}
-                  onChange={(e) => changeSlots(e.target.value)}
+                  onChange={(e) => setSlots(e.target.value)}
                   required
                   className={inputClass}
                 />
@@ -295,37 +264,6 @@ export function CreditSheet({
               </div>
             </div>
 
-            <MoneyInput
-              label="Amount pending"
-              value={amountPending}
-              onChange={setAmountPending}
-            />
-
-            {slotCount > 0 && (
-              <div className="flex flex-col gap-2 rounded-md border border-accent-light bg-accent-light/40 p-3">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-accent">
-                  Booked dates — one match is scheduled per slot
-                </p>
-                {slotDates.map((slotDate, i) => (
-                  <label key={i} className="flex items-center gap-2">
-                    <span className="w-14 shrink-0 text-xs font-medium text-text-secondary">
-                      Slot {i + 1}
-                    </span>
-                    <input
-                      type="date"
-                      value={slotDate}
-                      onChange={(e) =>
-                        setSlotDates((dates) =>
-                          dates.map((d, x) => (x === i ? e.target.value : d)),
-                        )
-                      }
-                      required
-                      className={inputClass}
-                    />
-                  </label>
-                ))}
-              </div>
-            )}
           </>
         ) : (
           <>
@@ -381,7 +319,7 @@ export function CreditSheet({
           {pending
             ? "Saving…"
             : kind === "ground_booking"
-              ? `Save booking${slotCount > 0 ? ` + schedule ${slotCount} ${slotCount === 1 ? "match" : "matches"}` : ""}`
+              ? "Save booking"
               : kind === "opening_due"
                 ? "Record due"
                 : "Add credit"}

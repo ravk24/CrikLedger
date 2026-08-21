@@ -10,26 +10,8 @@ function Brand() {
   return (
     <Link href="/" className="flex items-center gap-2">
       <Image src="/logo.png" alt="" width={32} height={32} priority />
-      <span className="flex items-center">
-        <span className="sr-only">CrikLedger</span>
-        <Image
-          src="/wordmark-light.svg"
-          alt=""
-          width={173}
-          height={26}
-          priority
-          unoptimized
-          className="dark:hidden"
-        />
-        <Image
-          src="/wordmark-dark.svg"
-          alt=""
-          width={173}
-          height={26}
-          priority
-          unoptimized
-          className="hidden dark:block"
-        />
+      <span className="text-[17px] font-semibold tracking-tight text-text-primary">
+        Crik<span className="text-accent">Ledger</span>
       </span>
     </Link>
   );

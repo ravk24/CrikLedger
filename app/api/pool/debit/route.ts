@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { pool, withTransaction } from "@/lib/db";
 import { ceilSplit } from "@/engine/split";
 import { requireAdmin } from "@/lib/session";
-import { getCurrentTeamId } from "@/lib/team";
 import { ApiError, handleRouteError, poolDebitSchema } from "@/lib/validate";
 
 export async function POST(req: NextRequest) {
   try {
     const admin = await requireAdmin();
     const body = poolDebitSchema.parse(await req.json());
-    const teamId = await getCurrentTeamId(pool);
+    const teamId = admin.scopeId;
 
     if (!body.common) {
       const res = await pool.query(

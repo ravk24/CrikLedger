@@ -1,73 +1,74 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { pool } from "@/lib/db";
+import { LEDGER, TOURNAMENT } from "@/lib/products";
 import { Skeleton } from "@/components/ui/skeleton";
-import { OpsHeader } from "@/components/ops/OpsHeader";
+import { OpsChrome } from "@/components/ops/OpsChrome";
+import { OpsConsole, type GrantRow, type OpsStats } from "@/components/ops/OpsConsole";
 import { requireMegaadminPage } from "@/components/ops/guard";
 
-async function OverviewData() {
+// The whole operator console is this one page: three tiles (Ledger
+// users, Tournament users, Statistics), each a sheet. Holder lists are
+// grouped per purchaser + team, newest first; rows deep-link to the
+// account page, which keeps reset-password / suspend / restore.
+const HOLDERS_SQL = `
+  SELECT a.id AS account_id, a.username, a.name, t.display_name AS team_name,
+         min(e.created_at) AS first_at,
+         count(*)::int AS total,
+         count(e.consumed_at)::int AS used
+    FROM entitlements e
+    JOIN admins a ON a.id = e.admin_id
+    JOIN teams  t ON t.id = e.team_id
+   WHERE e.product = $1
+   GROUP BY a.id, a.username, a.name, t.display_name
+   ORDER BY min(e.created_at) DESC`;
+
+async function ConsoleData() {
   await requireMegaadminPage("/ops");
 
-  const { rows } = await pool.query<{
-    teams: string;
-    accounts: string;
-    memberships: string;
-    tournaments: string;
-    matches: string;
-    stray: string;
-  }>(`SELECT
-        (SELECT count(*) FROM teams)                                   AS teams,
-        (SELECT count(*) FROM admins)                                  AS accounts,
-        (SELECT count(*) FROM team_memberships WHERE is_active)        AS memberships,
-        (SELECT count(*) FROM tournaments)                             AS tournaments,
-        (SELECT count(*) FROM matches)                                 AS matches,
-        (SELECT count(*) FROM team_memberships m
-           JOIN admins a ON a.id = m.admin_id
-          WHERE a.platform_role = 'megaadmin')                         AS stray`);
-  const c = rows[0];
-
-  const tiles = [
-    { label: "Teams", value: c.teams, href: "/ops/teams" },
-    { label: "Accounts", value: c.accounts, href: "/ops/accounts" },
-    { label: "Memberships", value: c.memberships, href: "/ops/accounts" },
-    { label: "Tournaments", value: c.tournaments, href: null },
-    { label: "Matches", value: c.matches, href: null },
-  ];
+  const [ledgerRes, tournamentRes, statsRes] = await Promise.all([
+    pool.query<GrantRow>(HOLDERS_SQL, ["team_ledger"]),
+    pool.query<GrantRow>(HOLDERS_SQL, ["tournament_credit"]),
+    pool.query<{
+      credits: string;
+      ledger_users: string;
+      superadmins: string;
+      admins: string;
+      money: string | null;
+      stray: string;
+    }>(`SELECT
+          (SELECT count(*) FROM entitlements WHERE product = 'tournament_credit') AS credits,
+          (SELECT count(*) FROM entitlements WHERE product = 'team_ledger')       AS ledger_users,
+          (SELECT count(DISTINCT m.admin_id) FROM team_memberships m
+             JOIN admins a ON a.id = m.admin_id
+            WHERE m.team_role = 'superadmin' AND m.is_active
+              AND a.platform_role <> 'megaadmin')                                 AS superadmins,
+          (SELECT count(*) FROM team_memberships
+            WHERE team_role = 'admin' AND is_active)                              AS admins,
+          (SELECT sum(price_inr) FROM entitlements)                               AS money,
+          (SELECT count(*) FROM team_memberships m
+             JOIN admins a ON a.id = m.admin_id
+            WHERE a.platform_role = 'megaadmin')                                  AS stray`),
+  ]);
+  const c = statsRes.rows[0];
+  const stats: OpsStats = {
+    credits: Number(c.credits),
+    ledger_users: Number(c.ledger_users),
+    superadmins: Number(c.superadmins),
+    admins: Number(c.admins),
+    money: Number(c.money ?? 0),
+  };
 
   return (
-    <>
-      <OpsHeader />
-      <h1 className="text-xl font-bold text-text-primary">Platform</h1>
-      <section className="grid grid-cols-2 gap-3">
-        {tiles.map((t) => {
-          const inner = (
-            <>
-              <span className="text-2xl font-bold text-text-primary">
-                {t.value}
-              </span>
-              <span className="text-xs font-medium text-text-secondary">
-                {t.label}
-              </span>
-            </>
-          );
-          return t.href ? (
-            <Link
-              key={t.label}
-              href={t.href}
-              className="flex min-h-20 flex-col justify-center gap-0.5 rounded-lg border border-border bg-surface p-4"
-            >
-              {inner}
-            </Link>
-          ) : (
-            <div
-              key={t.label}
-              className="flex min-h-20 flex-col justify-center gap-0.5 rounded-lg border border-border bg-surface p-4"
-            >
-              {inner}
-            </div>
-          );
-        })}
-      </section>
+    <OpsChrome>
+      <OpsConsole
+        ledger={ledgerRes.rows}
+        tournament={tournamentRes.rows}
+        stats={stats}
+        prices={{
+          team_ledger: LEDGER.priceInr,
+          tournament_credit: TOURNAMENT.priceInr,
+        }}
+      />
 
       {/* The megaadmin must hold no membership — it is enforced in the
           membership routes and lib/roles.ts, not by a DB constraint (a
@@ -79,29 +80,21 @@ async function OverviewData() {
           megaadmin must hold none — investigate before it grants anything.
         </p>
       )}
-
-      <section className="flex flex-col gap-2">
-        <Link
-          href="/ops/products"
-          className="rounded-lg border border-border bg-surface p-4 text-sm text-text-secondary"
-        >
-          Products &amp; pricing →
-        </Link>
-        <Link
-          href="/ops/payments"
-          className="rounded-lg border border-border bg-surface p-4 text-sm text-text-secondary"
-        >
-          Payments →
-        </Link>
-      </section>
-    </>
+    </OpsChrome>
   );
 }
 
 export default function Ops() {
   return (
-    <Suspense fallback={<Skeleton className="h-64 rounded-lg" />}>
-      <OverviewData />
+    <Suspense
+      fallback={
+        <main className="mx-auto flex max-w-md flex-col gap-4 px-4 py-4">
+          <Skeleton className="h-12 rounded-lg" />
+          <Skeleton className="h-64 rounded-lg" />
+        </main>
+      }
+    >
+      <ConsoleData />
     </Suspense>
   );
 }

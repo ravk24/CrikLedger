@@ -23,6 +23,12 @@ export default function About() {
         between players or team members takes place independently of CrikLedger.
       </p>
 
+      <h2>Your data</h2>
+      <p>
+        Your data is protected and backed up in the CrikLedger application —
+        we perform a database backup every 5th day.
+      </p>
+
       <h2>Who it is for</h2>
       <p>
         CrikLedger is designed primarily for amateur cricket teams and players
