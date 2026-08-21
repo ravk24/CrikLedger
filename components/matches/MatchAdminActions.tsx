@@ -94,8 +94,10 @@ export function MatchAdminActions({
   // the "ground fee returned" message before it can be read.
   if (status === "abandoned") return wizardOpen ? wizard : null;
 
-  // Completion is locked until the booking's pending fee is cleared.
-  const blocked = status === "scheduled" && feePending > 0;
+  // Completion is locked until the opponent is known and the booking's
+  // pending fee is cleared.
+  const noOpponent = !opponent?.trim();
+  const blocked = status === "scheduled" && (noOpponent || feePending > 0);
 
   return (
     <section className="flex flex-col gap-2">
@@ -136,7 +138,9 @@ export function MatchAdminActions({
       </div>
       {blocked && (
         <p className="text-xs text-text-muted">
-          Clear the pending match fee to enable match completion.
+          {noOpponent
+            ? "Set the opponent (tap Edit) to enable match completion."
+            : "Clear the pending match fee to enable match completion."}
         </p>
       )}
       {error && <p className="text-sm text-debit">{error}</p>}

@@ -94,7 +94,15 @@ export async function completeMatch(
     if (match.status === "abandoned") {
       throw new ApiError(409, "ABANDONED", "An abandoned match has no fees");
     }
-    // Scheduled → completed only: a pending fee must be cleared first.
+    // Scheduled → completed only: the opponent must be known and a
+    // pending fee must be cleared first.
+    if (match.status === "scheduled" && !match.opponent?.trim()) {
+      throw new ApiError(
+        409,
+        "OPPONENT_TBD",
+        "Set the opponent before completing this match",
+      );
+    }
     // Same gate for both sources — a legacy booking's amount_pending and
     // a match's own fee_pending (migration 36).
     if (match.status === "scheduled" && Number(match.fee_pending) > 0) {
