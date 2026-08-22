@@ -1,6 +1,6 @@
-# Memory — UI polish round + tournament car sharing
+# Memory — perf/pending-task sweep shipped (migration 40)
 
-Last updated: 2026-08-22 (session 14, end)
+Last updated: 2026-08-22 (session 14, late)
 
 ## What was built
 
@@ -17,6 +17,24 @@ All commits pushed directly to `main` (no branches). In order:
 - `f460d5d` Schedule tab: "Schedule a Match" is a full-width horizontal card (`ACTION_CLASS`, `col-span-2`).
 - `97bbe64` Neutral form placeholders (Opponent team name / Ground name / Your team name / Tournament name / What the money was spent on) across 7 sheet components.
 - `2c3438b` Tournaments directory rows read "Host name — Tournament name" (server `pool` join `tournaments.created_by → admins.name` in `app/(app)/tournaments/page.tsx`).
+
+## Session 14 part 2 — performance plan + pending tasks executed
+
+Commits on main, in order (each passed tsc/eslint/88 tests/next build):
+- `043c7af` perf: active team row rides the session query (`lib/session.ts` `teams` json_agg → `admin.activeTeam`; `getActiveTeam()` uses it, megaadmin falls back to lookup). List pages use `verdict.teamId`; `/matches/[id]` and tournament match page run admin reads in `Promise.all` (9 → 3 stages).
+- `0e3cae7` perf: MatchWizard computes the fee preview in-browser with `engine/calc` (preview routes + `matchPreviewSchema` deleted); `public/sw.js` v5 (navigation preload, precache only offline.html); icons quantized (public/ −1.3 MB), `splash.png` deleted.
+- `a77cf09` perf: all 6 insert loops → `INSERT … SELECT FROM unnest()`.
+- `eb65e3c` ux: every `router.refresh()` in `startTransition`; `useOptimistic` in TournamentAdminPanel (status), PlayerManager (is_active), PoolAdminSection + CreditSheet (`onOptimisticAdd`), StatementList.
+- `ef888d5` perf: `radix-ui` umbrella → `@radix-ui/react-dialog`/`react-switch`; framer-motion removed (rAF tween in AnimatedRupees); install diagrams server-rendered via `components/install/installDiagrams.tsx`; **Share match sheet** button on completed team match page; `/api/share/match-sheet` rate-limited 10/min/IP.
+- `029a265` docs: `OPERATOR.md` runbook (manual activation via /ops grants).
+- `f642128` **db: migration-40 APPLIED** — tenant-keyed `player_balances`/`tournament_player_balances`, `tournament_expense_shares.tournament_id` (NOT NULL, composite FK), 13 indexes, ledger views lost ORDER BY (callers now `.order()`), new views `match_attendee_counts` + `player_car_counts`, `teams.short_name` DROPPED (`teamLabel()` reads display_name). Balances diffed identical before/after. `/pool` and `/players/[id]` paged 50/`?page=` with "Show older entries"; directory LIMIT 50; share/balances ordered+limited in SQL.
+- `5913934` notes.
+
+Verified on prod after deploy: sw v5 live, `/api/health` bom1 warm 0.15 s, signed-in /pool (ordered, admin controls), Home balances, /matches (attendee counts), completed match page with share button; no console errors.
+
+**Backups:** GitHub workflow has NEVER succeeded (`SUPABASE_DB_URL` env secret missing in `Production`). Local dump taken before migration 40: `C:/Users/ravk2/crikledger-backups/2026-08-22-pre-migration-40.sql` (pg_dump 17 at `C:/Program Files/PostgreSQL/17/bin`, session pooler = app URL with port 5432). User must add the two secrets (pending-tasks item 1).
+
+Dropped/deferred: perf #11 `"use cache"` (updateTag is Server-Action-only; cookies forbidden in cached scopes; single-region serverless cache rarely persists) — replaced by #4c. #6 stage 3 Server Actions deferred. #18 share width kept 1080 (untested at 720). `tournament_ledger_public` page limits to 200 rows (no paging UI).
 
 ## Decisions made
 
@@ -39,8 +57,9 @@ All commits pushed directly to `main` (no branches). In order:
 
 ## Next session starts with
 
-1. Quick browser pass on prod for: multi-date scheduling, tournament 5-step complete-match flow (ignore toggle → 3 steps), Scheduled filter dropdown, purchases WhatsApp button, tournaments directory "Host — Name".
-2. Decide whether to cherry-pick/continue the performance plan items 3–8 (`performance-improvement-plan.md`, git-ignored) — item 3 is migration 38 tenant-keyed views; note migrations are now at 39.
+1. Ask the user to add `SUPABASE_DB_URL` + `BACKUP_PASSPHRASE` env secrets and run the backup workflow; record the date in `db/BACKUP.md`.
+2. Browser pass on interactive flows not exercised today: complete a match through the wizard (client-side preview), pool credit/edit/delete (optimistic rows), tournament complete/reopen, player deactivate, `/pool?page=2`, Share match sheet tap.
+3. Remaining open items: perf #6 stage 3 (Server Actions), #18 share width, `CrikLedger-docs` (git-ignored) still describe pre-migration-37 activation.
 
 ## Open questions
 
