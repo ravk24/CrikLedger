@@ -244,6 +244,7 @@ export function GuestMatchFlow() {
         rows={displayRows}
         costs={costs}
         captainName={CAPTAIN?.name ?? null}
+        captainId={CAPTAIN?.id ?? null}
         onBack={() => setStep("preview")}
       />
     );
@@ -513,6 +514,7 @@ export function GuestMatchFlow() {
               }))}
               players={DEMO_PLAYERS}
               totalCost={fees.totalCost}
+              carAllowancePerCar={allowance}
               cashCosts={
                 (Number(costs.ground) || 0) +
                 (Number(costs.ball) || 0) +

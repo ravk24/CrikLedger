@@ -25,6 +25,17 @@ export function formatWeekday(iso: string): string {
   });
 }
 
+// "Sat, 28 Aug 2026" — the shared match sheet.
+export function formatDateWithWeekday(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: TZ,
+  });
+}
+
 export function formatDateShort(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", {
     day: "2-digit",

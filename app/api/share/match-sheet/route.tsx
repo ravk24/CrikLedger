@@ -13,6 +13,7 @@ const rowSchema = z.object({
   name: z.string().trim().min(1).max(40),
   fee: z.number().finite(),
   broughtCar: z.boolean(),
+  isCaptain: z.boolean().default(false),
 });
 
 const payloadSchema = z.object({
@@ -29,6 +30,9 @@ const payloadSchema = z.object({
   perPlayerFee: z.number().finite().optional(),
   carSharePerSharer: z.number().finite().optional(),
   sharerCount: z.number().int().nonnegative().optional(),
+  // Informational: drivers keep the car money, so it is not in totalCost.
+  carAllowancePerCar: z.number().finite().default(0),
+  carCount: z.number().int().nonnegative().default(0),
   totalCost: z.number().finite(),
   surplus: z.number().finite(),
   rows: z.array(rowSchema).min(1).max(30),
@@ -55,6 +59,45 @@ function CarMark() {
       <path d="M9 17h6" />
       <circle cx="17" cy="17" r="2" />
     </svg>
+  );
+}
+
+// Crown + gold "C", the same mark components/shared/CaptainMark draws
+// on screen (lucide <Crown> path, app/globals.css gold tokens).
+function CaptainMark() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", marginLeft: 8 }}>
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#ca8a04"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" />
+        <path d="M5 21h14" />
+      </svg>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 24,
+          height: 24,
+          borderRadius: 12,
+          marginLeft: 4,
+          backgroundColor: "#fef08a",
+          color: "#713f12",
+          fontSize: 14,
+          fontWeight: 700,
+        }}
+      >
+        C
+      </div>
+    </div>
   );
 }
 
@@ -150,6 +193,7 @@ export async function POST(req: NextRequest) {
                     }}
                   >
                     {r.name}
+                    {r.isCaptain ? <CaptainMark /> : null}
                     {r.broughtCar ? <CarMark /> : null}
                   </div>
                   <div
@@ -174,8 +218,11 @@ export async function POST(req: NextRequest) {
 
         <div style={{ display: "flex", marginTop: "auto", fontSize: 24, color: "#94a3b8" }}>
           Ground ₹{rupees(data.groundFee)} · Balls ₹{rupees(data.ballFee)}
-          {data.otherFee > 0 ? ` · Other ₹${rupees(data.otherFee)}` : ""} ·
-          Total ₹{rupees(data.totalCost)}
+          {data.otherFee > 0 ? ` · Other ₹${rupees(data.otherFee)}` : ""}
+          {data.carCount > 0 && data.carAllowancePerCar > 0
+            ? ` · Cars ${data.carCount} × ₹${rupees(data.carAllowancePerCar)}`
+            : ""}{" "}
+          · Total ₹{rupees(data.totalCost)}
           {data.surplus > 0 ? ` · Surplus ₹${rupees(data.surplus)}` : ""}
         </div>
 

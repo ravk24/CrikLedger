@@ -49,7 +49,7 @@ export function FeeTable({ participants, guests }: Props) {
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="flex min-w-0 items-center gap-1.5 truncate text-sm font-medium text-text-primary">
                     {row.player_name}
-                    {row.is_captain && <CaptainMark compact />}
+                    {row.is_captain && <CaptainMark />}
                   </span>
                   {row.brought_car && (
                     <Car
@@ -99,7 +99,7 @@ export function FeeTable({ participants, guests }: Props) {
             <span className="flex min-w-0 items-center gap-2">
               <span className="flex min-w-0 items-center gap-1.5 truncate text-sm font-medium text-text-primary">
                 {captainCharge.player_name}
-                <CaptainMark compact />
+                <CaptainMark />
               </span>
               <span className="shrink-0 rounded-[4px] bg-accent-light px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-accent">
                 GUEST FEES

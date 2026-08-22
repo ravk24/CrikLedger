@@ -6,6 +6,7 @@ import { formatRupees } from "@/lib/format";
 import { DEMO_PLAYERS, DEMO_TEAM } from "@/lib/demo/fixtures";
 import type { FeeRow, MatchFeeResult } from "@/engine/calc";
 import type { WizardCosts } from "@/components/wizard/wizardTypes";
+import { CaptainMark } from "@/components/shared/CaptainMark";
 
 const NAME_BY_ID = new Map(DEMO_PLAYERS.map((p) => [p.id, p.name]));
 
@@ -18,12 +19,14 @@ export function GuestMatchSheet({
   rows,
   costs,
   captainName,
+  captainId,
   onBack,
 }: {
   result: MatchFeeResult;
   rows: FeeRow[]; // engine rows with any manual fee edit applied
   costs: WizardCosts;
   captainName: string | null;
+  captainId: string | null;
   onBack: () => void;
 }) {
   const [busy, setBusy] = useState(false);
@@ -46,10 +49,12 @@ export function GuestMatchSheet({
     team: DEMO_TEAM.name,
     opponent: DEMO_TEAM.opponent,
     venue: DEMO_TEAM.venue,
-    date: "Sunday, 13 September 2026",
+    date: "Sun, 13 Sep 2026",
     groundFee: Number(costs.ground) || 0,
     ballFee: Number(costs.ball) || 0,
     otherFee: Number(costs.other) || 0,
+    carAllowancePerCar: Number(costs.allowance) || 0,
+    carCount,
     totalCost: result.totalCost,
     surplus,
     rows: [
@@ -57,6 +62,7 @@ export function GuestMatchSheet({
         name: NAME_BY_ID.get(r.playerId) ?? r.playerId,
         fee: r.fee,
         broughtCar: r.broughtCar,
+        isCaptain: r.playerId === captainId,
       })),
       ...result.guestRows.map((g) => ({
         name: g.name,
@@ -128,7 +134,7 @@ export function GuestMatchSheet({
           {DEMO_TEAM.name} vs {DEMO_TEAM.opponent}
         </h2>
         <p className="mt-0.5 text-sm text-text-secondary">
-          {DEMO_TEAM.venue} · Sunday, 13 September 2026
+          {DEMO_TEAM.venue} · Sun, 13 Sep 2026
         </p>
 
         <ul className="mt-4 divide-y divide-border">
@@ -139,6 +145,9 @@ export function GuestMatchSheet({
             >
               <span className="text-text-primary">
                 {NAME_BY_ID.get(r.playerId)}
+                {r.playerId === captainId && (
+                  <CaptainMark className="ml-1.5 align-text-bottom" />
+                )}
                 {r.broughtCar && (
                   <Car
                     size={14}
@@ -203,6 +212,12 @@ export function GuestMatchSheet({
           <Line label="Balls" value={Number(costs.ball) || 0} />
           {Number(costs.other) > 0 && (
             <Line label="Other" value={Number(costs.other)} />
+          )}
+          {carCount > 0 && Number(costs.allowance) > 0 && (
+            <Line
+              label={`Cars ${carCount} × ₹${formatRupees(Number(costs.allowance))}`}
+              value={carCount * Number(costs.allowance)}
+            />
           )}
           <Line label="Total cost" value={result.totalCost} strong />
           {result.captainCharge > 0 && (

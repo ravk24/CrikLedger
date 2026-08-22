@@ -4,6 +4,7 @@ import { Car, Users } from "lucide-react";
 import { Money } from "@/components/shared/Money";
 import { formatRupees } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { CaptainMark } from "@/components/shared/CaptainMark";
 import {
   rowKey,
   type GuestPreviewRow,
@@ -16,6 +17,7 @@ type Props = {
   players: WizardPlayer[];
   totalCost: number;
   cashCosts: number; // ground + balls + other (pool pays these)
+  carAllowancePerCar?: number; // informational — drivers keep it
   guestRows: GuestPreviewRow[];
   captainCharge: number; // canonical — computed by the engine
   captainName: string | null;
@@ -27,6 +29,7 @@ export function StepFeePreview({
   players,
   totalCost,
   cashCosts,
+  carAllowancePerCar = 0,
   guestRows,
   captainCharge,
   captainName,
@@ -36,6 +39,9 @@ export function StepFeePreview({
     players.find((p) => p.id === id)?.name ?? "Unknown";
   const collected = rows.reduce((sum, r) => sum + r.fee, 0) + captainCharge;
   const surplus = collected - cashCosts;
+  const carCount =
+    rows.filter((r) => r.brought_car).length +
+    guestRows.filter((g) => g.brought_car).length;
 
   return (
     <div className="flex flex-col gap-3">
@@ -51,6 +57,9 @@ export function StepFeePreview({
             >
               <span className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-text-primary">
                 <span className="truncate">{nameOf(row.player_id)}</span>
+                {players.find((p) => p.id === row.player_id)?.is_captain && (
+                  <CaptainMark />
+                )}
                 {row.brought_car && (
                   <Car size={14} className="shrink-0 text-accent" />
                 )}
@@ -125,6 +134,14 @@ export function StepFeePreview({
       )}
 
       <div className="rounded-md bg-surface-secondary p-3 text-sm">
+        {carCount > 0 && carAllowancePerCar > 0 && (
+          <div className="mb-0.5 flex justify-between">
+            <span className="text-text-secondary">
+              Cars {carCount} × ₹{formatRupees(carAllowancePerCar)}
+            </span>
+            <Money amount={carCount * carAllowancePerCar} className="font-semibold" />
+          </div>
+        )}
         <div className="flex justify-between">
           <span className="text-text-secondary">Total match cost</span>
           <Money amount={totalCost} className="font-semibold" />

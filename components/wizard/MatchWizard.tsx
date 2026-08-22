@@ -600,6 +600,7 @@ export function MatchWizard({
                 players={players}
                 totalCost={totals.total_cost}
                 cashCosts={cashCosts}
+                carAllowancePerCar={ignoreAllowance ? 0 : Number(costs.allowance) || 0}
                 guestRows={totals.guest_rows}
                 captainCharge={totals.captain_charge}
                 captainName={totals.captain_name}

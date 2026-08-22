@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Crown } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
+import { CaptainMark } from "@/components/shared/CaptainMark";
 import { ResultBadge } from "@/components/shared/ResultBadge";
 import { FeeTable } from "@/components/matches/FeeTable";
 import {
@@ -20,6 +21,7 @@ import {
   formatDate,
   formatDateShort,
   formatRupees,
+  formatDateWithWeekday,
   formatWeekday,
   opponentLabel,
   teamLabel,
@@ -309,13 +311,12 @@ async function MatchDetailData({
       team: teamLabel(team),
       opponent: opponentLabel(match.opponent),
       venue: match.venue ?? undefined,
-      date: formatWeekday(match.match_date),
+      date: formatDateWithWeekday(match.match_date),
       groundFee: Number(match.ground_fee),
       ballFee: Number(match.ball_fee),
       otherFee: Number(match.other_fee),
-      perPlayerFee: calc.perPlayerFee,
-      carSharePerSharer: calc.carSharePerSharer,
-      sharerCount: calc.sharerCount,
+      carAllowancePerCar: Number(match.car_allowance_per_car),
+      carCount: drivers.length + guestCarCount,
       totalCost: cash,
       surplus: Math.max(0, collectedTotal - cash),
       rows: [
@@ -323,6 +324,7 @@ async function MatchDetailData({
           name: p.player_name,
           fee: Number(p.fee_amount) - Number(p.guest_fee_share),
           broughtCar: p.brought_car,
+          isCaptain: p.is_captain,
         })),
         ...calc.guestRows.map((g) => ({
           name: `${g.name} (guest)`,
@@ -376,7 +378,7 @@ async function MatchDetailData({
             {teamCaptain && (
               <span className="inline-flex items-center gap-1">
                 Captain: {teamCaptain}
-                <Crown size={14} className="text-accent" />
+                <CaptainMark />
               </span>
             )}
             {booking && (
