@@ -445,11 +445,11 @@ function GrantSheet({
                   onClick={() => setSelected(null)}
                 />
               ) : accounts === null ? (
-                <p className="text-xs text-text-muted">Loading accountsâ€¦</p>
+                <p className="text-xs text-text-muted">Loading accounts…</p>
               ) : matches.length === 0 ? (
                 <p className="text-xs text-text-muted">
                   {accounts.length === 0
-                    ? "No customer accounts yet â€” use New account."
+                    ? "No customer accounts yet — use New account."
                     : "No account matches. First-time customer? Use New account."}
                 </p>
               ) : (
@@ -494,7 +494,7 @@ function GrantSheet({
               </label>
               {clash && (
                 <p className="text-xs text-low-foreground">
-                  {clash.username} already exists ({clash.name}) â€” switch to
+                  {clash.username} already exists ({clash.name}) — switch to
                   Existing account so the purchase lands on that login.
                 </p>
               )}
@@ -526,12 +526,12 @@ function GrantSheet({
             className="h-11 w-full rounded-md bg-accent text-sm font-medium text-accent-foreground disabled:opacity-60"
           >
             {pending
-              ? "Grantingâ€¦"
+              ? "Granting…"
               : mode === "existing"
                 ? selected
-                  ? `${copy.cta} to ${selected.username} (â‚¹${price})`
-                  : `${copy.cta} (â‚¹${price})`
-                : `Create account + ${copy.cta.toLowerCase()} (â‚¹${price})`}
+                  ? `${copy.cta} to ${selected.username} (₹${price})`
+                  : `${copy.cta} (₹${price})`
+                : `Create account + ${copy.cta.toLowerCase()} (₹${price})`}
           </button>
         </form>
 
@@ -578,7 +578,7 @@ function GrantSheet({
 
 
 // One customer in the picker: who they are, which team they own, and
-// what they already hold â€” so the operator can see a repeat purchase
+// what they already hold — so the operator can see a repeat purchase
 // landing in the right place before tapping Grant.
 function AccountRow({
   account,
@@ -610,11 +610,11 @@ function AccountRow({
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold text-text-primary">
           {account.name}{" "}
-          <span className="font-normal text-text-muted">Â· {account.username}</span>
+          <span className="font-normal text-text-muted">· {account.username}</span>
         </span>
         <span className="block truncate text-xs text-text-secondary">
           {account.team_name ?? "No team yet"}
-          {holdings.length > 0 ? ` Â· ${holdings.join(" Â· ")}` : " Â· nothing yet"}
+          {holdings.length > 0 ? ` · ${holdings.join(" · ")}` : " · nothing yet"}
         </span>
       </span>
       <span className="shrink-0 text-xs font-medium text-accent">
