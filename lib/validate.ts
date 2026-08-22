@@ -111,10 +111,13 @@ export const createAdminSchema = z.object({
 });
 
 // Operator console grant (app/api/ops/grants): which product, to whom.
+// `name` is only needed when the account does not exist yet; the route
+// enforces that on the create branch so an existing customer needs
+// nothing but their user id.
 export const grantSchema = z.object({
   product: z.enum(["team_ledger", "tournament_credit"]),
   username: usernameField,
-  name: z.string().trim().min(1).max(80),
+  name: z.string().trim().max(80).optional(),
 });
 
 // Superadmin renames their own team (app/api/sa/team).

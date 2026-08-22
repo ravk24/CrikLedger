@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       );
 
       let adminId: string;
-      let accountName = name;
+      let accountName = name ?? "";
       let tempPassword: string | null = null;
       if (existing.rows[0]) {
         const row = existing.rows[0];
@@ -65,6 +65,13 @@ export async function POST(req: NextRequest) {
         adminId = row.id;
         accountName = row.name;
       } else {
+        if (!name) {
+          throw new ApiError(
+            400,
+            "NAME_REQUIRED",
+            "No account with that user id — enter a name to create one",
+          );
+        }
         // Shown ONCE in the response — never stored or logged in plaintext.
         tempPassword = generateTempPassword();
         const created = await client.query<{ id: string }>(
@@ -125,7 +132,7 @@ export async function POST(req: NextRequest) {
           throw new ApiError(
             409,
             "ALREADY_GRANTED",
-            "This user already holds a Ledger for their team",
+            `${username} already holds a Ledger for ${teamName}`,
           );
         }
         throw err;

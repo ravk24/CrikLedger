@@ -11,22 +11,26 @@ but writes none of their data; the grant below is the one thing it creates.
 
 ## Steps
 
-1. **Verify the payment** out of band (bank/UPI statement). Note the
-   customer's CrikLedger user id if they already signed up, or the name and
-   user id they want if not.
+1. **Verify the payment** out of band (bank/UPI statement). The customer
+   sends their CrikLedger user id or email with the payment.
 2. Open **`/ops`** (bottom tab **More → Operator console** when signed in as
    the megaadmin).
 3. Pick the product:
    - **Grant Ledger** — the Team Ledger (₹ one-time). One per team; granting
      again for the same team is refused.
-   - **Grant Tournament credit** — one credit hosts one tournament; credits
+   - **Add tournament credit** — one credit hosts one tournament; credits
      stack, so grant once per purchase.
-4. In the sheet, enter the **user id**. If the id does not exist yet the
-   console creates the account (and, for a Ledger, the team it will own with
-   a superadmin membership) and shows a **one-time password — it is shown
-   once**. Copy it before closing the sheet.
-5. Send the customer their user id and, for a new account, the one-time
-   password. They are forced to change it on first login.
+4. **One login per person.** The sheet opens on **Existing account**: search
+   by user id, name or email, pick the customer (the row shows their team and
+   what they already hold) and grant. The purchase attaches to that account
+   and its team — no new password. Use **New account** only for a
+   first-time customer: it asks for a user id and name, creates the account
+   (and the team it will own), and shows a **one-time password — shown
+   once**. If the id you type already exists, the sheet says so and blocks
+   until you switch to Existing account.
+5. Send a new customer their user id and one-time password (they must
+   change it on first login). An existing customer needs nothing — the
+   feature is live on their next page load.
 6. The new holder appears in the **Ledger holders / Tournament credit**
    lists on `/ops` immediately; the customer sees the feature on their next
    page load.

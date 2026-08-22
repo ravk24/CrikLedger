@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -8,12 +8,14 @@ import {
   BookOpen,
   ChevronRight,
   Copy,
+  Search,
   Trophy,
 } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { Money } from "@/components/shared/Money";
 import { formatDateShort } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { OpsAccount } from "@/app/api/ops/accounts/route";
 
 export type GrantRow = {
   account_id: string;
@@ -56,14 +58,14 @@ const PRODUCT_COPY: Record<
     title: "Ledger users",
     cta: "Grant Ledger",
     description:
-      "A verified payment becomes a Ledger for this user's team. A new user id gets a one-time password.",
+      "A verified payment becomes a Ledger for the customer's team. Pick their existing account — only a first-time customer needs a new user id.",
     empty: "No Ledger has been granted yet.",
   },
   tournament_credit: {
     title: "Tournament users",
     cta: "Add tournament credit",
     description:
-      "One credit hosts one tournament. Grant again for a repeat purchase — credits stack.",
+      "One credit hosts one tournament. Grant again for a repeat purchase — credits stack on the customer's existing account.",
     empty: "No tournament credit has been granted yet.",
   },
 };
@@ -212,6 +214,13 @@ function GrantSheet({
 }) {
   const router = useRouter();
   const copy = PRODUCT_COPY[product];
+  // Existing account is the default path: one login per person, every
+  // purchase stacks on it. "New account" is the first-time-customer
+  // exception and is the only path that mints a password.
+  const [mode, setMode] = useState<"existing" | "new">("existing");
+  const [accounts, setAccounts] = useState<OpsAccount[] | null>(null);
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<OpsAccount | null>(null);
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [pending, setPending] = useState(false);
@@ -219,15 +228,61 @@ function GrantSheet({
   const [reveal, setReveal] = useState<Reveal | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // The directory loads once per open; the list is tens of rows, so
+  // filtering happens here.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setAccounts(null);
+    fetch("/api/ops/accounts")
+      .then((r) => r.json())
+      .then((body) => {
+        if (!cancelled) setAccounts(body.success ? body.data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setAccounts([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  const needle = query.trim().toLowerCase();
+  const matches = (accounts ?? []).filter(
+    (a) =>
+      !needle ||
+      a.username.includes(needle) ||
+      a.name.toLowerCase().includes(needle) ||
+      (a.email ?? "").toLowerCase().includes(needle),
+  );
+  const clash =
+    mode === "new" && username.length >= 3
+      ? (accounts ?? []).find((a) => a.username === username) ?? null
+      : null;
+  const ledgerHeld =
+    mode === "existing" && product === "team_ledger" && !!selected?.has_ledger;
+  const canSubmit =
+    !pending &&
+    (mode === "existing"
+      ? !!selected && !ledgerHeld
+      : username.length >= 3 && name.trim().length > 0 && !clash);
+
+  const targetUsername = mode === "existing" ? selected?.username ?? "" : username;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!canSubmit) return;
     setPending(true);
     setError(null);
     try {
       const res = await fetch("/api/ops/grants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product, username, name: name.trim() }),
+        body: JSON.stringify({
+          product,
+          username: targetUsername,
+          ...(mode === "new" ? { name: name.trim() } : {}),
+        }),
       });
       const body = await res.json();
       if (!body.success) {
@@ -242,6 +297,13 @@ function GrantSheet({
       });
       setUsername("");
       setName("");
+      setSelected(null);
+      setQuery("");
+      // Refresh the directory so the new account / new holding shows.
+      fetch("/api/ops/accounts")
+        .then((r) => r.json())
+        .then((b) => b.success && setAccounts(b.data))
+        .catch(() => {});
       startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
@@ -318,48 +380,158 @@ function GrantSheet({
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-text-secondary">
-              User id
-            </span>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) =>
-                setUsername(
-                  e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""),
-                )
-              }
-              placeholder="e.g. rahul_sharma"
-              required
-              minLength={3}
-              maxLength={32}
-              autoCapitalize="none"
-              autoCorrect="off"
-              className={inputClass}
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-text-secondary">
-              Name
-            </span>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Rahul Sharma"
-              required
-              maxLength={80}
-              className={inputClass}
-            />
-          </label>
+          <div
+            role="radiogroup"
+            aria-label="Account"
+            className="grid grid-cols-2 gap-1 rounded-md bg-surface-secondary p-1"
+          >
+            {(
+              [
+                ["existing", "Existing account"],
+                ["new", "New account"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={mode === value}
+                onClick={() => {
+                  setMode(value);
+                  setError(null);
+                }}
+                className={cn(
+                  "h-9 rounded-sm text-sm font-medium",
+                  mode === value
+                    ? "bg-surface text-text-primary shadow-card"
+                    : "text-text-secondary",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {mode === "existing" ? (
+            <>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-text-secondary">
+                  Find the customer
+                </span>
+                <span className="relative">
+                  <Search
+                    size={16}
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+                  />
+                  <input
+                    type="search"
+                    value={query}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setSelected(null);
+                    }}
+                    placeholder="User id, name or email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    className={cn(inputClass, "pl-9")}
+                  />
+                </span>
+              </label>
+
+              {selected ? (
+                <AccountRow
+                  account={selected}
+                  selected
+                  onClick={() => setSelected(null)}
+                />
+              ) : accounts === null ? (
+                <p className="text-xs text-text-muted">Loading accountsâ€¦</p>
+              ) : matches.length === 0 ? (
+                <p className="text-xs text-text-muted">
+                  {accounts.length === 0
+                    ? "No customer accounts yet â€” use New account."
+                    : "No account matches. First-time customer? Use New account."}
+                </p>
+              ) : (
+                <ul className="max-h-56 divide-y divide-border overflow-y-auto rounded-md border border-border">
+                  {matches.map((a) => (
+                    <li key={a.id}>
+                      <AccountRow account={a} onClick={() => setSelected(a)} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {ledgerHeld && (
+                <p className="text-xs text-low-foreground">
+                  {selected?.username} already holds a Ledger for{" "}
+                  {selected?.team_name ?? "their team"}.
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-text-secondary">
+                  New user id
+                </span>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) =>
+                    setUsername(
+                      e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""),
+                    )
+                  }
+                  placeholder="e.g. rahul_sharma"
+                  required
+                  minLength={3}
+                  maxLength={32}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  className={inputClass}
+                />
+              </label>
+              {clash && (
+                <p className="text-xs text-low-foreground">
+                  {clash.username} already exists ({clash.name}) â€” switch to
+                  Existing account so the purchase lands on that login.
+                </p>
+              )}
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-text-secondary">
+                  Name
+                </span>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Rahul Sharma"
+                  required
+                  maxLength={80}
+                  className={inputClass}
+                />
+              </label>
+              <p className="text-xs text-text-muted">
+                A one-time password is generated for a new account. Share it
+                on WhatsApp; their first sign-in replaces it.
+              </p>
+            </>
+          )}
+
           {error && <p className="text-sm text-debit">{error}</p>}
           <button
             type="submit"
-            disabled={pending}
+            disabled={!canSubmit}
             className="h-11 w-full rounded-md bg-accent text-sm font-medium text-accent-foreground disabled:opacity-60"
           >
-            {pending ? "Granting…" : `${copy.cta} (₹${price})`}
+            {pending
+              ? "Grantingâ€¦"
+              : mode === "existing"
+                ? selected
+                  ? `${copy.cta} to ${selected.username} (â‚¹${price})`
+                  : `${copy.cta} (â‚¹${price})`
+                : `Create account + ${copy.cta.toLowerCase()} (â‚¹${price})`}
           </button>
         </form>
 
@@ -401,5 +573,53 @@ function GrantSheet({
         </section>
       </div>
     </SheetShell>
+  );
+}
+
+
+// One customer in the picker: who they are, which team they own, and
+// what they already hold â€” so the operator can see a repeat purchase
+// landing in the right place before tapping Grant.
+function AccountRow({
+  account,
+  selected = false,
+  onClick,
+}: {
+  account: OpsAccount;
+  selected?: boolean;
+  onClick: () => void;
+}) {
+  const holdings = [
+    account.has_ledger ? "Ledger" : null,
+    account.credits_total > 0
+      ? `${account.credits_total} credit${account.credits_total === 1 ? "" : "s"} (${account.credits_unused} unused)`
+      : null,
+  ].filter(Boolean);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        "flex w-full items-center justify-between gap-2 px-3 py-2 text-left",
+        selected
+          ? "rounded-md border border-accent bg-accent-light/40"
+          : "bg-surface",
+      )}
+    >
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold text-text-primary">
+          {account.name}{" "}
+          <span className="font-normal text-text-muted">Â· {account.username}</span>
+        </span>
+        <span className="block truncate text-xs text-text-secondary">
+          {account.team_name ?? "No team yet"}
+          {holdings.length > 0 ? ` Â· ${holdings.join(" Â· ")}` : " Â· nothing yet"}
+        </span>
+      </span>
+      <span className="shrink-0 text-xs font-medium text-accent">
+        {selected ? "Change" : "Select"}
+      </span>
+    </button>
   );
 }
