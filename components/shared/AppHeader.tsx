@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ThemeSwitcher } from "@/components/theme-switcher";
 import { getNavState } from "@/lib/nav";
 import { AccountMenu } from "./AccountMenu";
 
@@ -52,7 +51,6 @@ export function AppHeader() {
           >
             <HeaderAccount />
           </Suspense>
-          <ThemeSwitcher />
         </div>
       </div>
     </header>

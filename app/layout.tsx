@@ -19,10 +19,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#4f46e5" },
-    { media: "(prefers-color-scheme: dark)", color: "#17181b" },
-  ],
+  // Single value while the app is forced to light (see ThemeProvider below).
+  themeColor: "#4f46e5",
 };
 
 export default function RootLayout({
@@ -33,10 +31,16 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body className="font-sans antialiased">
+        {/* Dark theme is intentionally disabled, not removed: the `.dark`
+            tokens in globals.css and components/theme-switcher.tsx are kept.
+            `forcedTheme` also overrides any stored localStorage "theme". To
+            re-enable, drop forcedTheme, set defaultTheme="system",
+            enableSystem, and render <ThemeSwitcher /> in AppHeader again. */}
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
+          forcedTheme="light"
+          enableSystem={false}
           disableTransitionOnChange
         >
           {children}
