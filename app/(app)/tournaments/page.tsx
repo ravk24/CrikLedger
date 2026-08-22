@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getNavState, type NavState } from "@/lib/nav";
 import { canWrite } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
+import { pool } from "@/lib/db";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getCurrentTeam } from "@/lib/team";
 import type { TournamentPublic } from "@/types";
@@ -25,11 +26,21 @@ function CardList({ tournaments }: { tournaments: TournamentPublic[] }) {
 // state — a visitor has to be able to see what is on offer; what a
 // purchase unlocks is hosting, inside.
 async function TournamentDirectory({ hosted }: { hosted: boolean }) {
-  const { data } = await supabaseServer
-    .from("tournaments_public")
-    .select("id, name, status")
-    .order("created_at", { ascending: false });
-  const all = (data ?? []) as { id: string; name: string; status: string }[];
+  // The host's name rides along so other users see who is running
+  // each tournament ("Ravi — LRPL"). admins.name is the same display
+  // name already stamped on "edited by" rows, so nothing new is exposed.
+  const { rows } = await pool.query(
+    `SELECT t.id, t.name, t.status, a.name AS host_name
+     FROM tournaments t
+     LEFT JOIN admins a ON a.id = t.created_by
+     ORDER BY t.created_at DESC`,
+  );
+  const all = rows as {
+    id: string;
+    name: string;
+    status: string;
+    host_name: string | null;
+  }[];
 
   return (
     <>
@@ -58,7 +69,7 @@ async function TournamentDirectory({ hosted }: { hosted: boolean }) {
                 className="flex min-h-14 items-center justify-between gap-3 px-4 py-3 text-text-muted opacity-60"
               >
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold">
-                  {t.name}
+                  {t.host_name ? `${t.host_name} — ${t.name}` : t.name}
                 </span>
                 <span className="shrink-0 text-[11px] capitalize">
                   {t.status}
