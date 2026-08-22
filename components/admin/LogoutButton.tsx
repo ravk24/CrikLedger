@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export function LogoutButton() {
@@ -12,7 +12,7 @@ export function LogoutButton() {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
       router.push("/");
-      router.refresh();
+      startTransition(() => router.refresh());
     } finally {
       setPending(false);
     }

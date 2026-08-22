@@ -43,7 +43,7 @@ export function AccountMenu({ nav }: { nav: NavState }) {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
       router.push("/");
-      router.refresh();
+      startTransition(() => router.refresh());
     } finally {
       setBusy(false);
     }

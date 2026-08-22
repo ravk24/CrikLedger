@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useOptimistic, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Minus, Plus } from "lucide-react";
 import { LedgerRow } from "@/components/shared/LedgerRow";
@@ -32,7 +32,38 @@ const MANUAL_KINDS: PoolLedgerRow["kind"][] = [
 
 // Admin mode for P4: manual rows tap-to-edit, locked auto rows inert,
 // Credit/Debit buttons in a row above the ledger.
-export function PoolAdminSection({ entries, players, activePlayerCount }: Props) {
+type LedgerChange =
+  | { type: "edit"; id: string; amount: number; message: string }
+  | { type: "delete"; id: string }
+  | { type: "add"; row: PoolLedgerRow };
+
+function applyLedgerChange(state: PoolLedgerRow[], change: LedgerChange) {
+  switch (change.type) {
+    case "edit":
+      return state.map((e) =>
+        e.id === change.id
+          ? { ...e, amount: change.amount, message: change.message }
+          : e,
+      );
+    case "delete":
+      return state.filter((e) => e.id !== change.id);
+    case "add":
+      return [change.row, ...state];
+  }
+}
+
+export function PoolAdminSection({
+  entries: serverEntries,
+  players,
+  activePlayerCount,
+}: Props) {
+  // The list reflects an edit, delete or new credit the moment it is
+  // sent; the refresh after the write reconciles it with the ledger
+  // (and restores the row if the write failed).
+  const [entries, changeLedger] = useOptimistic(
+    serverEntries,
+    applyLedgerChange,
+  );
   const router = useRouter();
   const [creditOpen, setCreditOpen] = useState(false);
   const [debitOpen, setDebitOpen] = useState(false);
@@ -59,48 +90,62 @@ export function PoolAdminSection({ entries, players, activePlayerCount }: Props)
       setError("Enter a whole-rupee amount above zero.");
       return;
     }
+    const target = editing;
     setPending(true);
     setError(null);
-    try {
-      const res = await fetch(`/api/pool/entries/${editing.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: value, message: message.trim() }),
+    startTransition(async () => {
+      // The stored amount keeps the entry's sign (debits are negative).
+      changeLedger({
+        type: "edit",
+        id: target.id,
+        amount: target.amount < 0 ? -value : value,
+        message: message.trim(),
       });
-      const body = await res.json();
-      if (!body.success) {
-        setError(body.error?.message ?? "Could not save — try again.");
-        return;
+      try {
+        const res = await fetch(`/api/pool/entries/${target.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: value, message: message.trim() }),
+        });
+        const body = await res.json();
+        if (!body.success) {
+          setError(body.error?.message ?? "Could not save — try again.");
+          return;
+        }
+        setEditing(null);
+        router.refresh();
+      } catch {
+        setError("Could not reach the server — check your connection.");
+      } finally {
+        setPending(false);
       }
-      setEditing(null);
-      router.refresh();
-    } catch {
-      setError("Could not reach the server — check your connection.");
-    } finally {
-      setPending(false);
-    }
+    });
   }
 
-  async function handleDelete() {
+  function handleDelete() {
     if (!editing) return;
+    const target = editing;
     setPending(true);
-    try {
-      const res = await fetch(`/api/pool/entries/${editing.id}`, {
-        method: "DELETE",
-      });
-      const body = await res.json();
-      if (!body.success) {
-        setError(body.error?.message ?? "Could not delete — try again.");
-        return;
+    setConfirmDelete(false);
+    setEditing(null);
+    startTransition(async () => {
+      changeLedger({ type: "delete", id: target.id });
+      try {
+        const res = await fetch(`/api/pool/entries/${target.id}`, {
+          method: "DELETE",
+        });
+        const body = await res.json();
+        if (!body.success) {
+          setError(body.error?.message ?? "Could not delete — try again.");
+          return;
+        }
+        router.refresh();
+      } catch {
+        setError("Could not reach the server — check your connection.");
+      } finally {
+        setPending(false);
       }
-      setConfirmDelete(false);
-      setEditing(null);
-      router.refresh();
-    } catch {
-      setError("Could not reach the server — check your connection.");
-    } finally {
-      setPending(false);
-    }
+    });
   }
 
   return (
@@ -145,6 +190,7 @@ export function PoolAdminSection({ entries, players, activePlayerCount }: Props)
         open={creditOpen}
         onOpenChange={setCreditOpen}
         players={players}
+        onOptimisticAdd={(row) => changeLedger({ type: "add", row })}
       />
       <DebitSheet
         open={debitOpen}

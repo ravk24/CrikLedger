@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { cn } from "@/lib/utils";
+import type { PoolLedgerRow } from "@/types";
 
 type PlayerOption = { id: string; name: string; is_captain?: boolean };
 
@@ -17,13 +18,13 @@ type Props = {
   title?: string;
   initialKind?: CreditKind;
   lockKind?: boolean;
+  // Lets the ledger list show the new row before the write lands. Only
+  // player deposits / dues / other income are simple enough to predict;
+  // a ground booking writes several rows and waits for the refresh.
+  onOptimisticAdd?: (row: PoolLedgerRow) => void;
 };
 
-type CreditKind =
-  | "deposit"
-  | "ground_booking"
-  | "other_income"
-  | "opening_due";
+type CreditKind = "deposit" | "ground_booking" | "other_income" | "opening_due";
 
 const KIND_OPTIONS: [CreditKind, string][] = [
   ["deposit", "Player deposit"],
@@ -41,6 +42,7 @@ export function CreditSheet({
   title = "Pool credit",
   initialKind = "deposit",
   lockKind = false,
+  onOptimisticAdd,
 }: Props) {
   const router = useRouter();
   const [kind, setKind] = useState<CreditKind>(initialKind);
@@ -68,28 +70,31 @@ export function CreditSheet({
     setAmountPaid("");
   }
 
-  async function post(payload: unknown) {
+  function post(payload: unknown, optimisticRow?: PoolLedgerRow) {
     setError(null);
     setPending(true);
-    try {
-      const res = await fetch("/api/pool/credit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const body = await res.json();
-      if (!body.success) {
-        setError(body.error?.message ?? "Could not save — try again.");
-        return;
+    startTransition(async () => {
+      if (optimisticRow && onOptimisticAdd) onOptimisticAdd(optimisticRow);
+      try {
+        const res = await fetch("/api/pool/credit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const body = await res.json();
+        if (!body.success) {
+          setError(body.error?.message ?? "Could not save — try again.");
+          return;
+        }
+        onOpenChange(false);
+        resetForm();
+        router.refresh();
+      } catch {
+        setError("Could not reach the server — check your connection.");
+      } finally {
+        setPending(false);
       }
-      onOpenChange(false);
-      resetForm();
-      router.refresh();
-    } catch {
-      setError("Could not reach the server — check your connection.");
-    } finally {
-      setPending(false);
-    }
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -109,7 +114,7 @@ export function CreditSheet({
         setError("Enter the amount paid.");
         return;
       }
-      await post({
+      post({
         kind,
         team_name: teamName.trim(),
         captain: captain.trim(),
@@ -134,14 +139,27 @@ export function CreditSheet({
       );
       return;
     }
-    await post({
-      kind,
-      amount: value,
-      // Player-linked rows title themselves by player — message optional.
-      message: message.trim() || undefined,
-      player_id: playerLinked ? playerId : undefined,
-      entry_date: date || undefined,
-    });
+    post(
+      {
+        kind,
+        amount: value,
+        // Player-linked rows title themselves by player — message optional.
+        message: message.trim() || undefined,
+        player_id: playerLinked ? playerId : undefined,
+        entry_date: date || undefined,
+      },
+      {
+        id: `optimistic-${Date.now()}`,
+        entry_date: date || new Date().toISOString().slice(0, 10),
+        kind,
+        message: message.trim(),
+        amount: value,
+        edited_by: null,
+        player_name: playerLinked
+          ? (players.find((p) => p.id === playerId)?.name ?? null)
+          : null,
+      },
+    );
   }
 
   const inputClass =
@@ -263,7 +281,6 @@ export function CreditSheet({
                 />
               </div>
             </div>
-
           </>
         ) : (
           <>

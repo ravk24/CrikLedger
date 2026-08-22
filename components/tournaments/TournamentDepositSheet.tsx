@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
@@ -64,7 +64,7 @@ export function TournamentDepositSheet({
       setAmount("");
       setMessage("");
       setDate("");
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
     } finally {

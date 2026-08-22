@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
@@ -138,14 +138,14 @@ export function ScheduleMatchWizard({ open, onOpenChange }: Props) {
       setSuccess(
         `${dates.length} matches scheduled — add opponents and fees from each card`,
       );
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch (e) {
       setDates((all) => all.filter((d) => !done.includes(d)));
       setError(
         (e instanceof Error ? e.message : "Could not reach the server.") +
           (done.length ? ` ${done.length} scheduled so far.` : ""),
       );
-      if (done.length) router.refresh();
+      if (done.length) startTransition(() => router.refresh());
     } finally {
       setWorking(false);
     }
@@ -188,7 +188,7 @@ export function ScheduleMatchWizard({ open, onOpenChange }: Props) {
             ? `Match scheduled · ₹${formatRupees(settled)} ${credit ? "credited to" : "debited from"} the pool`
             : `Match scheduled · ₹${formatRupees(pendingValue)} pending`,
       );
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
     } finally {

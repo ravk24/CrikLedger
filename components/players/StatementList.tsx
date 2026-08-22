@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useOptimistic, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
@@ -140,7 +140,28 @@ function StatementRowItem({
   );
 }
 
-export function StatementList({ rows, canEdit }: Props) {
+type StatementChange =
+  | { type: "edit"; source_id: string; delta: number; description: string }
+  | { type: "delete"; source_id: string };
+
+// Running balances are left to the refresh that follows the write —
+// recomputing them here would be a second copy of the ledger rule.
+function applyStatementChange(state: StatementRow[], change: StatementChange) {
+  if (change.type === "delete") {
+    return state.filter((r) => r.source_id !== change.source_id);
+  }
+  return state.map((r) =>
+    r.source_id === change.source_id
+      ? { ...r, delta: change.delta, description: change.description }
+      : r,
+  );
+}
+
+export function StatementList({ rows: serverRows, canEdit }: Props) {
+  const [rows, changeStatement] = useOptimistic(
+    serverRows,
+    applyStatementChange,
+  );
   const router = useRouter();
   const [editing, setEditing] = useState<StatementRow | null>(null);
   const [amount, setAmount] = useState("");
@@ -165,48 +186,61 @@ export function StatementList({ rows, canEdit }: Props) {
       setError("Enter a whole-rupee amount above zero.");
       return;
     }
+    const target = editing;
     setPending(true);
     setError(null);
-    try {
-      const res = await fetch(`/api/pool/entries/${editing.source_id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: value, message: message.trim() }),
+    startTransition(async () => {
+      changeStatement({
+        type: "edit",
+        source_id: target.source_id,
+        delta: target.delta < 0 ? -value : value,
+        description: message.trim() || target.description,
       });
-      const body = await res.json();
-      if (!body.success) {
-        setError(body.error?.message ?? "Could not save — try again.");
-        return;
+      try {
+        const res = await fetch(`/api/pool/entries/${target.source_id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: value, message: message.trim() }),
+        });
+        const body = await res.json();
+        if (!body.success) {
+          setError(body.error?.message ?? "Could not save — try again.");
+          return;
+        }
+        setEditing(null);
+        router.refresh();
+      } catch {
+        setError("Could not reach the server — check your connection.");
+      } finally {
+        setPending(false);
       }
-      setEditing(null);
-      router.refresh();
-    } catch {
-      setError("Could not reach the server — check your connection.");
-    } finally {
-      setPending(false);
-    }
+    });
   }
 
-  async function handleDelete() {
+  function handleDelete() {
     if (!editing) return;
+    const target = editing;
     setPending(true);
-    try {
-      const res = await fetch(`/api/pool/entries/${editing.source_id}`, {
-        method: "DELETE",
-      });
-      const body = await res.json();
-      if (!body.success) {
-        setError(body.error?.message ?? "Could not delete — try again.");
-        return;
+    setConfirmDelete(false);
+    setEditing(null);
+    startTransition(async () => {
+      changeStatement({ type: "delete", source_id: target.source_id });
+      try {
+        const res = await fetch(`/api/pool/entries/${target.source_id}`, {
+          method: "DELETE",
+        });
+        const body = await res.json();
+        if (!body.success) {
+          setError(body.error?.message ?? "Could not delete — try again.");
+          return;
+        }
+        router.refresh();
+      } catch {
+        setError("Could not reach the server — check your connection.");
+      } finally {
+        setPending(false);
       }
-      setConfirmDelete(false);
-      setEditing(null);
-      router.refresh();
-    } catch {
-      setError("Could not reach the server — check your connection.");
-    } finally {
-      setPending(false);
-    }
+    });
   }
 
   return (

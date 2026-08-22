@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useOptimistic, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarPlus,
@@ -45,7 +45,13 @@ export function TournamentAdminPanel({
   isSuperadmin,
 }: Props) {
   const router = useRouter();
-  const readOnly = tournament.status === "completed";
+  // Complete/Reopen flips the whole panel between editable and locked.
+  // The flip shows at once and is reconciled by the refresh that follows
+  // the write; on failure React drops the optimistic value by itself.
+  const [optimisticStatus, setOptimisticStatus] = useOptimistic(
+    tournament.status,
+  );
+  const readOnly = optimisticStatus === "completed";
   const activePlayers = players.filter((p) => p.is_active);
 
   const [depositOpen, setDepositOpen] = useState(false);
@@ -109,7 +115,7 @@ export function TournamentAdminPanel({
         }),
       });
       setDetailsSaved(true);
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch (e) {
       setDetailsError(
         e instanceof Error ? e.message : "Could not save — try again.",
@@ -131,7 +137,7 @@ export function TournamentAdminPanel({
         body: JSON.stringify({ name: newName.trim() }),
       });
       setNewName("");
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch (e) {
       setRosterError(e instanceof Error ? e.message : "Could not add — try again.");
     } finally {
@@ -149,7 +155,7 @@ export function TournamentAdminPanel({
         { method: "DELETE" },
       );
       setRemoving(null);
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch (e) {
       setRemoving(null);
       setRosterError(
@@ -160,25 +166,28 @@ export function TournamentAdminPanel({
     }
   }
 
-  async function handleStatusFlip() {
+  function handleStatusFlip() {
+    const next = readOnly ? "active" : "completed";
     setPending(true);
     setStatusError(null);
-    try {
-      await callApi(`/api/tournaments/${tournament.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: readOnly ? "active" : "completed" }),
-      });
-      setConfirmStatus(false);
-      router.refresh();
-    } catch (e) {
-      setConfirmStatus(false);
-      setStatusError(
-        e instanceof Error ? e.message : "Could not update — try again.",
-      );
-    } finally {
-      setPending(false);
-    }
+    setConfirmStatus(false);
+    startTransition(async () => {
+      setOptimisticStatus(next);
+      try {
+        await callApi(`/api/tournaments/${tournament.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: next }),
+        });
+        router.refresh();
+      } catch (e) {
+        setStatusError(
+          e instanceof Error ? e.message : "Could not update — try again.",
+        );
+      } finally {
+        setPending(false);
+      }
+    });
   }
 
   async function handleDeleteTournament() {
@@ -186,7 +195,7 @@ export function TournamentAdminPanel({
     try {
       await callApi(`/api/tournaments/${tournament.id}`, { method: "DELETE" });
       router.push("/tournaments");
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch (e) {
       setConfirmDelete(false);
       setStatusError(

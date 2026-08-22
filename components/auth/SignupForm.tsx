@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, X } from "lucide-react";
@@ -92,7 +92,7 @@ export function SignupForm() {
       }
       // Signup signs you in; there is no team yet, so land on the app.
       router.push("/");
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
     } finally {

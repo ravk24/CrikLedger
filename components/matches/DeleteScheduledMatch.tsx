@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { formatRupees } from "@/lib/format";
@@ -45,7 +45,7 @@ export function DeleteScheduledMatch({
         return;
       }
       router.push("/matches");
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
     } finally {

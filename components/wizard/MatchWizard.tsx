@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { StepResult } from "@/components/wizard/StepResult";
@@ -279,7 +279,7 @@ export function MatchWizard({
           ? `Match marked abandoned — ₹${formatRupees(feeReverted)} ground fee returned to the ${fundLabel}.`
           : "Match marked abandoned — no fees charged.",
       );
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
     } finally {
@@ -317,7 +317,7 @@ export function MatchWizard({
         setSuccess(
           `Match recorded — ${selected.size} ${selected.size === 1 ? "player" : "players"}.`,
         );
-        router.refresh();
+        startTransition(() => router.refresh());
         return;
       }
       const collected = Number(body.data.collected);
@@ -341,7 +341,7 @@ export function MatchWizard({
             : ""
         }`,
       );
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
     } finally {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Copy } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
@@ -66,7 +66,7 @@ export function AdminManager({ admins, selfId }: Props) {
       setUsername("");
       setName("");
       setReveal({ name: body.data.name, tempPassword: body.data.temp_password });
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
     } finally {
@@ -99,7 +99,7 @@ export function AdminManager({ admins, selfId }: Props) {
         });
       }
       setConfirm(null);
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
     } finally {

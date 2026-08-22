@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MatchWizard } from "@/components/wizard/MatchWizard";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
@@ -65,7 +65,7 @@ export function MatchAdminActions({
         return;
       }
       router.push("/matches");
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
     } finally {

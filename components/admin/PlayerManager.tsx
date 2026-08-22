@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useOptimistic, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
@@ -51,8 +51,15 @@ async function callApi(
   }
 }
 
-export function PlayerManager({ players }: Props) {
+export function PlayerManager({ players: serverPlayers }: Props) {
   const router = useRouter();
+  // Deactivate/reactivate flips one row's is_active instantly; the
+  // refresh after the write reconciles, and a failed write reverts.
+  const [players, flipActive] = useOptimistic(
+    serverPlayers,
+    (state, change: { id: string; is_active: boolean }) =>
+      state.map((p) => (p.id === change.id ? { ...p, ...change } : p)),
+  );
   const [sheet, setSheet] = useState<SheetState>({ mode: "closed" });
   const [name, setName] = useState("");
   const [sheetError, setSheetError] = useState<string | null>(null);
@@ -95,36 +102,48 @@ export function PlayerManager({ players }: Props) {
       return;
     }
     setSheet({ mode: "closed" });
-    router.refresh();
+    startTransition(() => router.refresh());
   }
 
-  async function handleDeactivate(player: AdminPlayerRow) {
+  function handleDeactivate(player: AdminPlayerRow) {
     setPending(true);
-    const result = await callApi(`/api/players/${player.id}/deactivate`, "POST");
-    setPending(false);
     setConfirmTarget(null);
-    if (!result.ok) {
-      setBlocker(
-        result.error?.code === "NONZERO_BALANCE"
-          ? (result.error.message ?? "Balance must be settled first.")
-          : (result.error?.message ?? "Could not deactivate — try again."),
+    startTransition(async () => {
+      flipActive({ id: player.id, is_active: false });
+      const result = await callApi(
+        `/api/players/${player.id}/deactivate`,
+        "POST",
       );
-      return;
-    }
-    setBlocker(null);
-    router.refresh();
+      setPending(false);
+      if (!result.ok) {
+        setBlocker(
+          result.error?.code === "NONZERO_BALANCE"
+            ? (result.error.message ?? "Balance must be settled first.")
+            : (result.error?.message ?? "Could not deactivate — try again."),
+        );
+        return;
+      }
+      setBlocker(null);
+      router.refresh();
+    });
   }
 
-  async function handleReactivate(player: AdminPlayerRow) {
+  function handleReactivate(player: AdminPlayerRow) {
     setPending(true);
-    const result = await callApi(`/api/players/${player.id}/reactivate`, "POST");
-    setPending(false);
-    if (!result.ok) {
-      setBlocker(result.error?.message ?? "Could not reactivate — try again.");
-      return;
-    }
-    setBlocker(null);
-    router.refresh();
+    startTransition(async () => {
+      flipActive({ id: player.id, is_active: true });
+      const result = await callApi(
+        `/api/players/${player.id}/reactivate`,
+        "POST",
+      );
+      setPending(false);
+      if (!result.ok) {
+        setBlocker(result.error?.message ?? "Could not reactivate — try again.");
+        return;
+      }
+      setBlocker(null);
+      router.refresh();
+    });
   }
 
   const inputClass =

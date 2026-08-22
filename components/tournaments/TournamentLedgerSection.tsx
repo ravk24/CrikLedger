@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LedgerRow } from "@/components/shared/LedgerRow";
 import { SheetShell } from "@/components/shared/SheetShell";
@@ -59,7 +59,7 @@ export function TournamentLedgerSection({ tournamentId, entries }: Props) {
         return;
       }
       setEditing(null);
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
     } finally {
@@ -82,7 +82,7 @@ export function TournamentLedgerSection({ tournamentId, entries }: Props) {
       }
       setConfirmDelete(false);
       setEditing(null);
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
     } finally {

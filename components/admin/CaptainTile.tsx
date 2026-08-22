@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Crown } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
@@ -41,7 +41,7 @@ export function CaptainTile({ players }: Props) {
         return;
       }
       setOpen(false);
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
     } finally {

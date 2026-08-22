@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -46,7 +46,7 @@ export function LoginForm() {
           : (next ??
             (body.data.platform_role === "megaadmin" ? "/ops" : "/")),
       );
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
     } finally {

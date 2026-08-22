@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Copy } from "lucide-react";
 
@@ -38,7 +38,7 @@ export function AccountActions({
       }
       // Shown ONCE — never stored or logged in plaintext.
       if (action === "reset-password") setTemp(body.data.temp_password);
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server.");
     } finally {

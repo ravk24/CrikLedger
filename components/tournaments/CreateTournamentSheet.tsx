@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
@@ -53,7 +53,7 @@ export function CreateTournamentSheet({ creditsLeft }: { creditsLeft: number }) 
       setStartDate("");
       setEndDate("");
       router.push(`/tournaments/${body.data.id}`);
-      router.refresh();
+      startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
     } finally {
