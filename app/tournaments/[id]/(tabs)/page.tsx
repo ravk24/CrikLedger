@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { PlayerGrid } from "@/components/dashboard/PlayerGrid";
 import { PoolSummaryCard } from "@/components/dashboard/PoolSummaryCard";
+import { DownloadImageButton } from "@/components/shared/DownloadImageButton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateShort } from "@/lib/format";
 import { canWrite } from "@/lib/roles";
@@ -116,6 +117,15 @@ async function TournamentHomeData({
       <PlayerGrid
         players={roster}
         hrefBase={`/tournaments/${id}/players`}
+        downloadSlot={
+          isAdmin ? (
+            <DownloadImageButton
+              endpoint={`/api/share/tournament-balances?id=${id}`}
+              filename={`${tournament.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-balances.png`}
+              title={`${tournament.name} · Balances`}
+            />
+          ) : null
+        }
         emptyCopy={
           isAdmin
             ? "No players yet — add them from Admin → Manage Players."

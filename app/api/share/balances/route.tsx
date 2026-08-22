@@ -5,10 +5,10 @@ import { requireTeamAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getTeamById } from "@/lib/team";
 import {
+  BalanceRows,
   ShareFrame,
   SHARE_WIDTH,
-  balanceRupees,
-  moneyColor,
+  balanceImageHeight,
   shareDate,
 } from "@/lib/share-image";
 import type { PlayerPublic } from "@/types";
@@ -45,13 +45,13 @@ export async function GET() {
       })
       .slice(0, MAX_ROWS);
 
-    const twoColumns = players.length > 15;
-    const half = twoColumns ? Math.ceil(players.length / 2) : players.length;
-    const columns = twoColumns
-      ? [players.slice(0, half), players.slice(half)]
-      : [players];
-    const height = Math.min(2200, Math.max(900, 420 + Math.max(half, 1) * 60));
     const activeCount = players.filter((p) => p.is_active).length;
+    const rows = players.map((p) => ({
+      id: p.id,
+      name: p.name,
+      is_active: p.is_active,
+      balance: Number(p.balance),
+    }));
 
     return new ImageResponse(
       (
@@ -60,51 +60,12 @@ export async function GET() {
           subtitle={`${activeCount} active players · ${shareDate()}`}
           footer="Negative = amount owed to the team pool"
         >
-          <div style={{ display: "flex", gap: 40, marginTop: 32 }}>
-            {players.length === 0 ? (
-              <div style={{ display: "flex", fontSize: 28, color: "#94a3b8" }}>
-                No players yet.
-              </div>
-            ) : null}
-            {columns.map((col, ci) => (
-              <div key={ci} style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-                {col.map((p) => (
-                  <div
-                    key={p.id}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 16,
-                      fontSize: twoColumns ? 24 : 28,
-                      padding: "12px 0",
-                      borderBottom: "1px solid #1e293b",
-                      color: p.is_active ? "#e2e8f0" : "#64748b",
-                    }}
-                  >
-                    <div style={{ display: "flex", overflow: "hidden", whiteSpace: "nowrap" }}>
-                      {p.name.slice(0, 28)}
-                      {p.is_active ? "" : " · Left"}
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexShrink: 0,
-                        fontWeight: 700,
-                        color: p.is_active ? moneyColor(Number(p.balance)) : "#64748b",
-                      }}
-                    >
-                      {balanceRupees(Number(p.balance))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
+          <BalanceRows players={rows} />
         </ShareFrame>
       ),
       {
         width: SHARE_WIDTH,
-        height,
+        height: balanceImageHeight(rows.length),
         headers: { "Cache-Control": "no-store" },
       },
     );
