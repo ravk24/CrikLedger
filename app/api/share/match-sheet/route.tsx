@@ -23,11 +23,12 @@ const payloadSchema = z.object({
   groundFee: z.number().finite(),
   ballFee: z.number().finite(),
   otherFee: z.number().finite(),
-  perPlayerFee: z.number().finite(),
-  // Riders fund the car money on top of the base share; both default
-  // to 0 so older callers keep working.
-  carSharePerSharer: z.number().finite().default(0),
-  sharerCount: z.number().int().nonnegative().default(0),
+  // Accepted for compatibility but no longer drawn: the base-fee /
+  // car-share headline confused readers, the per-person rows are the
+  // only numbers that matter on the shared sheet.
+  perPlayerFee: z.number().finite().optional(),
+  carSharePerSharer: z.number().finite().optional(),
+  sharerCount: z.number().int().nonnegative().optional(),
   totalCost: z.number().finite(),
   surplus: z.number().finite(),
   rows: z.array(rowSchema).min(1).max(30),
@@ -100,7 +101,7 @@ export async function POST(req: NextRequest) {
 
   // Height follows the roster: a fixed canvas leaves a two-player match
   // as mostly empty space, and crops a large squad.
-  const height = Math.min(1600, Math.max(940, 560 + half * 56));
+  const height = Math.min(1600, Math.max(760, 380 + half * 56));
 
   return new ImageResponse(
     (
@@ -125,30 +126,6 @@ export async function POST(req: NextRequest) {
         </div>
         <div style={{ display: "flex", fontSize: 26, color: "#94a3b8", marginTop: 8 }}>
           {[data.venue, data.date].filter(Boolean).join(" · ")}
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            backgroundColor: "#1e293b",
-            borderRadius: 20,
-            padding: "26px 0",
-            marginTop: 32,
-          }}
-        >
-          <div style={{ display: "flex", fontSize: 24, color: "#94a3b8" }}>
-            {data.carSharePerSharer > 0 ? "Base fee per player" : "Fee per player"}
-          </div>
-          <div style={{ display: "flex", fontSize: 76, fontWeight: 700, marginTop: 4 }}>
-            ₹{rupees(data.perPlayerFee)}
-          </div>
-          {data.carSharePerSharer > 0 && (
-            <div style={{ display: "flex", fontSize: 22, color: "#94a3b8", marginTop: 6 }}>
-              + ₹{rupees(data.carSharePerSharer)} car share for the {data.sharerCount} who rode with someone
-            </div>
-          )}
         </div>
 
         <div style={{ display: "flex", gap: 40, marginTop: 32 }}>
