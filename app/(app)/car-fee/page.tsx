@@ -23,9 +23,9 @@ async function CarFeeData() {
   return (
     <>
       <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-secondary">
-        Open Google Maps and enter the starting location as{" "}
+        Open Google Maps and enter your{" "}
         <span className="font-semibold text-text-primary">
-          {team?.meeting_point ?? "your meeting point"}
+          starting location
         </span>{" "}
         and the destination as the{" "}
         <span className="font-semibold text-text-primary">
