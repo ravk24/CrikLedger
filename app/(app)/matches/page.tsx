@@ -5,7 +5,6 @@ import { supabaseServer } from "@/lib/supabase-server";
 import { AccessGate } from "@/components/shared/AccessGate";
 import { checkActiveTeamRead } from "@/lib/access";
 import { buildAttendeeCounts } from "@/lib/matches";
-import { getCurrentTeam } from "@/lib/team";
 import type { Match, MatchParticipantPublic } from "@/types";
 
 async function MatchesData() {
@@ -16,7 +15,8 @@ async function MatchesData() {
   if (!verdict.ok) {
     return <AccessGate verdict={verdict} what="this team's matches" next="/matches" />;
   }
-  const team = await getCurrentTeam();
+  // The verdict already carries the team id; no team config is needed here.
+  const team = { id: verdict.teamId };
   const [matchesRes, participantsRes] = await Promise.all([
     supabaseServer.from("matches_public").select("*").eq("team_id", team.id),
     supabaseServer

@@ -4,6 +4,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { SESSION_COOKIE, TEAM_COOKIE } from "@/lib/cookies";
 import { pool } from "@/lib/db";
 import { ApiError } from "@/lib/validate";
+import type { TeamPublic } from "@/lib/team";
 import {
   canAdminister,
   canWrite,
@@ -55,6 +56,13 @@ export type SessionAdmin = Principal & {
   activeTeamSlug: string | null;
   /** Role in the active team — what UI gating should read. */
   activeTeamRole: ScopeRole | null;
+  /**
+   * The active team's config row, when the account is a member of it.
+   * Rides the session query so pages skip a serial teams_public hop;
+   * null for a megaadmin observing a team it holds no membership in
+   * (lib/team.ts falls back to a lookup for that case).
+   */
+  activeTeam: TeamPublic | null;
 };
 
 export async function signSession(payload: SessionPayload): Promise<string> {
@@ -124,6 +132,7 @@ type AdminRow = {
   session_epoch: number;
   memberships: Membership[] | null;
   entitlements: EntitlementSummary[] | null;
+  teams: TeamPublic[] | null;
 };
 
 // Fresh-row lookup on EVERY REQUEST — the is_active re-check is what
@@ -170,7 +179,14 @@ const loadSessionAdmin = cache(async (): Promise<SessionAdmin | null> => {
                     WHERE tm.admin_id = a.id AND tm.is_active)
                  GROUP BY en.team_id, en.product
               ) e
-            ), '[]'::json) AS entitlements
+            ), '[]'::json) AS entitlements,
+            COALESCE((
+              SELECT json_agg(tp)
+                FROM teams_public tp
+               WHERE tp.id IN (
+                 SELECT tm.team_id FROM team_memberships tm
+                  WHERE tm.admin_id = a.id AND tm.is_active)
+            ), '[]'::json) AS teams
        FROM admins a
       WHERE a.id = $1`,
     [payload.adminId],
@@ -214,6 +230,8 @@ const loadSessionAdmin = cache(async (): Promise<SessionAdmin | null> => {
     activeTeamId,
     activeTeamSlug: activeTeam?.slug ?? (activeTeamId ? cookieSlug : null),
     activeTeamRole: scopeRoleFor(principal, "team", activeTeamId),
+    activeTeam:
+      (row.teams ?? []).find((t) => t.id === activeTeamId) ?? null,
   };
 });
 

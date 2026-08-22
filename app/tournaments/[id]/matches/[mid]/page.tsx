@@ -45,31 +45,37 @@ async function buildAdminProps(
   const isSuperadmin = isScopeSuperadmin(admin, scope.kind, scope.id);
 
   // Recently-played first, then alphabetical — scoped to this tournament.
-  const playersRes = await pool.query(
-    `SELECT tp.id, tp.name, tp.is_captain
-     FROM tournament_players tp
-     LEFT JOIN (
-       SELECT tmp.player_id, MAX(tm.match_date) AS last_played
-       FROM tournament_match_participants tmp
-       JOIN tournament_matches tm ON tm.id = tmp.match_id
-         AND tm.status = 'completed'
-       GROUP BY tmp.player_id
-     ) lp ON lp.player_id = tp.id
-     WHERE tp.is_active AND tp.tournament_id = $1
-     ORDER BY lp.last_played DESC NULLS LAST, tp.name ASC`,
-    [tournament.id],
-  );
+  // Both admin reads are independent, so they run together.
+  const [playersRes, rowsRes] = await Promise.all([
+    pool.query(
+      `SELECT tp.id, tp.name, tp.is_captain
+       FROM tournament_players tp
+       LEFT JOIN (
+         SELECT tmp.player_id, MAX(tm.match_date) AS last_played
+         FROM tournament_match_participants tmp
+         JOIN tournament_matches tm ON tm.id = tmp.match_id
+           AND tm.status = 'completed'
+         WHERE tmp.tournament_id = $1
+         GROUP BY tmp.player_id
+       ) lp ON lp.player_id = tp.id
+       WHERE tp.is_active AND tp.tournament_id = $1
+       ORDER BY lp.last_played DESC NULLS LAST, tp.name ASC`,
+      [tournament.id],
+    ),
+    match.status === "completed"
+      ? pool.query(
+          `SELECT player_id, brought_car, shared_car
+           FROM tournament_match_participants WHERE match_id = $1`,
+          [match.id],
+        )
+      : Promise.resolve({ rows: [] as never[] }),
+  ]);
   const players = (
     playersRes.rows as { id: string; name: string; is_captain: boolean }[]
   ).map((p) => ({ id: p.id, name: p.name, is_captain: p.is_captain }));
 
   let initial: WizardInitial | undefined;
   if (match.status === "completed") {
-    const rowsRes = await pool.query(
-      `SELECT player_id, brought_car, shared_car
-       FROM tournament_match_participants WHERE match_id = $1`,
-      [match.id],
-    );
     const selected: string[] = [];
     const cars: string[] = [];
     const shared: string[] = [];
@@ -126,15 +132,12 @@ async function TournamentMatchData({
 
   // Team from the RESOURCE, not the session — this match sheet is
   // publicly link-readable and must render with no active team.
-  const team = tournament.team_id
-    ? await getTeamById(tournament.team_id)
-    : null;
+  const [team, adminProps] = await Promise.all([
+    tournament.team_id ? getTeamById(tournament.team_id) : null,
+    tournament.status === "active" ? buildAdminProps(tournament, match) : null,
+  ]);
   const participants = (participantsRes.data ??
     []) as MatchParticipantPublic[];
-  const adminProps =
-    tournament.status === "active"
-      ? await buildAdminProps(tournament, match)
-      : null;
 
   const carCount = participants.filter((p) => p.brought_car).length;
 

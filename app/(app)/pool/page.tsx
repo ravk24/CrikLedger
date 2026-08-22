@@ -19,9 +19,17 @@ async function LedgerData() {
 
 async function PoolLedgerData() {
   const team = await getCurrentTeam();
-  const [entriesRes, admin] = await Promise.all([
+  // The players list only matters to a signed-in admin, but it costs
+  // nothing to fetch alongside the ledger instead of after it.
+  const [entriesRes, admin, playersRes] = await Promise.all([
     supabaseServer.from("pool_ledger_public").select("*").eq("team_id", team.id),
     getSessionAdmin(),
+    supabaseServer
+      .from("players_public")
+      .select("id, name, is_active")
+      .eq("team_id", team.id)
+      .eq("is_active", true)
+      .order("name"),
   ]);
   const entries = (entriesRes.data ?? []) as PoolLedgerRow[];
 
@@ -34,13 +42,7 @@ async function PoolLedgerData() {
   }
 
   if (admin && !admin.mustChangePassword) {
-    const { data: playersData } = await supabaseServer
-      .from("players_public")
-      .select("id, name, is_active")
-      .eq("team_id", team.id)
-      .eq("is_active", true)
-      .order("name");
-    const players = (playersData ?? []) as Pick<
+    const players = (playersRes.data ?? []) as Pick<
       PlayerPublic,
       "id" | "name" | "is_active"
     >[];

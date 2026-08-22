@@ -61,7 +61,9 @@ export const getTeamBySlug = cache(
 export const getActiveTeam = cache(async (): Promise<TeamPublic | null> => {
   const admin = await getSessionAdmin();
   if (!admin?.activeTeamId) return null;
-  return getTeamById(admin.activeTeamId);
+  // The member's team row already arrived with the session; only a
+  // megaadmin observing a foreign team still needs the lookup.
+  return admin.activeTeam ?? getTeamById(admin.activeTeamId);
 });
 
 /**

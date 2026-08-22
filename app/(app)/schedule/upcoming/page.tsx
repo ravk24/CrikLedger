@@ -5,7 +5,6 @@ import { supabaseServer } from "@/lib/supabase-server";
 import { AccessGate } from "@/components/shared/AccessGate";
 import { checkActiveTeamRead } from "@/lib/access";
 import { buildAttendeeCounts } from "@/lib/matches";
-import { getCurrentTeam } from "@/lib/team";
 import type { Match, MatchParticipantPublic } from "@/types";
 
 // Scheduled-only view of the matches list (played ones live on
@@ -18,7 +17,8 @@ async function ScheduledMatchesData() {
   if (!verdict.ok) {
     return <AccessGate verdict={verdict} what="scheduled matches" next="/schedule/upcoming" />;
   }
-  const team = await getCurrentTeam();
+  // The verdict already carries the team id; no team config is needed here.
+  const team = { id: verdict.teamId };
   const [matchesRes, participantsRes] = await Promise.all([
     supabaseServer
       .from("matches_public")

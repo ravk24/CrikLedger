@@ -38,32 +38,52 @@ async function buildAdminProps(match: MatchPublicRow) {
   if (!canWrite(admin, "team", match.team_id)) return null;
   const isSuperadmin = isScopeSuperadmin(admin, "team", match.team_id);
 
-  // Recently-played first (kickoff §6 step 3), then alphabetical.
-  const playersRes = await pool.query(
-    `SELECT p.id, p.name, p.is_captain
-     FROM players p
-     LEFT JOIN (
-       SELECT mp.player_id, MAX(m.match_date) AS last_played
-       FROM match_participants mp
-       JOIN matches m ON m.id = mp.match_id AND m.status = 'completed'
-         AND mp.is_playing
-       GROUP BY mp.player_id
-     ) lp ON lp.player_id = p.id
-     WHERE p.team_id = $1 AND p.is_active
-     ORDER BY lp.last_played DESC NULLS LAST, p.name ASC`,
-    [match.team_id],
-  );
+  // The four admin reads are independent, so they run together: players
+  // (recently-played first — kickoff §6 step 3 — then alphabetical), the
+  // completed match's participants, and the match's other-fee and booking
+  // money in one row. The last-played derivation is scoped to the team so
+  // it never aggregates another tenant's participants.
+  const [playersRes, rowsRes, moneyRes] = await Promise.all([
+    pool.query(
+      `SELECT p.id, p.name, p.is_captain
+       FROM players p
+       LEFT JOIN (
+         SELECT mp.player_id, MAX(m.match_date) AS last_played
+         FROM match_participants mp
+         JOIN matches m ON m.id = mp.match_id AND m.status = 'completed'
+           AND mp.is_playing
+         WHERE mp.team_id = $1
+         GROUP BY mp.player_id
+       ) lp ON lp.player_id = p.id
+       WHERE p.team_id = $1 AND p.is_active
+       ORDER BY lp.last_played DESC NULLS LAST, p.name ASC`,
+      [match.team_id],
+    ),
+    match.status === "completed"
+      ? pool.query(
+          `SELECT player_id, brought_car, shared_car, is_playing
+           FROM match_participants WHERE match_id = $1`,
+          [match.id],
+        )
+      : Promise.resolve({ rows: [] as never[] }),
+    pool.query(
+      `SELECT ofe.amount AS other_fee_amount,
+              gb.amount_paid, gb.slots, gb.amount_pending,
+              pe.amount AS cleared_amount
+       FROM matches m
+       LEFT JOIN pool_entries ofe ON ofe.id = m.other_fee_entry_id
+       LEFT JOIN ground_bookings gb ON gb.id = m.ground_booking_id
+       LEFT JOIN pool_entries pe ON pe.id = gb.pending_cleared_entry_id
+       WHERE m.id = $1`,
+      [match.id],
+    ),
+  ]);
   const players = (
     playersRes.rows as { id: string; name: string; is_captain: boolean }[]
   ).map((p) => ({ id: p.id, name: p.name, is_captain: p.is_captain }));
 
   let initial: WizardInitial | undefined;
   if (match.status === "completed") {
-    const rowsRes = await pool.query(
-      `SELECT player_id, brought_car, shared_car, is_playing
-       FROM match_participants WHERE match_id = $1`,
-      [match.id],
-    );
     const selected: string[] = [];
     const cars: string[] = [];
     const shared: string[] = [];
@@ -101,14 +121,17 @@ async function buildAdminProps(match: MatchPublicRow) {
   // Other match: the delete dialog quotes the pool-fronted ground fee
   // that returns when the match is removed (admin-only, pg path).
   let otherFee = 0;
-  const otherFeeRes = await pool.query(
-    `SELECT pe.amount FROM matches m
-     JOIN pool_entries pe ON pe.id = m.other_fee_entry_id
-     WHERE m.id = $1`,
-    [match.id],
-  );
-  if (otherFeeRes.rows[0]) {
-    otherFee = Math.abs(Number(otherFeeRes.rows[0].amount));
+  const money = moneyRes.rows[0] as
+    | {
+        other_fee_amount: string | null;
+        amount_paid: string | null;
+        slots: number | null;
+        amount_pending: string | null;
+        cleared_amount: string | null;
+      }
+    | undefined;
+  if (money?.other_fee_amount != null) {
+    otherFee = Math.abs(Number(money.other_fee_amount));
   }
 
   // Booking money is admin-only, so this stays in the pg code path:
@@ -118,16 +141,9 @@ async function buildAdminProps(match: MatchPublicRow) {
   let bookingShare = 0;
   let bookingFee = 0;
   let matchFee: { amountPending: number } | null = null;
-  const bookingRes = await pool.query(
-    `SELECT gb.amount_paid, gb.slots, gb.amount_pending,
-            pe.amount AS cleared_amount
-     FROM matches m
-     JOIN ground_bookings gb ON gb.id = m.ground_booking_id
-     LEFT JOIN pool_entries pe ON pe.id = gb.pending_cleared_entry_id
-     WHERE m.id = $1`,
-    [match.id],
-  );
-  const booking = bookingRes.rows[0];
+  // A booking row exists only when the LEFT JOIN matched (slots is NOT
+  // NULL on ground_bookings).
+  const booking = money && money.slots != null ? money : undefined;
   // A match carries its own pending fee since migration 36; a legacy
   // booking-linked one still reports through the booking. Either way the
   // card and the completion gate read one number.
@@ -194,12 +210,12 @@ async function MatchDetailData({
   // The team comes from the MATCH, never from the session — this page is
   // publicly link-readable (the WhatsApp sharing loop), so it must render
   // for a visitor who has no active team at all.
-  const team = await getTeamById(match.team_id);
-
   // Captain and booking are scoped by the match's own team; the
   // booking resolves by id (matches.ground_booking_id) — the old
-  // opponent-name heuristic is gone.
-  const [captainRes, bookingRes] = await Promise.all([
+  // opponent-name heuristic is gone. The admin props depend on nothing
+  // below, so they load in the same round.
+  const [team, captainRes, bookingRes, adminProps] = await Promise.all([
+    getTeamById(match.team_id),
     supabaseServer
       .from("players_public")
       .select("name")
@@ -213,6 +229,7 @@ async function MatchDetailData({
           .eq("id", match.ground_booking_id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    buildAdminProps(match),
   ]);
 
   const teamCaptain = (captainRes.data as { name: string } | null)?.name ?? null;
@@ -221,8 +238,6 @@ async function MatchDetailData({
   const booking: GroundBookingPublic | null = rawBooking
     ? { ...rawBooking, amount_pending: Number(rawBooking.amount_pending) }
     : null;
-
-  const adminProps = await buildAdminProps(match);
 
   const participants = (participantsRes.data ?? []) as MatchParticipantPublic[];
   participants.sort((a, b) => a.player_name.localeCompare(b.player_name));
