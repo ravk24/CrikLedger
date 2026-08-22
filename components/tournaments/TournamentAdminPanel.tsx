@@ -356,7 +356,7 @@ export function TournamentAdminPanel({
               type="text"
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
-              placeholder="Your XI"
+              placeholder="Your team name"
               maxLength={80}
               disabled={readOnly}
               className={inputClass}
@@ -370,7 +370,7 @@ export function TournamentAdminPanel({
               type="text"
               value={venue}
               onChange={(e) => setVenue(e.target.value)}
-              placeholder="Pimpri Turf"
+              placeholder="Ground name"
               maxLength={80}
               disabled={readOnly}
               className={inputClass}

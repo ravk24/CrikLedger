@@ -114,7 +114,7 @@ export function TournamentScheduleMatchSheet({
             type="text"
             value={opponent}
             onChange={(e) => setOpponent(e.target.value)}
-            placeholder="Falcons XI"
+            placeholder="Opponent team name"
             required
             maxLength={80}
             className={inputClass}

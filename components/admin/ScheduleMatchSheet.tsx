@@ -235,7 +235,7 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
             type="text"
             value={venue}
             onChange={(e) => setVenue(e.target.value)}
-            placeholder="Pimpri Turf"
+            placeholder="Ground name"
             className={inputClass}
           />
         </label>
@@ -255,7 +255,7 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
                   type="text"
                   value={opponent}
                   onChange={(e) => setOpponent(e.target.value)}
-                  placeholder="Borivali Blasters"
+                  placeholder="Opponent team name"
                   required
                   className={inputClass}
                 />

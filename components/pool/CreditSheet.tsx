@@ -218,7 +218,7 @@ export function CreditSheet({
                 type="text"
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
-                placeholder="Andheri Warriors"
+                placeholder="Opponent team name"
                 required
                 className={inputClass}
               />

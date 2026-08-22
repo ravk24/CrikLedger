@@ -88,7 +88,7 @@ export function DebitSheet({ open, onOpenChange, activePlayerCount }: Props) {
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Ground booking — Vasai"
+            placeholder="What the money was spent on"
             required
             className={inputClass}
           />

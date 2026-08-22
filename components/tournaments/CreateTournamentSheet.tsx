@@ -106,7 +106,7 @@ export function CreateTournamentSheet({ creditsLeft }: { creditsLeft: number }) 
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Pimpri Premier League"
+              placeholder="Tournament name"
               required
               maxLength={80}
               className={inputClass}
@@ -121,7 +121,7 @@ export function CreateTournamentSheet({ creditsLeft }: { creditsLeft: number }) 
               type="text"
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
-              placeholder="Your XI"
+              placeholder="Your team name"
               maxLength={80}
               className={inputClass}
             />
@@ -134,7 +134,7 @@ export function CreateTournamentSheet({ creditsLeft }: { creditsLeft: number }) 
               type="text"
               value={venue}
               onChange={(e) => setVenue(e.target.value)}
-              placeholder="Pimpri Turf"
+              placeholder="Ground name"
               maxLength={80}
               className={inputClass}
             />
