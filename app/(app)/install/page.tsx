@@ -1,4 +1,5 @@
 import { InstallGuide } from "@/components/install/InstallGuide";
+import { renderInstallDiagrams } from "@/components/install/installDiagrams";
 
 export const metadata = {
   title: "Install CrikLedger",
@@ -24,7 +25,7 @@ export default function InstallPage() {
         </p>
       </div>
 
-      <InstallGuide />
+      <InstallGuide diagrams={renderInstallDiagrams()} />
     </>
   );
 }

@@ -60,7 +60,33 @@ function CarMark() {
 const rupees = (n: number) =>
   Math.abs(Math.round(n)).toLocaleString("en-IN");
 
+// The route is unauthenticated (the guest sample has no session), and
+// rendering a PNG is CPU-heavy, so each client gets a small bucket per
+// minute. In-memory is enough: a function instance serves one region,
+// and the worst case of a cold instance is a fresh bucket.
+const RATE_LIMIT = 10;
+const RATE_WINDOW_MS = 60_000;
+const buckets = new Map<string, { count: number; resetAt: number }>();
+
+function rateLimited(req: NextRequest): boolean {
+  const key = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "anon";
+  const now = Date.now();
+  const bucket = buckets.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    buckets.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return false;
+  }
+  bucket.count += 1;
+  return bucket.count > RATE_LIMIT;
+}
+
 export async function POST(req: NextRequest) {
+  if (rateLimited(req)) {
+    return new Response("Too many requests", {
+      status: 429,
+      headers: { "Retry-After": "60" },
+    });
+  }
   let data: z.infer<typeof payloadSchema>;
   try {
     data = payloadSchema.parse(await req.json());

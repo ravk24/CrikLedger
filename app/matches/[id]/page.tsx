@@ -4,6 +4,10 @@ import { notFound } from "next/navigation";
 import { ChevronLeft, Crown } from "lucide-react";
 import { ResultBadge } from "@/components/shared/ResultBadge";
 import { FeeTable } from "@/components/matches/FeeTable";
+import {
+  ShareMatchSheetButton,
+  type MatchSheetPayload,
+} from "@/components/matches/ShareMatchSheetButton";
 import { CostBreakdownFooter } from "@/components/matches/CostBreakdownFooter";
 import { MatchAdminActions } from "@/components/matches/MatchAdminActions";
 import { MatchFeeCard } from "@/components/matches/MatchFeeCard";
@@ -258,6 +262,52 @@ async function MatchDetailData({
     participants.find((p) => Number(p.guest_fee_share) !== 0) ?? null;
   const updatedStamp = match.updated_at ?? null;
 
+  // Share payload from the stored rows. The base share is a plain
+  // attendee's fee (no car, no ride); a rider's extra over that is the
+  // car share. Guests are listed after the roster like the sample sheet.
+  let sheetPayload: MatchSheetPayload | null = null;
+  if (match.status === "completed") {
+    const playing = participants.filter((p) => p.is_playing);
+    const plain = playing.find((p) => !p.brought_car && !p.shared_car);
+    const rider = playing.find((p) => p.shared_car && !p.brought_car);
+    const own = (p: MatchParticipantPublic) =>
+      Number(p.fee_amount) - Number(p.guest_fee_share);
+    const perPlayerFee = plain ? own(plain) : playing[0] ? own(playing[0]) : 0;
+    const sharerCount = playing.filter((p) => p.shared_car && !p.brought_car).length;
+    const cash =
+      Number(match.ground_fee) + Number(match.ball_fee) + Number(match.other_fee);
+    sheetPayload = {
+      team: teamLabel(team),
+      opponent: opponentLabel(match.opponent),
+      venue: match.venue ?? undefined,
+      date: formatWeekday(match.match_date),
+      groundFee: Number(match.ground_fee),
+      ballFee: Number(match.ball_fee),
+      otherFee: Number(match.other_fee),
+      perPlayerFee,
+      carSharePerSharer: rider ? Math.max(0, own(rider) - perPlayerFee) : 0,
+      sharerCount,
+      totalCost: cash,
+      surplus: Math.max(0, collectedTotal - cash),
+      rows: [
+        ...playing.map((p) => ({
+          name: p.player_name,
+          fee: Number(p.fee_amount),
+          broughtCar: p.brought_car,
+        })),
+        ...guests.map((g) => ({
+          name: `${g.name} (guest)`,
+          fee: 0,
+          broughtCar: g.brought_car,
+        })),
+      ].slice(0, 30),
+      captainNote:
+        captainRow && Number(captainRow.guest_fee_share) !== 0
+          ? `Guest fees charged to ${captainRow.player_name}`
+          : undefined,
+    };
+  }
+
   return (
     <>
       <section className="flex flex-col gap-1">
@@ -415,6 +465,7 @@ async function MatchDetailData({
           )}
 
           <FeeTable participants={participants} guests={guests} />
+          {sheetPayload && <ShareMatchSheetButton payload={sheetPayload} />}
           <CostBreakdownFooter
             match={match}
             carCount={drivers.length + guestCarCount}

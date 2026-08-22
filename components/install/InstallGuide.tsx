@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PhoneDiagram } from "./PhoneDiagram";
-import { INSTALL_STEPS, PLATFORM_LABELS, type Platform } from "./steps";
+import {
+  INSTALL_STEPS,
+  PLATFORM_LABELS,
+  type InstallStepId,
+  type Platform,
+} from "./steps";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -25,7 +29,12 @@ const PLATFORMS: Platform[] = ["android", "ios"];
  * standalone test, same beforeinstallprompt capture. Kept as two small
  * copies rather than a shared hook while there are only two callers.
  */
-export function InstallGuide() {
+export function InstallGuide({
+  diagrams,
+}: {
+  // Pre-rendered on the server (components/install/installDiagrams.tsx).
+  diagrams: Record<InstallStepId, ReactNode>;
+}) {
   // "android" on the server AND on the first client render — the sniff
   // lands in the effect below, so there is nothing to mismatch.
   const [platform, setPlatform] = useState<Platform>("android");
@@ -159,7 +168,7 @@ export function InstallGuide() {
                 </p>
               </div>
             </div>
-            <PhoneDiagram step={step.id} alt={step.alt} />
+            {diagrams[step.id]}
           </li>
         ))}
       </ol>
