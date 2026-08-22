@@ -4,7 +4,7 @@ Last updated: 2026-08-22 ~23:30 IST (session 17, end)
 
 ## What was built
 
-All on `main`, pushed; working tree clean. Commits in order: `3249778`, `90781b1`, `707ad2e`, `157afa5`, `f9f2fde`, `1752c9f`, `489b707`, `d9c0474`, `4e5b38b`, `30ae4dc`, `a0f754c`, `e9742b8`.
+All on `main`, pushed; working tree clean. Commits in order: `3249778`, `90781b1`, `707ad2e`, `157afa5`, `f9f2fde`, `1752c9f`, `489b707`, `d9c0474`, `4e5b38b`, `30ae4dc`, `a0f754c`, `e9742b8`, `ffc97b0`.
 
 - **Shared match PNG** (`app/api/share/match-sheet/route.tsx` + payload in `app/matches/[id]/page.tsx`): payload is now built by re-running `calculateMatchFees` on the stored inputs (was reverse-engineered from rows — showed base ₹33 / guests ₹0). Guest rows show their real fee; captain row shows own share with the "Guest fees charged to X" note. The "Base fee per player / car share" headline block was REMOVED from the PNG, `components/guest/GuestMatchSheet.tsx` and `components/wizard/StepFeePreview.tsx`. Added: crown + gold "C" after the captain (inline satori `CaptainMark`, `isCaptain` row flag), full date via new `formatDateWithWeekday` in `lib/format.ts` ("Sat, 28 Aug 2026"), footer `Cars N × ₹allowance` (Total stays cash-only). `MatchSheetPayload` type in `components/matches/ShareMatchSheetButton.tsx` gained `carAllowancePerCar`, `carCount`, `rows[].isCaptain`. `FeeTable` uses the full CaptainMark (crown + C); match page "Captain:" line uses `<CaptainMark />`.
 - **Edit schedule sheet** (`components/admin/ScheduleMatchSheet.tsx`): Opponent switch removed; Opponent Name is a required top-level field under Ground (create wizard keeps its switch). Credit/Debit switches disabled until fee > 0; clearing the fee resets direction + pending. Same disabled guard added to `ScheduleMatchWizard.tsx` step 3 (already unreachable without a fee).
@@ -26,12 +26,13 @@ All on `main`, pushed; working tree clean. Commits in order: `3249778`, `90781b1
 - Share-card wrong numbers root cause: `page.tsx` derived base fee from a "plain attendee" that didn't exist → fell back to a driver's −33; car share = 274−(−33)=307; guest rows hard-coded 0.
 - Chrome MCP: `resize_window` to phone width is ignored on this machine; screenshots sometimes time out once then succeed. The extension's tab returned 404 for a match URL that the server served 200 — turned out the match had been deleted in prod (`5bdc97b0…` Arezo no longer exists).
 - `rm -rf .next/dev/types` after deleting a route, or `tsc` trips on a stale validator file.
+- **Mojibake in `OpsConsole.tsx`** (`ffc97b0`): a Python patch script read snippet files with `open(f).read()` (Windows default cp1252), so `·`, `₹`, `—`, `…` landed as `Â·`, `â‚¹`, `â€”`, `â€¦` in the grant sheet. Always pass `encoding='utf8'` when scripting edits; grep for `Â|â€|â‚¹` before committing UI text.
 - Duplicate prod accounts `ravi_kant_sgsa` (Ledger) / `rav_kant_sgsa` (credit) were an operator typo; repaired with the script (credit moved to LR-SuperGiants, team `rav-kant-sgsa` deleted, `rav_kant_sgsa` suspended).
 
 ## Current state
 
 - Prod DB: `ravi_kant` (megaadmin), `ravi_kant_sgsa` active with Ledger + 1 tournament credit on team `ravi-kant-sgsa` "LR-SuperGiants", `rav_kant_sgsa` suspended. Recent matches are bare scheduled dates (no opponent). The Arezo match from the screenshot is gone.
-- `tsc`, eslint, vitest (81) all green at `e9742b8`. Vercel deploys from `main`; `/api/health` not re-checked this session.
+- `tsc`, eslint, vitest (81) all green at `ffc97b0`. Vercel deploys from `main`; `/api/health` not re-checked this session.
 - Not visually verified (need a signed-in/megaadmin session): dashboard navy hero card with balances, `/schedule/upcoming` list + dropdown, Edit schedule sheet, new `/ops` grant picker. Signed-out pages (`/`, `/more`, `/schedule`, match detail) were screenshotted and look right.
 - Git-ignored local docs updated: `context/ui-tokens.md`, `context/ui-rules.md`, `CrikLedger-docs/02`, `03`, `06`.
 
