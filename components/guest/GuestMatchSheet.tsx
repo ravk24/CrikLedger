@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Car, ChevronLeft, Download, Share2 } from "lucide-react";
+import { Car, ChevronLeft, Download, Share2, Users } from "lucide-react";
 import { formatRupees } from "@/lib/format";
 import { DEMO_PLAYERS, DEMO_TEAM } from "@/lib/demo/fixtures";
 import type { FeeRow, MatchFeeResult } from "@/engine/calc";
@@ -41,6 +41,13 @@ export function GuestMatchSheet({
   const carCount =
     rows.filter((r) => r.broughtCar).length +
     result.guestRows.filter((g) => g.broughtCar).length;
+  // Car money is funded by the riders, not every head, so the headline
+  // is the BASE share and the car share is spelled out underneath —
+  // otherwise the big number contradicts the rows (see StepFeePreview).
+  const sharerCount =
+    rows.filter((r) => r.sharedCar).length +
+    result.guestRows.filter((g) => g.sharedCar).length;
+  const carShare = sharerCount > 0 ? result.carSharePerSharer : 0;
 
   const payload = {
     team: DEMO_TEAM.name,
@@ -51,6 +58,8 @@ export function GuestMatchSheet({
     ballFee: Number(costs.ball) || 0,
     otherFee: Number(costs.other) || 0,
     perPlayerFee: result.perPlayerFee,
+    carSharePerSharer: carShare,
+    sharerCount,
     totalCost: result.totalCost,
     surplus,
     rows: [
@@ -133,10 +142,19 @@ export function GuestMatchSheet({
         </p>
 
         <div className="mt-4 rounded-md bg-surface-secondary p-3 text-center">
-          <p className="text-xs text-text-secondary">Fee per player</p>
+          <p className="text-xs text-text-secondary">
+            {carShare > 0 ? "Base fee per player" : "Fee per player"}
+          </p>
           <p className="text-3xl font-bold text-text-primary">
             ₹{formatRupees(result.perPlayerFee)}
           </p>
+          {carShare > 0 && (
+            <p className="mt-1 text-xs text-text-muted">
+              + ₹{formatRupees(carShare)} car share for the {sharerCount} who
+              rode with someone · drivers get ₹
+              {formatRupees(Number(costs.allowance) || 0)} back
+            </p>
+          )}
         </div>
 
         <ul className="mt-4 divide-y divide-border">
@@ -152,6 +170,13 @@ export function GuestMatchSheet({
                     size={14}
                     aria-label="Brought a car"
                     className="ml-1.5 inline shrink-0 align-text-bottom text-accent"
+                  />
+                )}
+                {r.sharedCar && (
+                  <Users
+                    size={13}
+                    aria-label="Shared a car"
+                    className="ml-1.5 inline shrink-0 align-text-bottom text-text-muted"
                   />
                 )}
               </span>

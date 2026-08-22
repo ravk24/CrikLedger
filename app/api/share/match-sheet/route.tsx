@@ -24,6 +24,10 @@ const payloadSchema = z.object({
   ballFee: z.number().finite(),
   otherFee: z.number().finite(),
   perPlayerFee: z.number().finite(),
+  // Riders fund the car money on top of the base share; both default
+  // to 0 so older callers keep working.
+  carSharePerSharer: z.number().finite().default(0),
+  sharerCount: z.number().int().nonnegative().default(0),
   totalCost: z.number().finite(),
   surplus: z.number().finite(),
   rows: z.array(rowSchema).min(1).max(30),
@@ -109,11 +113,16 @@ export async function POST(req: NextRequest) {
           }}
         >
           <div style={{ display: "flex", fontSize: 24, color: "#94a3b8" }}>
-            Fee per player
+            {data.carSharePerSharer > 0 ? "Base fee per player" : "Fee per player"}
           </div>
           <div style={{ display: "flex", fontSize: 76, fontWeight: 700, marginTop: 4 }}>
             ₹{rupees(data.perPlayerFee)}
           </div>
+          {data.carSharePerSharer > 0 && (
+            <div style={{ display: "flex", fontSize: 22, color: "#94a3b8", marginTop: 6 }}>
+              + ₹{rupees(data.carSharePerSharer)} car share for the {data.sharerCount} who rode with someone
+            </div>
+          )}
         </div>
 
         <div style={{ display: "flex", gap: 40, marginTop: 32 }}>
