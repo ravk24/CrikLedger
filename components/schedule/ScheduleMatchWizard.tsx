@@ -201,12 +201,21 @@ export function ScheduleMatchWizard({ open, onOpenChange }: Props) {
     checked: boolean,
     onChange: (on: boolean) => void,
     checkedClass?: string,
+    disabled = false,
   ) => (
     <label className="flex min-h-11 items-center justify-between gap-3 rounded-md border border-border bg-surface-secondary px-3 py-2">
-      <span className="text-sm font-medium text-text-primary">{label}</span>
+      <span
+        className={cn(
+          "text-sm font-medium",
+          disabled ? "text-text-muted" : "text-text-primary",
+        )}
+      >
+        {label}
+      </span>
       <Switch
         checked={checked}
         onCheckedChange={onChange}
+        disabled={disabled}
         className={checkedClass}
       />
     </label>
@@ -492,12 +501,14 @@ export function ScheduleMatchWizard({ open, onOpenChange }: Props) {
                 credit,
                 toggleCredit,
                 "data-[state=checked]:bg-credit",
+                feeAmount <= 0,
               )}
               {switchRow(
                 "Debit from Pool",
                 debit,
                 toggleDebit,
                 "data-[state=checked]:bg-debit",
+                feeAmount <= 0,
               )}
 
               <p className="text-xs text-text-muted">

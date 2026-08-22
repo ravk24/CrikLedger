@@ -93,10 +93,23 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
   // Pending is a slice of an amount that has to move somewhere, so it
   // is only reachable once a direction exists.
   const hasDirection = credit || debit;
+  // A direction only makes sense once there is a non-zero fee to move.
+  const hasFee = (Number(fee) || 0) > 0;
 
   function clearPending() {
     setPendingOn(false);
     setPendingAmount("");
+  }
+
+  // Clearing the fee (or typing 0) withdraws the direction and pending
+  // with it, so the disabled switches never show a stale "on".
+  function handleFeeChange(value: string) {
+    setFee(value);
+    if ((Number(value) || 0) <= 0) {
+      setCredit(false);
+      setDebit(false);
+      clearPending();
+    }
   }
 
   // Credit and Debit are one direction of travel — turning either on
@@ -253,19 +266,26 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
 
         {detailsOn && (
           <div className="flex flex-col gap-3 rounded-md border border-border bg-surface p-3">
-            <MoneyInput label="Fee" value={fee} onChange={setFee} required />
+            <MoneyInput
+              label="Fee"
+              value={fee}
+              onChange={handleFeeChange}
+              required
+            />
 
             {switchRow(
               "Credit to Pool",
               credit,
               toggleCredit,
               "data-[state=checked]:bg-credit",
+              !hasFee,
             )}
             {switchRow(
               "Debit from Pool",
               debit,
               toggleDebit,
               "data-[state=checked]:bg-debit",
+              !hasFee,
             )}
             {switchRow(
               "Pending",
@@ -286,7 +306,9 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
               <p className="text-xs text-text-muted">
                 {hasDirection
                   ? "Pending is off — the fee counts as fully paid."
-                  : "Choose Credit or Debit first."}
+                  : hasFee
+                    ? "Choose Credit or Debit first."
+                    : "Enter the fee first."}
               </p>
             )}
           </div>
