@@ -9,6 +9,10 @@ The Supabase database is the single source of truth for the club ledger, so it i
 - **Encryption:** the repo is public, so every dump is gzip'd and GPG-encrypted (AES256) with a passphrase before upload. Without the passphrase the artifact is unreadable.
 - **Alerting:** GitHub emails the repo owner automatically if a scheduled run fails.
 
+## Status
+
+- **2026-08-22:** the workflow has never succeeded — `SUPABASE_DB_URL` is not set, so every scheduled run exits at the guard. Until the secrets below are added, take a local dump before each migration with the installed client: `"C:/Program Files/PostgreSQL/17/bin/pg_dump.exe" "<session-pooler-url>" --schema=public --no-owner --no-privileges --clean --if-exists -f backup.sql` (the session pooler is the app URL with port 6543 → 5432). Last local dump: 2026-08-22, before migration 40.
+
 ## One-time setup (required before the first backup works)
 
 Add two secrets at **GitHub → repo → Settings → Secrets and variables → Actions**. They live as **environment secrets** in the `Production` environment (the workflow job declares `environment: Production`); repository-level secrets with the same names would also work.
