@@ -32,10 +32,13 @@ const OPTIONS: Option[] = [
   },
 ];
 
-// Shared by the link cards and the Schedule a Match button, so the two
-// element types cannot drift apart visually.
 const TILE_CLASS =
   "flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface p-4 text-left text-text-primary";
+
+// The primary action spans the full width as a horizontal card; the two
+// link tiles below it keep the square grid.
+const ACTION_CLASS =
+  "col-span-2 flex min-h-16 w-full flex-row items-center gap-3 rounded-lg border border-border bg-surface p-4 text-left text-text-primary";
 
 async function ScheduleData() {
   const nav = await getNavState();
@@ -58,7 +61,7 @@ function ScheduleChooser({ canSchedule }: { canSchedule: boolean }) {
         </p>
       </div>
       <section className="grid grid-cols-2 gap-3">
-        <ScheduleMatch canSchedule={canSchedule} tileClass={TILE_CLASS} />
+        <ScheduleMatch canSchedule={canSchedule} tileClass={ACTION_CLASS} />
         {OPTIONS.map((option) => {
           const Icon = option.icon;
           return (
