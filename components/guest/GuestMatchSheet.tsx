@@ -41,13 +41,6 @@ export function GuestMatchSheet({
   const carCount =
     rows.filter((r) => r.broughtCar).length +
     result.guestRows.filter((g) => g.broughtCar).length;
-  // Car money is funded by the riders, not every head, so the headline
-  // is the BASE share and the car share is spelled out underneath —
-  // otherwise the big number contradicts the rows (see StepFeePreview).
-  const sharerCount =
-    rows.filter((r) => r.sharedCar).length +
-    result.guestRows.filter((g) => g.sharedCar).length;
-  const carShare = sharerCount > 0 ? result.carSharePerSharer : 0;
 
   const payload = {
     team: DEMO_TEAM.name,
@@ -57,9 +50,6 @@ export function GuestMatchSheet({
     groundFee: Number(costs.ground) || 0,
     ballFee: Number(costs.ball) || 0,
     otherFee: Number(costs.other) || 0,
-    perPlayerFee: result.perPlayerFee,
-    carSharePerSharer: carShare,
-    sharerCount,
     totalCost: result.totalCost,
     surplus,
     rows: [
@@ -140,22 +130,6 @@ export function GuestMatchSheet({
         <p className="mt-0.5 text-sm text-text-secondary">
           {DEMO_TEAM.venue} · Sunday, 13 September 2026
         </p>
-
-        <div className="mt-4 rounded-md bg-surface-secondary p-3 text-center">
-          <p className="text-xs text-text-secondary">
-            {carShare > 0 ? "Base fee per player" : "Fee per player"}
-          </p>
-          <p className="text-3xl font-bold text-text-primary">
-            ₹{formatRupees(result.perPlayerFee)}
-          </p>
-          {carShare > 0 && (
-            <p className="mt-1 text-xs text-text-muted">
-              + ₹{formatRupees(carShare)} car share for the {sharerCount} who
-              rode with someone · drivers get ₹
-              {formatRupees(Number(costs.allowance) || 0)} back
-            </p>
-          )}
-        </div>
 
         <ul className="mt-4 divide-y divide-border">
           {rows.map((r) => (
