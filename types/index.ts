@@ -47,7 +47,7 @@ export type Match = {
   id: string;
   team_id: string;
   match_date: string;
-  opponent: string | null; // NULL = not known yet (red dot)
+  opponent: string | null; // NULL = not known yet (shown as "Opponent TBD")
   status: MatchStatus;
   result: MatchResult | null;
   abandoned_reason: string | null;

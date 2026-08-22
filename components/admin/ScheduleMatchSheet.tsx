@@ -30,8 +30,7 @@ const inputClass =
   "h-11 w-full rounded-md border border-border bg-surface-secondary px-3 text-base text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 // Edit a scheduled match. Mirrors the scheduling form field for field,
-// because this is where a red-dot match gains its opponent and its fee —
-// without that, a dot could never change colour.
+// because this is where a bare-date match gains its opponent and its fee.
 export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
   const router = useRouter();
   const [date, setDate] = useState(editing.date);

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatDate, opponentLabel } from "@/lib/format";
 import { ResultBadge, matchState } from "@/components/shared/ResultBadge";
-import { MatchStatusDot } from "@/components/matches/MatchStatusDot";
 import type { Match } from "@/types";
 
 type Props = {
@@ -26,16 +25,11 @@ export function MatchCard({ match, attendeeCount }: Props) {
         <span className="truncate text-base font-semibold text-text-primary">
           vs {opponentLabel(match.opponent)}
         </span>
-        <span className="flex shrink-0 items-center gap-1.5">
-          {state === "scheduled" ? (
-            <MatchStatusDot
-              opponent={match.opponent}
-              feePending={Number(match.fee_pending)}
-            />
-          ) : (
+        {state !== "scheduled" && (
+          <span className="flex shrink-0 items-center">
             <ResultBadge match={match} />
-          )}
-        </span>
+          </span>
+        )}
       </div>
       <p className="mt-1 text-xs text-text-muted">
         {formatDate(match.match_date)}

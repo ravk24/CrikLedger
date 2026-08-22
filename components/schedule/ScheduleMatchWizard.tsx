@@ -31,7 +31,7 @@ const inputClass =
 //
 // The quick case finishes on screen 1 — a bare date and ground with the
 // details switch off schedules a match with no opponent and no pool
-// entry, which the card marks with a red dot. Turning the switch on
+// entry, which the card shows as "Opponent TBD". Turning the switch on
 // disables that button, so Next becomes the only way forward.
 //
 // Pending lives on screen 2 but the direction on screen 3, so Pending is

@@ -11,7 +11,7 @@ import type { WizardInitial, WizardPlayer } from "@/components/wizard/wizardType
 
 type Props = {
   matchId: string;
-  opponent: string | null; // null = not known yet (red dot)
+  opponent: string | null; // null = not known yet
   matchDate: string; // yyyy-mm-dd, for editing the schedule
   matchDateLabel: string;
   status: "scheduled" | "completed" | "abandoned";

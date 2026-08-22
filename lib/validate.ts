@@ -179,7 +179,7 @@ const FEE_RULES: [(b: FeeBody) => boolean, string][] = [
 
 // Creating a match. Everything past the date is optional: the master
 // switch left off schedules a bare date (opponent NULL, no fee, no
-// pool entry) and the card's red dot flags it.
+// pool entry) and the card shows "Opponent TBD".
 export const createMatchSchema = FEE_RULES.reduce(
   (schema, [check, message]) => schema.refine(check, { message }),
   z.object({
@@ -191,7 +191,7 @@ export const createMatchSchema = FEE_RULES.reduce(
 );
 
 // Fixing an already-scheduled match — including filling in what
-// scheduling left blank, which is how a red dot becomes green. An
+// scheduling left blank, which is how a bare date becomes a real fixture. An
 // absent venue/opponent keeps the stored value (COALESCE server-side).
 export const editMatchSchema = FEE_RULES.reduce(
   (schema, [check, message]) => schema.refine(check, { message }),

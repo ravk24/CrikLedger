@@ -2,13 +2,8 @@
 
 import { useState } from "react";
 import { MatchCard } from "@/components/matches/MatchCard";
-import {
-  SCHEDULED_STATE_META,
-  scheduledState,
-  type ScheduledState,
-} from "@/components/matches/MatchStatusDot";
+import { scheduledState } from "@/components/matches/scheduledState";
 import { formatMonth } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import type { Match } from "@/types";
 
 type Props = {
@@ -16,14 +11,19 @@ type Props = {
   counts: Record<string, number>;
 };
 
-type Filter = "all" | ScheduledState;
+type Filter = "all" | "no_opponent" | "fee_pending";
 
 const OPTIONS: { value: Filter; label: string }[] = [
   { value: "all", label: "All matches" },
-  { value: "ready", label: "Green — opponent set, fee paid" },
-  { value: "fee_pending", label: "Orange — fee pending" },
-  { value: "no_opponent", label: "Red — no opponent yet" },
+  { value: "no_opponent", label: "No Opponent" },
+  { value: "fee_pending", label: "Pending Fee" },
 ];
+
+const EMPTY: Record<Filter, string> = {
+  all: "No scheduled matches.",
+  no_opponent: "No matches without an opponent.",
+  fee_pending: "No matches with a pending fee.",
+};
 
 // The list is small (one team's upcoming matches), so filtering happens
 // here on the already-fetched rows rather than round-tripping a query.
@@ -41,16 +41,7 @@ export function ScheduledMatchList({ matches, counts }: Props) {
   return (
     <>
       <label className="flex items-center gap-2">
-        <span className="sr-only">Filter by status</span>
-        {filter !== "all" && (
-          <span
-            aria-hidden
-            className={cn(
-              "size-2.5 shrink-0 rounded-full",
-              SCHEDULED_STATE_META[filter].className,
-            )}
-          />
-        )}
+        <span className="sr-only">Filter matches</span>
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value as Filter)}
@@ -66,7 +57,7 @@ export function ScheduledMatchList({ matches, counts }: Props) {
 
       {visible.length === 0 ? (
         <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
-          No {SCHEDULED_STATE_META[filter as ScheduledState]?.label.toLowerCase()} matches.
+          {EMPTY[filter]}
         </p>
       ) : (
         <section className="flex flex-col gap-2">
