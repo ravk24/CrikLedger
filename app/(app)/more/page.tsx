@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import {
-  Calculator,
   Car,
   CarFront,
   Info,
   Receipt,
+  Share2,
   ShoppingBag,
   Smartphone,
   Swords,
@@ -54,12 +54,6 @@ function buildFeatures(nav: NavState): Feature[] {
       icon: CarFront,
       iconClass: "bg-scheduled-light text-scheduled-foreground",
     },
-    {
-      label: "Virtual Match Fee",
-      href: "/virtual-fee",
-      icon: Calculator,
-      iconClass: "bg-credit-light text-credit-foreground",
-    },
     // Pricing is public; Purchases needs a session. A guest must still be
     // able to see what things cost, so Pricing is always shown.
     {
@@ -83,6 +77,12 @@ function buildFeatures(nav: NavState): Feature[] {
       href: "/about-us",
       icon: Info,
       iconClass: "bg-surface-secondary text-text-secondary",
+    },
+    {
+      label: "Share with a friend",
+      href: "/share-app",
+      icon: Share2,
+      iconClass: "bg-accent-light text-accent",
     },
   ];
 }

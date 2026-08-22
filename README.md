@@ -81,10 +81,9 @@ reaches the browser.
 | `/schedule` | Chooser — Barne Slots or Other Slots |
 | `/slots` | Barne Slots — the season's pre-booked Sat–Sun dates (Nov 2026 – May 2027) not yet taken by a Barne match (away matches don't consume slots) |
 | `/other-slots` | Other Slots — away matches at other grounds (Upcoming + Played). Admins schedule one via a two-step flow: who received the team's ground fee (opponent / ground owner, with a captain-transfer note in the owner case), then date + opponent + optional ground name + amount — the match and the pool debit are created in one transaction |
-| `/more` | App drawer — Car Fee Calculator, Car Counter, and Virtual Match Fee live; Tournament tile reserved for v2 |
+| `/more` | App drawer — Car Fee Calculator, Car Counter, and Share with a friend live; Tournament tile reserved for v2 |
 | `/car-fee` | Car Fee Calculator — enter the Google Maps distance (starting location → ground), fee = CEILING(2 × distance × ₹9.6/km) |
 | `/car-count` | Car Counter — active players with how many times each brought a car (derived from match participation) |
-| `/virtual-fee` | Virtual Match Fee — fun-only "who should have paid what" calculator by balls faced/bowled; nothing is stored |
 | `/matches/[id]` | Match detail — fee table, cost breakdown, surplus to pool |
 | `/pool` | Team fund ledger (+ Credit/Debit buttons when logged in as admin) |
 | `/players/[id]` | Public player statement with running balance |

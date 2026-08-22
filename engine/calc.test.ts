@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { calculateMatchFees, type Attendee } from "./calc";
 import { carFee } from "./carFee";
 import { ceilSplit } from "./split";
-import { virtualFee } from "./virtualFee";
 
 function selfRows(count: number, drivers = 0): Attendee[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -312,97 +311,5 @@ describe("carFee", () => {
 
   it("negative distance is rejected", () => {
     expect(() => carFee(-1, 9.6)).toThrowError("NEGATIVE_DISTANCE");
-  });
-});
-
-describe("virtualFee", () => {
-  const CHARGES = [200, 200, 150, 75, 35];
-  const fiveBatsmen = (ramesheBalls: number) => [
-    { name: "Ramesh", ballsFaced: ramesheBalls },
-    { name: "B2", ballsFaced: 0 },
-    { name: "B3", ballsFaced: 0 },
-    { name: "B4", ballsFaced: 0 },
-    { name: "B5", ballsFaced: 0 },
-  ];
-
-  it("canonical (remainder 1400): Ramesh pos 1 × 10 balls → 277, Suresh 12 balls → 93", () => {
-    // 2060 − 660 fixed = 1400 → pools 700/700 over 90 balls.
-    const result = virtualFee({
-      matchFee: 2060,
-      overs: 15,
-      positionCharges: CHARGES,
-      batsmen: fiveBatsmen(10),
-      bowlers: [{ name: "Suresh", ballsBowled: 12 }],
-    });
-    expect(result.totalBalls).toBe(90);
-    expect(result.fixedTotal).toBe(660);
-    expect(result.battingPool).toBe(700);
-    expect(result.bowlingPool).toBe(700);
-    expect(result.batsmen[0].total).toBe(277); // 200 + floor(77.78)
-    expect(result.batsmen[1].total).toBe(200); // fixed only
-    expect(result.bowlers[0].fee).toBe(93); // floor(93.33)
-  });
-
-  it("fee 2000: remainder is 1340 → pools 670, Ramesh 274, Suresh 89", () => {
-    const result = virtualFee({
-      matchFee: 2000,
-      overs: 15,
-      positionCharges: CHARGES,
-      batsmen: fiveBatsmen(10),
-      bowlers: [{ name: "Suresh", ballsBowled: 12 }],
-    });
-    expect(result.remainder).toBe(1340);
-    expect(result.batsmen[0].total).toBe(274); // 200 + floor(74.44)
-    expect(result.bowlers[0].fee).toBe(89); // floor(89.33)
-  });
-
-  it("position 6+ has no fixed charge — per-ball only; unoccupied charges don't count", () => {
-    const result = virtualFee({
-      matchFee: 2060,
-      overs: 15,
-      positionCharges: CHARGES,
-      batsmen: [...fiveBatsmen(0), { name: "B6", ballsFaced: 9 }],
-      bowlers: [],
-    });
-    expect(result.batsmen[5].fixedCharge).toBe(0);
-    expect(result.batsmen[5].total).toBe(70); // floor(9 × 700/90)
-    // Only 3 batsmen → only the first 3 charges come off the fee.
-    const three = virtualFee({
-      matchFee: 2060,
-      overs: 15,
-      positionCharges: CHARGES,
-      batsmen: fiveBatsmen(0).slice(0, 3),
-      bowlers: [],
-    });
-    expect(three.fixedTotal).toBe(550);
-    expect(three.remainder).toBe(1510);
-  });
-
-  it("a player who bats and bowls gets one combined total", () => {
-    const result = virtualFee({
-      matchFee: 2060,
-      overs: 15,
-      positionCharges: CHARGES,
-      batsmen: fiveBatsmen(10),
-      bowlers: [
-        { name: "Ramesh ", ballsBowled: 12 }, // trailing space still merges
-        { name: "Suresh", ballsBowled: 6 },
-      ],
-    });
-    const ramesh = result.totals.find((t) => t.name === "Ramesh");
-    expect(ramesh?.amount).toBe(277 + 93);
-    expect(result.totals).toHaveLength(6); // 5 batsmen + Suresh
-  });
-
-  it("zero overs is rejected", () => {
-    expect(() =>
-      virtualFee({
-        matchFee: 2000,
-        overs: 0,
-        positionCharges: CHARGES,
-        batsmen: [],
-        bowlers: [],
-      }),
-    ).toThrowError("NO_BALLS");
   });
 });
