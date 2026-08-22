@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { MatchCard } from "@/components/matches/MatchCard";
+import { ScheduledMatchList } from "@/components/matches/ScheduledMatchList";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabaseServer } from "@/lib/supabase-server";
 import { AccessGate } from "@/components/shared/AccessGate";
@@ -51,16 +51,12 @@ async function ScheduledMatchesData() {
     );
   }
 
+  // Plain object: a Map cannot cross the server/client boundary.
   return (
-    <section className="flex flex-col gap-2">
-      {scheduled.map((match) => (
-        <MatchCard
-          key={match.id}
-          match={match}
-          attendeeCount={counts.get(match.id) ?? 0}
-        />
-      ))}
-    </section>
+    <ScheduledMatchList
+      matches={scheduled}
+      counts={Object.fromEntries(counts)}
+    />
   );
 }
 
