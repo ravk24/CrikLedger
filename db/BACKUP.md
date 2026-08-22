@@ -2,31 +2,32 @@
 
 The Supabase database is the single source of truth for the club ledger, so it is backed up automatically every 5th day by the GitHub Actions workflow [`.github/workflows/db-backup.yml`](../.github/workflows/db-backup.yml).
 
-- **Schedule:** daily at 21:30 UTC (3:00 AM IST).
+- **Schedule:** every 5th day of the month (1st, 6th, 11th, 16th, 21st, 26th, 31st) at 21:30 UTC (3:00 AM IST) — cron `30 21 */5 * *`. The 31st → 1st gap is one day; that's fine.
+- Runs from 18–21 Aug 2026 were the original *daily* schedule, renamed and slowed to 5-day on 2026-08-21.
 - **What is backed up:** a full `pg_dump` of the `public` schema — all tables, views, functions, and RLS policies, plus every row of data.
-- **Where it goes:** an encrypted workflow artifact on the run (GitHub → Actions → Daily DB Backup → pick a run → Artifacts).
+- **Where it goes:** an encrypted workflow artifact on the run (GitHub → Actions → DB Backup (every 5 days) → pick a run → Artifacts).
 - **Retention:** each artifact is kept for **30 days**, then GitHub deletes it automatically — a rolling 30-day window with zero cleanup code.
 - **Encryption:** the repo is public, so every dump is gzip'd and GPG-encrypted (AES256) with a passphrase before upload. Without the passphrase the artifact is unreadable.
 - **Alerting:** GitHub emails the repo owner automatically if a scheduled run fails.
 
 ## Status
 
-- **2026-08-22:** the workflow has never succeeded — `SUPABASE_DB_URL` is not set, so every scheduled run exits at the guard. Until the secrets below are added, take a local dump before each migration with the installed client: `"C:/Program Files/PostgreSQL/17/bin/pg_dump.exe" "<session-pooler-url>" --schema=public --no-owner --no-privileges --clean --if-exists -f backup.sql` (the session pooler is the app URL with port 6543 → 5432). Last local dump: 2026-08-22, before migration 40.
+- **2026-08-22 (armed):** first successful run #7 — artifact `db-backup-2026-08-22-run7` (19 KB, expires 2026-09-21). Runs 1–6 failed because the `Production` environment had no secrets, then a direct-connection URL, then a pooler URL with user `postgres` instead of `postgres.<ref>`. If it ever breaks again, fall back to a local dump before each migration with the installed client: `"C:/Program Files/PostgreSQL/17/bin/pg_dump.exe" "<session-pooler-url>" --schema=public --no-owner --no-privileges --clean --if-exists -f backup.sql` (the session pooler URL is the app's `DATABASE_URL` with port `6543` replaced by `5432`). Last local dump: 2026-08-22, before migration 40.
 
 ## One-time setup (required before the first backup works)
 
-Add two secrets at **GitHub → repo → Settings → Secrets and variables → Actions**. They live as **environment secrets** in the `Production` environment (the workflow job declares `environment: Production`); repository-level secrets with the same names would also work.
+Add two secrets at **GitHub → repo → Settings → Environments → Production → Add environment secret** (the workflow job declares `environment: Production`, so it reads *environment* secrets; repository-level secrets under Secrets and variables → Actions would also work). From a terminal: `gh secret set SUPABASE_DB_URL --env Production` and `gh secret set BACKUP_PASSPHRASE --env Production` (each prompts for the value).
 
 | Secret | Value |
 | --- | --- |
-| `SUPABASE_DB_URL` | The **Session pooler** connection string from Supabase Dashboard → **Connect** → *Session pooler*. It uses port **5432** and looks like `postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres`. ⚠️ Not the app's `DATABASE_URL` — `pg_dump` cannot use the transaction pooler (port 6543), and the workflow fails fast if it detects one. |
+| `SUPABASE_DB_URL` | The **Session pooler** connection string from Supabase Dashboard → **Connect** → *Session pooler*. It is the app's `DATABASE_URL` with port **5432** instead of 6543: `postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres`. ⚠️ Not the unmodified `DATABASE_URL` — `pg_dump` cannot use the transaction pooler (port 6543), and the workflow fails fast if it detects one. |
 | `BACKUP_PASSPHRASE` | A strong passphrase of your choosing. **Save it in a password manager too** — if it is lost, every backup is permanently unreadable. |
 
-Then trigger a manual run to verify: **Actions → Daily DB Backup → Run workflow**.
+Then trigger a manual run to verify: **Actions → DB Backup (every 5 days) → Run workflow** (or `gh workflow run "DB Backup (every 5 days)"`).
 
 ## Restoring a backup
 
-1. Download the artifact from the desired run (Actions → Daily DB Backup → run → Artifacts) and unzip it to get `backup.sql.gz.gpg`.
+1. Download the artifact from the desired run (Actions → DB Backup (every 5 days) → run → Artifacts) and unzip it to get `backup.sql.gz.gpg`.
 2. Decrypt and decompress:
    ```sh
    gpg --decrypt --batch --passphrase "<BACKUP_PASSPHRASE>" backup.sql.gz.gpg > backup.sql.gz
@@ -44,4 +45,4 @@ Notes:
 
 ## Manual on-demand backup
 
-Actions → **Daily DB Backup** → **Run workflow** (e.g. right before running a risky migration).
+Actions → **DB Backup (every 5 days)** → **Run workflow** (e.g. right before running a risky migration).

@@ -6,9 +6,9 @@ Work goes straight to `main`; prod deploys from there.
 
 ## 0. Guardrails before touching the database again
 
-**Status 2026-08-22:** GitHub backups are STILL unarmed (`SUPABASE_DB_URL` secret missing — every scheduled run fails). A local `pg_dump` was taken before migration 40: `C:/Users/ravk2/crikledger-backups/2026-08-22-pre-migration-40.sql`. Item 1 remains open.
+**Status 2026-08-22 (evening):** GitHub backups are ARMED — run #7 succeeded (artifact `db-backup-2026-08-22-run7`); item 1 closed. A local `pg_dump` was taken before migration 40: `C:/Users/ravk2/crikledger-backups/2026-08-22-pre-migration-40.sql`. Item 1 remains open.
 
-1. **Arm Supabase backups.** The project is shared with a separate tenancy-migration repo that wiped it once (2026-08-20); backups were still unarmed on 2026-08-21. Confirm a fresh backup exists and note the date in `db/BACKUP.md` before any migration below. (`db/BACKUP.md` describes the 5-day backup scheme — verify it actually runs.)
+1. ~~**Arm Supabase backups.**~~ DONE 2026-08-22 (see db/BACKUP.md Status). The project is shared with a separate tenancy-migration repo that wiped it once (2026-08-20); backups were still unarmed on 2026-08-21. Confirm a fresh backup exists and note the date in `db/BACKUP.md` before any migration below. (`db/BACKUP.md` describes the 5-day backup scheme — verify it actually runs.)
 
 ## 1. Verify what just shipped (no code)
 

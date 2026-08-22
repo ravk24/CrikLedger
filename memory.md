@@ -48,7 +48,7 @@ All commits pushed directly to `main` (no branches); every one passed tsc, eslin
 
 - `main` = `dcb4c13`, pushed, working tree clean. Prod verified after deploy: sw v5 live, `/api/health` `bom1` warm 0.15 s, signed-in `/pool` (ordered, admin controls), Home balances, `/matches` attendee counts, completed match page with share button, no console errors.
 - Migrations 39 and 40 applied to the shared Supabase project; balances diffed identical before/after 40.
-- **Backups still NOT armed**: GitHub "DB Backup" workflow has never succeeded (`SUPABASE_DB_URL` env secret missing in `Production`). Local dump before migration 40: `C:/Users/ravk2/crikledger-backups/2026-08-22-pre-migration-40.sql`.
+- **Backups ARMED 2026-08-22**: `Production` env secrets `SUPABASE_DB_URL` (session pooler, user `postgres.<ref>`, port 5432) + `BACKUP_PASSPHRASE` set; run #7 green, artifact `db-backup-2026-08-22-run7`; next scheduled 26 Aug. Local dump before migration 40: `C:/Users/ravk2/crikledger-backups/2026-08-22-pre-migration-40.sql`.
 - Untested by hand today: wizard completion (client-side preview), optimistic pool/statement edits, tournament complete/reopen, player deactivate, `/pool?page=2`, Share match sheet tap.
 
 ## Next session starts with
