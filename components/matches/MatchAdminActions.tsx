@@ -64,7 +64,8 @@ export function MatchAdminActions({
         setError(body.error?.message ?? "Could not delete the match.");
         return;
       }
-      router.push("/schedule/upcoming");
+      // Delete only exists on completed matches, so back to that list.
+      router.push("/schedule/completed");
       startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");

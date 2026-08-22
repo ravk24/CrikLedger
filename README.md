@@ -77,10 +77,10 @@ reaches the browser.
 | Route | Page |
 |---|---|
 | `/` | Dashboard — animated pool balance card + searchable player balance grid, lowest balance first |
-| `/matches` | Match cards — Barne/Other ground tag (from `matches.ground`, the scheduling-flow provenance), result badge on played matches |
-| `/schedule` | Chooser — Barne Slots or Other Slots |
-| `/slots` | Barne Slots — the season's pre-booked Sat–Sun dates (Nov 2026 – May 2027) not yet taken by a Barne match (away matches don't consume slots) |
-| `/other-slots` | Other Slots — away matches at other grounds (Upcoming + Played). Admins schedule one via a two-step flow: who received the team's ground fee (opponent / ground owner, with a captain-transfer note in the owner case), then date + opponent + optional ground name + amount — the match and the pool debit are created in one transaction |
+| `/schedule` | Hub — Schedule match, Upcoming, Completed |
+| `/schedule/upcoming` | Scheduled matches, month-grouped, with a filter (All / No Opponent / Pending Fee) |
+| `/schedule/completed` | Played and abandoned matches, newest first, with result badges |
+| `/matches/[id]` | Match detail — fee table, share sheet, admin actions; back link returns to Upcoming or Completed by status |
 | `/more` | App drawer — Car Fee Calculator, Car Counter, and Share with a friend live; Tournament tile reserved for v2 |
 | `/car-fee` | Car Fee Calculator — enter the Google Maps distance (starting location → ground), fee = CEILING(2 × distance × ₹9.6/km) |
 | `/car-count` | Car Counter — active players with how many times each brought a car (derived from match participation) |
