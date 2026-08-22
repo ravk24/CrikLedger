@@ -206,21 +206,39 @@ async function settleTournamentFees(
 
   // Idempotent: wholesale replace (partial uniques backstop the entries).
   await reverseSettlement(client, tournament.id);
-  for (const row of result.rows) {
+  // One insert per table (players × matches used to be one round-trip
+  // each — 160 sequential inserts for a full tournament).
+  if (result.rows.length > 0) {
     await client.query(
       `INSERT INTO tournament_fee_charges
          (tournament_id, player_id, played, driver_credit, amount)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [tournament.id, row.playerId, row.played, row.driverCredit, row.charge],
+       SELECT $1, u.player_id, u.played, u.driver_credit, u.amount
+         FROM unnest($2::uuid[], $3::int[], $4::numeric[], $5::numeric[])
+           AS u(player_id, played, driver_credit, amount)`,
+      [
+        tournament.id,
+        result.rows.map((r) => r.playerId),
+        result.rows.map((r) => r.played),
+        result.rows.map((r) => r.driverCredit),
+        result.rows.map((r) => r.charge),
+      ],
     );
   }
   // Lines FK-reference the charge rows — insert them second.
-  for (const line of result.lines) {
+  if (result.lines.length > 0) {
     await client.query(
       `INSERT INTO tournament_fee_charge_lines
          (tournament_id, player_id, match_id, share, driver_credit)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [tournament.id, line.playerId, line.matchId, line.share, line.driverCredit],
+       SELECT $1, u.player_id, u.match_id, u.share, u.driver_credit
+         FROM unnest($2::uuid[], $3::uuid[], $4::numeric[], $5::numeric[])
+           AS u(player_id, match_id, share, driver_credit)`,
+      [
+        tournament.id,
+        result.lines.map((l) => l.playerId),
+        result.lines.map((l) => l.matchId),
+        result.lines.map((l) => l.share),
+        result.lines.map((l) => l.driverCredit),
+      ],
     );
   }
   if (joiningFee > 0) {

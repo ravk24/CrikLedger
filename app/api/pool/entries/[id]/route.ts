@@ -110,13 +110,11 @@ export async function PATCH(
           `DELETE FROM expense_shares WHERE pool_entry_id = $1`,
           [id],
         );
-        for (const player of activePlayers) {
-          await client.query(
-            `INSERT INTO expense_shares (pool_entry_id, player_id, amount, team_id)
-             VALUES ($1, $2, $3, $4)`,
-            [id, player.id, split.share, entry.team_id],
-          );
-        }
+        await client.query(
+          `INSERT INTO expense_shares (pool_entry_id, player_id, amount, team_id)
+           SELECT $1, p, $3, $4 FROM unnest($2::uuid[]) AS p`,
+          [id, activePlayers.map((p) => p.id), split.share, entry.team_id],
+        );
         return { id, share: split.share, players: split.players };
       }
       return { id };

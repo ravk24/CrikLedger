@@ -194,20 +194,39 @@ export async function completeMatch(
     ]);
     const captainPlaying =
       captain !== null && body.rows.some((r) => r.player_id === captain.id);
-    for (const row of body.rows) {
+    // One multi-row insert: every per-row value is decided here first,
+    // then unnest() writes the whole attendance in a single round-trip.
+    const rows = body.rows.map((row) => {
       const isCaptainRow = captain !== null && row.player_id === captain.id;
       const share = isCaptainRow ? guestFee : 0;
       const fee = feeByPlayer.get(row.player_id) ?? 0;
-      await client.query(
-        `INSERT INTO match_participants
-           (match_id, player_id, brought_car, shared_car, fee_amount,
-            guest_fee_share, is_playing, team_id)
-         VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7)`,
-        [matchId, row.player_id, row.brought_car,
-         row.shared_car && !row.brought_car, fee + share, share,
-         match.team_id],
-      );
-    }
+      return {
+        playerId: row.player_id,
+        broughtCar: row.brought_car,
+        sharedCar: row.shared_car && !row.brought_car,
+        feeAmount: fee + share,
+        guestFeeShare: share,
+      };
+    });
+    await client.query(
+      `INSERT INTO match_participants
+         (match_id, player_id, brought_car, shared_car, fee_amount,
+          guest_fee_share, is_playing, team_id)
+       SELECT $1, u.player_id, u.brought_car, u.shared_car, u.fee_amount,
+              u.guest_fee_share, TRUE, $2
+         FROM unnest($3::uuid[], $4::boolean[], $5::boolean[],
+                     $6::numeric[], $7::numeric[])
+           AS u(player_id, brought_car, shared_car, fee_amount, guest_fee_share)`,
+      [
+        matchId,
+        match.team_id,
+        rows.map((r) => r.playerId),
+        rows.map((r) => r.broughtCar),
+        rows.map((r) => r.sharedCar),
+        rows.map((r) => r.feeAmount),
+        rows.map((r) => r.guestFeeShare),
+      ],
+    );
     // Captain absent but charged: a charge-only row keeps balances and
     // statements derived from one place.
     if (captain && !captainPlaying && guestFee !== 0) {

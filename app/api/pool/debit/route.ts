@@ -45,13 +45,11 @@ export async function POST(req: NextRequest) {
       );
       const debitId = debitRes.rows[0].id;
 
-      for (const player of activePlayers) {
-        await client.query(
-          `INSERT INTO expense_shares (pool_entry_id, player_id, amount, team_id)
-           VALUES ($1, $2, $3, $4)`,
-          [debitId, player.id, split.share, teamId],
-        );
-      }
+      await client.query(
+        `INSERT INTO expense_shares (pool_entry_id, player_id, amount, team_id)
+         SELECT $1, p, $3, $4 FROM unnest($2::uuid[]) AS p`,
+        [debitId, activePlayers.map((p) => p.id), split.share, teamId],
+      );
 
       return {
         debit_id: debitId,

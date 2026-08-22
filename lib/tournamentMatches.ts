@@ -156,21 +156,22 @@ export async function completeTournamentMatch(
       `DELETE FROM tournament_match_participants WHERE match_id = $1`,
       [matchId],
     );
-    for (const row of body.rows) {
-      await client.query(
-        `INSERT INTO tournament_match_participants
-           (tournament_id, match_id, player_id, brought_car, shared_car, fee_amount)
-         VALUES ($1, $2, $3, $4, $5, 0)`,
-        [
-          tournamentId,
-          matchId,
-          row.player_id,
-          row.brought_car,
-          // A driver is never a sharer — ticking both means "brought".
-          row.shared_car && !row.brought_car,
-        ],
-      );
-    }
+    // One multi-row insert. A driver is never a sharer — ticking both
+    // means "brought".
+    await client.query(
+      `INSERT INTO tournament_match_participants
+         (tournament_id, match_id, player_id, brought_car, shared_car, fee_amount)
+       SELECT $1, $2, u.player_id, u.brought_car, u.shared_car, 0
+         FROM unnest($3::uuid[], $4::boolean[], $5::boolean[])
+           AS u(player_id, brought_car, shared_car)`,
+      [
+        tournamentId,
+        matchId,
+        body.rows.map((r) => r.player_id),
+        body.rows.map((r) => r.brought_car),
+        body.rows.map((r) => r.shared_car && !r.brought_car),
+      ],
+    );
     // Legacy cleanup: editing a match completed under the old per-match
     // model removes its stale surplus row.
     await client.query(`DELETE FROM tournament_entries WHERE match_id = $1`, [
