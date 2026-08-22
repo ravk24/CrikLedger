@@ -22,7 +22,7 @@ async function CarFeeData() {
     Number.isFinite(rate) && rate > 0 ? rate : DEFAULT_CAR_RATE_PER_KM;
   return (
     <>
-      <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-secondary">
+      <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-secondary">
         Open Google Maps and enter your{" "}
         <span className="font-semibold text-text-primary">
           starting location

@@ -67,7 +67,7 @@ export function ShareMatchSheetButton({ payload }: { payload: MatchSheetPayload 
         type="button"
         onClick={() => void share()}
         disabled={busy}
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-md border border-border bg-surface text-sm font-medium text-text-primary disabled:opacity-60"
+        className="flex h-11 w-full items-center justify-center gap-2 rounded-md border border-border bg-surface shadow-card text-sm font-medium text-text-primary disabled:opacity-60"
       >
         <Share2 size={16} />
         {busy ? "Building…" : "Share match sheet"}

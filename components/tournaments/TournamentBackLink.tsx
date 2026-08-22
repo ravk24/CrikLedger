@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import { CHROME_BACK_LINK } from "@/lib/ui";
 
 type Props = {
   segment?: string; // e.g. "matches" → /tournaments/<id>/matches; omit for Home
@@ -16,7 +17,7 @@ function BackLinkInner({ segment, label }: Props) {
   return (
     <Link
       href={segment ? `${base}/${segment}` : base}
-      className="flex min-h-11 items-center gap-1 px-2 text-sm font-medium text-text-secondary"
+      className={CHROME_BACK_LINK}
     >
       <ChevronLeft size={18} />
       {label}
@@ -31,7 +32,7 @@ export function TournamentBackLink({ segment, label }: Props) {
   return (
     <Suspense
       fallback={
-        <span className="flex min-h-11 items-center gap-1 px-2 text-sm font-medium text-text-secondary">
+        <span className={CHROME_BACK_LINK}>
           <ChevronLeft size={18} />
           {label}
         </span>

@@ -34,7 +34,7 @@ const inputClass =
 
 // SG-console tile idioms (app/admin/page.tsx).
 const tileClass =
-  "flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface p-4 text-left text-text-primary disabled:cursor-not-allowed disabled:text-text-muted disabled:opacity-70";
+  "flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface shadow-card p-4 text-left text-text-primary disabled:cursor-not-allowed disabled:text-text-muted disabled:opacity-70";
 
 // The tournament's Admin console tab: SG-style card grid (money entry
 // lives HERE, not on the Ledger tab — Ravi 2026-08-15), then details
@@ -454,7 +454,7 @@ export function TournamentAdminPanel({
             className={
               readOnly
                 ? "h-11 w-full rounded-md bg-accent text-sm font-medium text-accent-foreground"
-                : "h-11 w-full rounded-md border border-border bg-surface text-sm font-medium text-text-primary"
+                : "h-11 w-full rounded-md border border-border bg-surface shadow-card text-sm font-medium text-text-primary"
             }
           >
             {readOnly ? "Reopen tournament" : "Mark as completed"}

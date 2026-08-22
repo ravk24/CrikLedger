@@ -77,7 +77,7 @@ export function InstallGuide({
 
   if (installed) {
     return (
-      <section className="flex items-start gap-3 rounded-lg border border-border bg-surface p-4">
+      <section className="flex items-start gap-3 rounded-lg border border-border bg-surface shadow-card p-4">
         <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-credit" />
         <div>
           <p className="text-sm font-semibold text-text-primary">
@@ -95,7 +95,7 @@ export function InstallGuide({
   const steps = INSTALL_STEPS[platform];
 
   return (
-    <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4">
+    <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface shadow-card p-4">
       <div>
         <h2 className="text-base font-semibold text-text-primary">
           Install CrikLedger on your phone

@@ -85,7 +85,7 @@ export function StepSharedCar({
         </span>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border bg-surface">
+      <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
         <div className="max-h-60 divide-y divide-border overflow-y-auto">
           {players.map((player) => {
             const drove = cars.has(player.id);

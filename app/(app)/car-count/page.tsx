@@ -46,14 +46,14 @@ async function CarCountData() {
 
   if (players.length === 0) {
     return (
-      <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+      <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
         No active players yet.
       </p>
     );
   }
 
   return (
-    <div className="divide-y divide-border rounded-lg border border-border bg-surface">
+    <div className="divide-y divide-border rounded-lg border border-border bg-surface shadow-card">
       {players.map((player) => (
         <div
           key={player.name}

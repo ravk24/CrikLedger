@@ -39,7 +39,7 @@ export function ShareAppActions() {
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4">
+    <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface shadow-card p-4">
       <p className="text-sm text-text-secondary">{SHARE_MESSAGE}</p>
       <button
         type="button"
@@ -53,7 +53,7 @@ export function ShareAppActions() {
         href={`https://wa.me/?text=${encodeURIComponent(SHARE_MESSAGE)}`}
         target="_blank"
         rel="noopener"
-        className="flex h-11 w-full items-center justify-center gap-2 rounded-md border border-border bg-surface text-sm font-medium text-text-primary"
+        className="flex h-11 w-full items-center justify-center gap-2 rounded-md border border-border bg-surface shadow-card text-sm font-medium text-text-primary"
       >
         <MessageCircle size={16} />
         Send on WhatsApp

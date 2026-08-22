@@ -6,14 +6,14 @@ Last updated: 2026-08-22 ~21:00 IST (session 16, end)
 
 All on `main`, pushed; working tree clean.
 
-- **Light theme enforced** (`d9cc978`): `app/layout.tsx` `ThemeProvider` now `defaultTheme="light" forcedTheme="light" enableSystem={false}`; `viewport.themeColor` collapsed to `#4f46e5`. `ThemeSwitcher` import/render removed from `components/shared/AppHeader.tsx` (the only place it was rendered). Dark code deliberately kept: `.dark` block in `globals.css`, `components/theme-switcher.tsx`, `switch.tsx` `dark:` utilities, `public/offline.html`. Re-enable = drop `forcedTheme`, `defaultTheme="system"`, `enableSystem`, re-add `<ThemeSwitcher />`.
+- **Light theme only** (`d9cc978`, then the refresh 2026-08-22): `ThemeProvider` is `forcedTheme="light"`; the `.dark` tokens, `components/theme-switcher.tsx` and every `dark:` utility were REMOVED on user instruction. `viewport.themeColor` / manifest `theme_color` are `#0f172a` (navy chrome).
 - **Pre-launch DB reset executed** (`972d388`): `db/clear-dev-data.sql` rewritten to wipe all 19 data tables in FK-safe order (tournament tables → entitlements → team tables → `admins WHERE platform_role <> 'megaadmin'`, then bump megaadmin `session_epoch`). New `db/reset.mjs` (`node db/reset.mjs --confirm`; reads `DATABASE_URL` from `.env.local`; refuses without flag; aborts unless exactly one megaadmin row; prints before/after counts). Ran against live Supabase after GitHub backup run 32579010470 succeeded. Before: 5 accounts, 2 teams, 22 players, 10 matches, 14 pool entries, 1 tournament. After: every data table 0, `_migrations` 41, `admins` = `ravi_kant` only. `our-xi` and `ravi_kant_SA` are gone.
 - **Home install card expands in place** (`4ccacfb`): new `components/install/InstallCard.tsx` (client; button with `aria-expanded` + rotating `ChevronDown`, renders `InstallGuide` below when open). `HomeIntro.tsx` (still a server component) renders `<InstallCard diagrams={renderInstallDiagrams()} />` then the two remaining link rows (`/schedule`, `/pricing`). `/install` route unchanged (used by More + `InstallNudge`). Verified in browser signed out.
 - Git-ignored docs updated locally: `context/progress-tracker.md` item 17 (reset done), `context/build-plan.md`, `context/ui-registry.md:109`, `context/ui-rules.md` Theme section, `CrikLedger-docs/01`, `06` (data volume), `07` (accounts).
 
 ## Decisions made
 
-- Dark theme is disabled, not deleted (user's explicit ask).
+- Visual system 2026-08-22: navy chrome (`--color-chrome*`) for header, tab bar, copyright strip and the pool hero card; sky accent `#0284c7`; cards carry `shadow-card`; shared chrome class recipes in `lib/ui.ts`.
 - Reset scope: wipe everything incl. `our-xi` and `ravi_kant_SA`; teams/superadmins are to be created via `/ops` grants from now on, not seed files.
 - Home for anonymous and signed-in-no-ledger users is the three-collapsed-card layout; only "How to install" is a disclosure, the other two stay links.
 

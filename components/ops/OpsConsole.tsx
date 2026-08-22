@@ -111,7 +111,7 @@ export function OpsConsole({ ledger, tournament, stats, prices }: Props) {
               key={t.key}
               type="button"
               onClick={() => setOpen(t.key)}
-              className="flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface p-4 text-left text-text-primary"
+              className="flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface shadow-card p-4 text-left text-text-primary"
             >
               <span
                 className={cn(
@@ -188,7 +188,7 @@ export function OpsConsole({ ledger, tournament, stats, prices }: Props) {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex min-h-20 flex-col justify-center gap-0.5 rounded-lg border border-border bg-surface p-4">
+    <div className="flex min-h-20 flex-col justify-center gap-0.5 rounded-lg border border-border bg-surface shadow-card p-4">
       <span className="text-2xl font-bold tabular-nums text-text-primary">
         {value}
       </span>
@@ -368,11 +368,11 @@ function GrantSheet({
             {copy.title} · {rows.length}
           </h3>
           {rows.length === 0 ? (
-            <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+            <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
               {copy.empty}
             </p>
           ) : (
-            <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+            <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
               {rows.map((r) => (
                 <li key={r.account_id}>
                   <Link

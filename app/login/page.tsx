@@ -26,7 +26,7 @@ export default function Login() {
         <p className="mt-1 text-center text-sm text-text-secondary">
           Browsing is free — sign in to run your team&apos;s ledger.
         </p>
-        <div className="mt-6 rounded-lg border border-border bg-surface p-4">
+        <div className="mt-6 rounded-lg border border-border bg-surface shadow-card p-4">
           <LoginForm />
         </div>
         <p className="mt-4 text-center text-xs text-text-muted">

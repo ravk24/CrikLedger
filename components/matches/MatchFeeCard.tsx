@@ -59,7 +59,7 @@ export function MatchFeeCard({
 
   if (cleared) {
     return (
-      <section className="rounded-lg border border-border bg-surface p-4">
+      <section className="rounded-lg border border-border bg-surface shadow-card p-4">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-medium text-text-primary">Match Fee</p>
           <span className="rounded-full bg-credit-light px-2 py-0.5 text-xs font-medium text-credit-foreground">
@@ -71,7 +71,7 @@ export function MatchFeeCard({
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4">
+    <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface shadow-card p-4">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium text-text-primary">Match Fee</p>
         <p className="text-xs font-medium text-low">

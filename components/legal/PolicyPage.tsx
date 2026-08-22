@@ -36,7 +36,7 @@ export function PolicyPage({
         <p className="mt-0.5 text-xs text-text-muted">Last updated {updated}</p>
       </div>
       <section
-        className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 text-sm leading-relaxed text-text-secondary
+        className="flex flex-col gap-3 rounded-lg border border-border bg-surface shadow-card p-4 text-sm leading-relaxed text-text-secondary
           [&_h2]:mt-2 [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:text-text-primary
           [&_h3]:text-[13px] [&_h3]:font-semibold [&_h3]:text-text-primary
           [&_strong]:font-semibold [&_strong]:text-text-primary

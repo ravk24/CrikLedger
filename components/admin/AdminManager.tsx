@@ -152,7 +152,7 @@ export function AdminManager({ admins, selfId }: Props) {
         </section>
       )}
 
-      <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+      <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
         {admins.map((admin) => (
           <div
             key={admin.id}

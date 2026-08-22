@@ -32,6 +32,7 @@ import { supabaseServer } from "@/lib/supabase-server";
 import { getTeamById } from "@/lib/team";
 import type { WizardInitial } from "@/components/wizard/wizardTypes";
 import type { GroundBookingPublic, Match, MatchParticipantPublic } from "@/types";
+import { CHROME_HEADER, CHROME_BACK_LINK } from "@/lib/ui";
 
 type MatchPublicRow = Match & { updated_by_name: string | null };
 
@@ -446,7 +447,7 @@ async function MatchDetailData({
       )}
 
       {match.status === "abandoned" && (
-        <section className="rounded-lg border border-border bg-surface p-4">
+        <section className="rounded-lg border border-border bg-surface shadow-card p-4">
           <p className="text-sm text-text-primary">
             Match abandoned{match.abandoned_reason ? ` — ${match.abandoned_reason}` : ""}.
           </p>
@@ -517,8 +518,7 @@ async function MatchDetailData({
   );
 }
 
-const backLinkClass =
-  "flex min-h-11 items-center gap-1 px-2 text-sm font-medium text-text-secondary";
+const backLinkClass = CHROME_BACK_LINK;
 
 // Back goes to the list this match lives in: Schedule › Upcoming for a
 // scheduled match, Schedule › Completed once played or abandoned. Only
@@ -550,7 +550,7 @@ export default function MatchDetail({
 }) {
   return (
     <div className="min-h-svh bg-background pb-16">
-      <header className="sticky top-0 z-10 border-b border-border bg-surface">
+      <header className={CHROME_HEADER}>
         <div className="mx-auto flex max-w-md items-center gap-1 px-2 py-3">
           <Suspense
             fallback={

@@ -54,7 +54,7 @@ async function AccountData({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <OpsChrome backHref="/ops">
-      <section className="flex flex-col gap-1 rounded-lg border border-border bg-surface p-4">
+      <section className="flex flex-col gap-1 rounded-lg border border-border bg-surface shadow-card p-4">
         <h1 className="text-lg font-bold text-text-primary">
           {account.username}
         </h1>
@@ -76,11 +76,11 @@ async function AccountData({ params }: { params: Promise<{ id: string }> }) {
           Memberships
         </h2>
         {memRes.rows.length === 0 ? (
-          <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+          <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
             None — this account owns and administers nothing.
           </p>
         ) : (
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
             {memRes.rows.map((m, i) => (
               <li
                 key={i}

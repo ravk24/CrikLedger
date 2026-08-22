@@ -11,6 +11,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  CHROME_BAR,
+  CHROME_TAB,
+  CHROME_TAB_ICON,
+  CHROME_TAB_ICON_ACTIVE,
+} from "@/lib/ui";
 import type { IconKey, TabSpec } from "@/lib/nav";
 
 // The key -> component map lives HERE, on the client. TabSpec carries an
@@ -33,12 +39,11 @@ export function AppTabBar({ tabs }: { tabs: TabSpec[] }) {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-[calc(24px+env(safe-area-inset-bottom))] z-10 border-t border-border bg-surface">
+    <nav className={CHROME_BAR}>
       <div className="mx-auto flex max-w-md">
         {tabs.map((tab) => {
           const Icon = ICONS[tab.icon];
-          const className =
-            "flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 py-2";
+          const className = CHROME_TAB;
 
           if (!tab.href) {
             return (
@@ -48,9 +53,11 @@ export function AppTabBar({ tabs }: { tabs: TabSpec[] }) {
                 // or href is free to change with entitlement.
                 key={tab.slot}
                 aria-disabled="true"
-                className={cn(className, "text-text-muted opacity-50")}
+                className={cn(className, "text-chrome-muted opacity-40")}
               >
-                <Icon size={20} strokeWidth={2} />
+                <span className={CHROME_TAB_ICON}>
+                  <Icon size={20} strokeWidth={2} />
+                </span>
                 <span className="whitespace-nowrap text-center text-[11px] font-semibold leading-tight">
                   {tab.label}
                 </span>
@@ -70,10 +77,14 @@ export function AppTabBar({ tabs }: { tabs: TabSpec[] }) {
               href={tab.href}
               className={cn(
                 className,
-                active ? "text-accent" : "text-text-muted",
+                active ? "text-chrome-accent" : "text-chrome-muted",
               )}
             >
-              <Icon size={20} strokeWidth={active ? 2.25 : 2} />
+              <span
+                className={cn(CHROME_TAB_ICON, active && CHROME_TAB_ICON_ACTIVE)}
+              >
+                <Icon size={20} strokeWidth={active ? 2.25 : 2} />
+              </span>
               <span
                 className={cn(
                   "whitespace-nowrap text-center text-[11px] leading-tight",

@@ -172,7 +172,7 @@ export function PoolAdminSection({
         />
       </div>
 
-      <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+      <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
         {entries.map((entry) => (
           <LedgerRow
             key={entry.id}

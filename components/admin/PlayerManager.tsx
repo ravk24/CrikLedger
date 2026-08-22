@@ -151,7 +151,7 @@ export function PlayerManager({ players: serverPlayers }: Props) {
 
   return (
     <>
-      <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+      <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
         {players.map((player) => (
           <div
             key={player.id}

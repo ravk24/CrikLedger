@@ -64,7 +64,7 @@ export function StepResult({
             value={abandonReason}
             onChange={(e) => onAbandonReason(e.target.value)}
             placeholder="Rain, ground unplayable…"
-            className="mt-2 h-11 w-full rounded-md border border-border bg-surface px-3 text-base text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+            className="mt-2 h-11 w-full rounded-md border border-border bg-surface shadow-card px-3 text-base text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
           />
         )}
         {abandonMode && (

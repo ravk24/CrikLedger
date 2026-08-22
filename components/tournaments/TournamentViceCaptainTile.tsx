@@ -61,7 +61,7 @@ export function TournamentViceCaptainTile({
         type="button"
         disabled={disabled}
         onClick={() => setOpen(true)}
-        className="flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface p-4 text-left text-text-primary disabled:cursor-not-allowed disabled:text-text-muted disabled:opacity-70"
+        className="flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface shadow-card p-4 text-left text-text-primary disabled:cursor-not-allowed disabled:text-text-muted disabled:opacity-70"
       >
         <span className="flex size-9 items-center justify-center rounded-md bg-accent-light text-accent">
           <Award size={18} />

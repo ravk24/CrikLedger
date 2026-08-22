@@ -120,7 +120,7 @@ function StatementRowItem({
           {row.match_id && (
             <Link
               href={`/matches/${row.match_id}`}
-              className="flex h-10 w-full items-center justify-center rounded-md border border-border bg-surface text-sm font-medium text-accent"
+              className="flex h-10 w-full items-center justify-center rounded-md border border-border bg-surface shadow-card text-sm font-medium text-accent"
             >
               View match
             </Link>
@@ -129,7 +129,7 @@ function StatementRowItem({
             <button
               type="button"
               onClick={onEdit}
-              className="h-10 w-full rounded-md border border-border bg-surface text-sm font-medium text-accent"
+              className="h-10 w-full rounded-md border border-border bg-surface shadow-card text-sm font-medium text-accent"
             >
               Edit entry
             </button>
@@ -245,7 +245,7 @@ export function StatementList({ rows: serverRows, canEdit }: Props) {
 
   return (
     <>
-      <section className="overflow-hidden rounded-lg border border-border bg-surface">
+      <section className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
         <div className="flex items-baseline border-b border-border px-4 py-2 text-[11px] font-medium uppercase tracking-wider text-text-muted">
           <span className="flex-1">Entry</span>
           <span className="w-20 text-right">Amount</span>

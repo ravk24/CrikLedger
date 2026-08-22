@@ -45,7 +45,7 @@ export function StepFeePreview({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-hidden rounded-lg border border-border bg-surface">
+      <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
         <div className="max-h-56 divide-y divide-border overflow-y-auto">
         {rows.map((row) => {
           const key = rowKey(row);

@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getSessionAdmin } from "@/lib/session";
 import { pool } from "@/lib/db";
 import { getCurrentTeamId } from "@/lib/team";
+import { CHROME_HEADER, CHROME_BACK_LINK } from "@/lib/ui";
 
 async function PlayersData() {
   const admin = await getSessionAdmin();
@@ -45,16 +46,16 @@ async function PlayersData() {
 export default function AdminPlayers() {
   return (
     <div className="min-h-svh bg-background pb-16">
-      <header className="sticky top-0 z-10 border-b border-border bg-surface">
+      <header className={CHROME_HEADER}>
         <div className="mx-auto flex max-w-md items-center gap-1 px-2 py-3">
           <Link
             href="/admin"
-            className="flex min-h-11 items-center gap-1 px-2 text-sm font-medium text-text-secondary"
+            className={CHROME_BACK_LINK}
           >
             <ChevronLeft size={18} />
             Console
           </Link>
-          <h1 className="text-xl font-semibold text-text-primary">Players</h1>
+          <h1 className="text-xl font-semibold text-chrome-foreground">Players</h1>
         </div>
       </header>
       <main className="mx-auto flex max-w-md flex-col gap-4 px-4 py-4">

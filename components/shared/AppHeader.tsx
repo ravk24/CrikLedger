@@ -3,14 +3,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { getNavState } from "@/lib/nav";
 import { AccountMenu } from "./AccountMenu";
+import { CHROME_HEADER } from "@/lib/ui";
 
 // Brand block: fully static, so it paints in the prerendered shell.
 function Brand() {
   return (
     <Link href="/" className="flex items-center gap-2">
       <Image src="/logo.png" alt="" width={32} height={32} priority />
-      <span className="text-[17px] font-semibold tracking-tight text-text-primary">
-        Crik<span className="text-accent">Ledger</span>
+      <span className="text-[17px] font-semibold tracking-tight text-chrome-foreground">
+        Crik<span className="text-chrome-accent">Ledger</span>
       </span>
     </Link>
   );
@@ -28,7 +29,7 @@ async function HeaderAccount() {
     return (
       <Link
         href="/login"
-        className="rounded-full border border-border bg-surface-secondary px-3 py-1 text-sm font-medium text-text-primary"
+        className="rounded-full border border-chrome-border bg-chrome-elevated px-3 py-1 text-sm font-medium text-chrome-foreground"
       >
         Login
       </Link>
@@ -40,7 +41,7 @@ async function HeaderAccount() {
 
 export function AppHeader() {
   return (
-    <header className="sticky top-0 z-10 border-b border-border bg-surface">
+    <header className={CHROME_HEADER}>
       <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3">
         <Brand />
         <div className="flex items-center gap-1">

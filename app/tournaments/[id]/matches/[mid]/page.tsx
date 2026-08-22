@@ -24,6 +24,7 @@ import type {
   TournamentMatch,
   TournamentPublic,
 } from "@/types";
+import { CHROME_HEADER } from "@/lib/ui";
 
 // Sibling of the SG match detail page, scoped to the tournament's
 // isolated data — no bookings, no other-fee, no guests.
@@ -196,7 +197,7 @@ async function TournamentMatchData({
         <>
           {/* Attendance only — the participation fee settles for the whole
               tournament at Mark as completed, not per match. */}
-          <section className="overflow-hidden rounded-lg border border-border bg-surface">
+          <section className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
             <div className="flex items-baseline justify-between border-b border-border px-4 py-2">
               <span className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
                 {participants.length}{" "}
@@ -245,7 +246,7 @@ async function TournamentMatchData({
       )}
 
       {match.status === "scheduled" && (
-        <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+        <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
           {tournament.status === "completed"
             ? "This tournament is completed — reopen it to record this match."
             : "Upcoming match — awaiting completion by an admin."}
@@ -262,7 +263,7 @@ export default function TournamentMatchDetail({
 }) {
   return (
     <div className="min-h-svh bg-background pb-16">
-      <header className="sticky top-0 z-10 border-b border-border bg-surface">
+      <header className={CHROME_HEADER}>
         <div className="mx-auto flex max-w-md items-center gap-1 px-2 py-3">
           <TournamentBackLink segment="matches" label="Matches" />
         </div>

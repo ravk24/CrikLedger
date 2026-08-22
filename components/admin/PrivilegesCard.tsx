@@ -111,7 +111,7 @@ export function PrivilegesCard({ name, teamName, adminCount, creditsLeft }: Prop
   ];
 
   return (
-    <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4">
+    <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface shadow-card p-4">
       <div>
         <p className="text-[11px] font-bold uppercase tracking-wider text-text-muted">
           Your privileges

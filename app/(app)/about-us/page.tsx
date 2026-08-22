@@ -41,7 +41,7 @@ export default function AboutUs() {
           Who we are, and the terms you are agreeing to.
         </p>
       </div>
-      <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+      <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
         {LINKS.map(({ href, label, icon: Icon }) => (
           <li key={href}>
             <Link
@@ -58,7 +58,7 @@ export default function AboutUs() {
         ))}
       </ul>
 
-      <section className="flex flex-col gap-1 rounded-lg border border-border bg-surface p-4">
+      <section className="flex flex-col gap-1 rounded-lg border border-border bg-surface shadow-card p-4">
         <h2 className="text-sm font-semibold text-text-primary">
           Refunds at a glance
         </h2>

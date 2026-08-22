@@ -70,7 +70,7 @@ async function TournamentMatchesData({
       )}
 
       {matches.length === 0 && (
-        <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+        <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
           No matches yet
           {isAdmin && tournament.status === "active"
             ? " — schedule one from Admin → Schedule Matches."
@@ -83,7 +83,7 @@ async function TournamentMatchesData({
           <h2 className="px-1 text-[11px] font-medium uppercase tracking-wider text-text-muted">
             Upcoming
           </h2>
-          <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+          <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
             {upcoming.map((m) => (
               <TournamentMatchCard
                 key={m.id}
@@ -100,7 +100,7 @@ async function TournamentMatchesData({
           <h2 className="px-1 text-[11px] font-medium uppercase tracking-wider text-text-muted">
             Played
           </h2>
-          <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+          <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
             {played.map((m) => (
               <TournamentMatchCard
                 key={m.id}

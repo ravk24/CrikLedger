@@ -62,7 +62,7 @@ export function StepGuests({
       </div>
 
       {guests.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 rounded-lg border border-border bg-surface p-3">
+        <div className="flex flex-wrap gap-1.5 rounded-lg border border-border bg-surface shadow-card p-3">
           {guests.map((guest, i) => (
             <span
               key={`${guest.name}-${i}`}

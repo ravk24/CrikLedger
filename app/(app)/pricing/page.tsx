@@ -33,7 +33,7 @@ export default function Pricing() {
         <ProductCard key={p.key} product={p} />
       ))}
 
-      <section className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4 text-sm text-text-secondary">
+      <section className="flex flex-col gap-2 rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-secondary">
         <h2 className="text-sm font-semibold text-text-primary">
           How payment works
         </h2>

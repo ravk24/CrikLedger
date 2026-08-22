@@ -16,7 +16,7 @@ export function MatchCard({ match, attendeeCount }: Props) {
     <Link
       href={`/matches/${match.id}`}
       className={cn(
-        "block rounded-lg border bg-surface p-4",
+        "block rounded-lg border bg-surface p-4 shadow-card",
         state === "scheduled" ? "border-scheduled-light" : "border-border",
         state === "abandoned" && "bg-surface-secondary",
       )}

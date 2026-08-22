@@ -20,7 +20,7 @@ export function StepCars({ players, cars, onToggleCar, allowance }: Props) {
         One car per player — each driver gets a ₹{formatRupees(allowance)}{" "}
         rebate off their fee.
       </p>
-      <div className="overflow-hidden rounded-lg border border-border bg-surface">
+      <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
         <div className="max-h-60 divide-y divide-border overflow-y-auto">
         {players.map((player) => {
           const hasCar = cars.has(player.id);

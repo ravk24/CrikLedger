@@ -45,7 +45,7 @@ export function ScheduledMatchList({ matches, counts }: Props) {
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value as Filter)}
-          className="h-10 w-full rounded-md border border-border bg-surface px-3 text-sm text-text-primary focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          className="h-10 w-full rounded-md border border-border bg-surface shadow-card px-3 text-sm text-text-primary focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
         >
           {OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -56,7 +56,7 @@ export function ScheduledMatchList({ matches, counts }: Props) {
       </label>
 
       {visible.length === 0 ? (
-        <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+        <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
           {EMPTY[filter]}
         </p>
       ) : (

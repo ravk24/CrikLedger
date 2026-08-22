@@ -92,7 +92,7 @@ export function TournamentLedgerSection({ tournamentId, entries }: Props) {
 
   return (
     <>
-      <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+      <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
         {entries.length === 0 ? (
           <p className="p-4 text-sm text-text-muted">
             No entries yet — record a deposit or a shared expense from the

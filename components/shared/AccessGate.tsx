@@ -24,7 +24,7 @@ export function AccessGate({
   const noTeam = verdict.reason === "no-team";
 
   return (
-    <section className="flex flex-col items-center gap-3 rounded-lg border border-border bg-surface p-6 text-center">
+    <section className="flex flex-col items-center gap-3 rounded-lg border border-border bg-surface shadow-card p-6 text-center">
       <span className="flex size-11 items-center justify-center rounded-full bg-surface-secondary text-text-muted">
         <Lock size={20} />
       </span>

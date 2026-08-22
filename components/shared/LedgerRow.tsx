@@ -121,7 +121,7 @@ export function LedgerRow({ entry, onEdit }: Props) {
             <button
               type="button"
               onClick={onEdit}
-              className="h-10 w-full rounded-md border border-border bg-surface text-sm font-medium text-accent"
+              className="h-10 w-full rounded-md border border-border bg-surface shadow-card text-sm font-medium text-accent"
             >
               Edit entry
             </button>

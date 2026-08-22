@@ -23,7 +23,7 @@ async function PasswordGate() {
           ? "Every admin action is blocked until this is done — no skip."
           : "Choose a new password for your admin account."}
       </p>
-      <div className="mt-6 rounded-lg border border-border bg-surface p-4">
+      <div className="mt-6 rounded-lg border border-border bg-surface shadow-card p-4">
         <ChangePasswordForm requireCurrent={!admin.mustChangePassword} />
       </div>
     </>

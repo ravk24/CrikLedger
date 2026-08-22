@@ -209,7 +209,7 @@ export function GuestMatchFlow() {
   if (abandoned) {
     return (
       <>
-        <section className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4">
+        <section className="flex flex-col gap-2 rounded-lg border border-border bg-surface shadow-card p-4">
           <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-text-muted">
             <CloudRain size={14} /> Abandoned
           </p>
@@ -271,7 +271,7 @@ export function GuestMatchFlow() {
 
       {step === "intro" && (
         <>
-          <section className="rounded-lg border border-border bg-surface p-4">
+          <section className="rounded-lg border border-border bg-surface shadow-card p-4">
             <p className="text-[11px] font-bold uppercase tracking-wider text-scheduled-foreground">
               Scheduled
             </p>

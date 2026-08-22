@@ -63,13 +63,13 @@ async function TournamentLedgerData({
       {canWrite ? (
         <TournamentLedgerSection tournamentId={id} entries={entries} />
       ) : entries.length === 0 ? (
-        <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+        <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
           {tournament.status === "completed"
             ? "The ledger is empty."
             : "The ledger is empty — deposits and shared expenses will appear here."}
         </p>
       ) : (
-        <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+        <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
           {entries.map((entry) => (
             <LedgerRow key={entry.id} entry={entry} />
           ))}

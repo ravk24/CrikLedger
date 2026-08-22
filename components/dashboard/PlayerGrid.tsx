@@ -58,15 +58,15 @@ export function PlayerGrid({
       </div>
 
       {players.length === 0 ? (
-        <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+        <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
           {emptyCopy ?? "No players yet — an admin can add them from the console."}
         </p>
       ) : filtered.length === 0 ? (
-        <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+        <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
           No players match “{query.trim()}”.
         </p>
       ) : (
-        <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+        <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
           {filtered.map((player) => (
             <PlayerCard key={player.id} player={player} hrefBase={hrefBase} />
           ))}

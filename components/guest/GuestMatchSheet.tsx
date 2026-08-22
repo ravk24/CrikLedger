@@ -126,7 +126,7 @@ export function GuestMatchSheet({
         <ChevronLeft size={16} /> Back
       </button>
 
-      <section className="rounded-lg border border-border bg-surface p-4">
+      <section className="rounded-lg border border-border bg-surface shadow-card p-4">
         <p className="text-[11px] font-bold uppercase tracking-wider text-credit">
           Match complete
         </p>

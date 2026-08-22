@@ -265,7 +265,7 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
         {switchRow("Match details", detailsOn, setDetailsOn)}
 
         {detailsOn && (
-          <div className="flex flex-col gap-3 rounded-md border border-border bg-surface p-3">
+          <div className="flex flex-col gap-3 rounded-md border border-border bg-surface shadow-card p-3">
             <MoneyInput
               label="Fee"
               value={fee}

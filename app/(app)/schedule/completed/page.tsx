@@ -54,7 +54,7 @@ async function CompletedMatchesData() {
 
   if (played.length === 0) {
     return (
-      <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+      <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
         No matches played yet — completed matches will appear here.
       </p>
     );

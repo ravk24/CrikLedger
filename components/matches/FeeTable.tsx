@@ -25,7 +25,7 @@ export function FeeTable({ participants, guests }: Props) {
   const attendeeCount = playing.length + guests.length;
 
   return (
-    <section className="overflow-hidden rounded-lg border border-border bg-surface">
+    <section className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
       <div className="flex items-baseline justify-between border-b border-border px-4 py-2">
         <span className="text-[11px] font-medium uppercase tracking-wider text-text-muted">
           {attendeeCount} {attendeeCount === 1 ? "attendee" : "attendees"}

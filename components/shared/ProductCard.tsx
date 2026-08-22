@@ -58,7 +58,7 @@ export function ProductCard({
 
   if (!href) {
     return (
-      <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4">
+      <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface shadow-card p-4">
         {body}
       </section>
     );
@@ -67,7 +67,7 @@ export function ProductCard({
   return (
     <Link
       href={href}
-      className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4"
+      className="flex flex-col gap-3 rounded-lg border border-border bg-surface shadow-card p-4"
     >
       {body}
       <span className="flex items-center gap-1 text-xs font-medium text-accent">

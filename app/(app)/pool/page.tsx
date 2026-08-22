@@ -58,7 +58,7 @@ async function PoolLedgerData({ page }: { page: number }) {
     from + entries.length < total ? (
       <Link
         href={`/pool?page=${page + 1}`}
-        className="flex h-11 items-center justify-center rounded-md border border-border bg-surface text-sm font-medium text-text-primary"
+        className="flex h-11 items-center justify-center rounded-md border border-border bg-surface shadow-card text-sm font-medium text-text-primary"
       >
         Show older entries ({total - from - entries.length} more)
       </Link>
@@ -66,7 +66,7 @@ async function PoolLedgerData({ page }: { page: number }) {
 
   if (entries.length === 0 && !admin) {
     return (
-      <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+      <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
         The ledger is empty — deposits and match collections will appear here.
       </p>
     );
@@ -91,7 +91,7 @@ async function PoolLedgerData({ page }: { page: number }) {
 
   return (
     <>
-      <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+      <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
         {entries.map((entry) => (
           <LedgerRow key={entry.id} entry={entry} />
         ))}

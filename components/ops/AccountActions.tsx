@@ -78,7 +78,7 @@ export function AccountActions({
         type="button"
         onClick={() => call("reset-password")}
         disabled={busy}
-        className="h-11 rounded-md border border-border bg-surface text-sm font-medium text-text-primary disabled:opacity-60"
+        className="h-11 rounded-md border border-border bg-surface shadow-card text-sm font-medium text-text-primary disabled:opacity-60"
       >
         Reset password
       </button>

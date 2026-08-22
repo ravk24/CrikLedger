@@ -14,7 +14,7 @@ export function CarFeeCalculator({ ratePerKm }: { ratePerKm: number }) {
 
   return (
     <>
-      <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-4">
+      <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface shadow-card p-4">
         <Label htmlFor="car-fee-distance">Enter exact distance</Label>
         <div className="flex items-center gap-2">
           <Input
@@ -35,7 +35,7 @@ export function CarFeeCalculator({ ratePerKm }: { ratePerKm: number }) {
         )}
       </div>
       {valid && (
-        <div className="flex flex-col gap-1 rounded-lg border border-border bg-surface p-4">
+        <div className="flex flex-col gap-1 rounded-lg border border-border bg-surface shadow-card p-4">
           <p className="text-sm font-bold text-text-primary">Car allowance</p>
           <Money
             amount={carFee(distance, ratePerKm)}

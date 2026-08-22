@@ -17,6 +17,7 @@ import { canWrite } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
 import type { PlayerPublic } from "@/types";
+import { CHROME_HEADER, CHROME_BACK_LINK } from "@/lib/ui";
 
 // A statement grows for as long as the player plays; it is read newest
 // first, a page at a time.
@@ -108,7 +109,7 @@ async function StatementData({
       )}
 
       {rows.length === 0 ? (
-        <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+        <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
           No entries yet — deposits and match fees will appear here.
         </p>
       ) : (
@@ -118,7 +119,7 @@ async function StatementData({
       {remaining > 0 && (
         <Link
           href={`/players/${id}?page=${page + 1}`}
-          className="flex h-11 items-center justify-center rounded-md border border-border bg-surface text-sm font-medium text-text-primary"
+          className="flex h-11 items-center justify-center rounded-md border border-border bg-surface shadow-card text-sm font-medium text-text-primary"
         >
           Show older entries ({remaining} more)
         </Link>
@@ -141,11 +142,11 @@ export default function PlayerStatement({
 }) {
   return (
     <div className="min-h-svh bg-background pb-16">
-      <header className="sticky top-0 z-10 border-b border-border bg-surface">
+      <header className={CHROME_HEADER}>
         <div className="mx-auto flex max-w-md items-center gap-1 px-2 py-3">
           <Link
             href="/"
-            className="flex min-h-11 items-center gap-1 px-2 text-sm font-medium text-text-secondary"
+            className={CHROME_BACK_LINK}
           >
             <ChevronLeft size={18} />
             Players

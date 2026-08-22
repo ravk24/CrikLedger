@@ -49,7 +49,7 @@ export function ConfirmDialog({
             type="button"
             onClick={() => onOpenChange(false)}
             disabled={pending}
-            className="h-11 rounded-md border border-border bg-surface px-4 text-sm font-medium text-text-primary disabled:opacity-60"
+            className="h-11 rounded-md border border-border bg-surface shadow-card px-4 text-sm font-medium text-text-primary disabled:opacity-60"
           >
             Cancel
           </button>

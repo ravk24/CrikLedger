@@ -14,6 +14,7 @@ import type {
   TournamentPlayerPublic,
   TournamentStatementRow,
 } from "@/types";
+import { CHROME_HEADER } from "@/lib/ui";
 
 // Read-only tournament player statement. Edits happen from the
 // tournament ledger, so no admin affordances here (unlike the
@@ -104,12 +105,12 @@ async function StatementData({
       </section>
 
       {rows.length === 0 ? (
-        <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+        <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
           No entries yet — deposits, expense shares and the tournament fee will
           appear here.
         </p>
       ) : (
-        <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+        <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
           {rows.map((row) => (
             <StatementRow
               key={row.source_id}
@@ -139,7 +140,7 @@ export default function TournamentPlayerStatement({
 }) {
   return (
     <div className="min-h-svh bg-background pb-16">
-      <header className="sticky top-0 z-10 border-b border-border bg-surface">
+      <header className={CHROME_HEADER}>
         <div className="mx-auto flex max-w-md items-center gap-1 px-2 py-3">
           <TournamentBackLink label="Tournament" />
         </div>

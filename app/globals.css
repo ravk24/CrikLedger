@@ -1,8 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
 /* iOS home-indicator clearance for bars fixed to the true screen bottom */
 @utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
@@ -12,24 +10,39 @@
   /* Font */
   --font-sans: "Inter", sans-serif;
 
-  /* Page and surfaces — light theme values; dark overrides below */
-  --color-background: #f5f6f8;
+  /* Page and surfaces — light only (the theme switch was dropped 2026-08-22) */
+  --color-background: #eef2f7;
   --color-surface: #ffffff;
-  --color-surface-secondary: #f9fafb;
+  --color-surface-secondary: #f4f7fb;
 
   /* Borders */
-  --color-border: #e5e7eb;
-  --color-border-strong: #d1d5db;
+  --color-border: #dfe5ee;
+  --color-border-strong: #c7d1de;
 
   /* Text */
-  --color-text-primary: #101828;
-  --color-text-secondary: #4b5563;
-  --color-text-muted: #9ca3af;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
 
-  /* Accent — indigo. Primary buttons, active nav, focus rings. NOT money. */
-  --color-accent: #4f46e5;
+  /* Accent — sky blue, the share-card family. Primary buttons, links,
+     focus rings. NOT money. */
+  --color-accent: #0284c7;
   --color-accent-foreground: #ffffff;
-  --color-accent-light: #e0e7ff;
+  --color-accent-light: #e0f2fe;
+
+  /* Chrome — the navy bars (header, tab bar, copyright strip) and the
+     pool hero card. Matches the logo tile and the shared match PNG.
+     Shell components only; content surfaces stay white. */
+  --color-chrome: #0f172a;
+  --color-chrome-elevated: #1e293b;
+  --color-chrome-border: #273449;
+  --color-chrome-foreground: #f8fafc;
+  --color-chrome-muted: #94a3b8;
+  --color-chrome-accent: #38bdf8;
+
+  /* Card lift — soft, cool-tinted so white cards separate from the
+     off-white ground without heavy borders. */
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 14px rgb(15 23 42 / 0.06);
 
   /* Money + status: CREDIT / SURPLUS — green */
   --color-credit: #16a34a;
@@ -73,60 +86,21 @@
 
   /* shadcn/ui compatibility aliases — components/ui/* consume these names.
      Values always point at the project tokens above; never diverge. */
-  --color-foreground: #101828;
+  --color-foreground: #0f172a;
   --color-card: #ffffff;
-  --color-card-foreground: #101828;
+  --color-card-foreground: #0f172a;
   --color-popover: #ffffff;
-  --color-popover-foreground: #101828;
-  --color-primary: #4f46e5;
+  --color-popover-foreground: #0f172a;
+  --color-primary: #0284c7;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #f9fafb;
-  --color-secondary-foreground: #101828;
-  --color-muted: #f3f4f6;
-  --color-muted-foreground: #4b5563;
+  --color-secondary: #f4f7fb;
+  --color-secondary-foreground: #0f172a;
+  --color-muted: #eef2f7;
+  --color-muted-foreground: #475569;
   --color-destructive: #dc2626;
   --color-destructive-foreground: #ffffff;
-  --color-input: #e5e7eb;
-  --color-ring: #4f46e5;
-}
-
-/* Dark theme — shadcn/ui class strategy */
-.dark {
-  --color-background: #0b0b0d;
-  --color-surface: #17181b;
-  --color-surface-secondary: #1f2023;
-  --color-border: #2a2b2f;
-  --color-border-strong: #3a3b40;
-  --color-text-primary: #f4f4f5;
-  --color-text-secondary: #a1a1aa;
-  --color-text-muted: #71717a;
-  --color-accent-light: #312e81;
-  --color-credit-light: #14532d;
-  --color-credit-foreground: #bbf7d0;
-  --color-low-light: #78350f;
-  --color-low-foreground: #fde68a;
-  --color-debit-light: #7f1d1d;
-  --color-debit-foreground: #fecaca;
-  --color-inactive-light: #27272a;
-  --color-inactive-foreground: #a1a1aa;
-  --color-scheduled-light: #1e3a8a;
-  --color-scheduled-foreground: #bfdbfe;
-  --color-gold-light: #713f12;
-  --color-gold-foreground: #fde047;
-  --color-silver-light: #3f3f46;
-  --color-silver-foreground: #d4d4d8;
-
-  /* shadcn aliases — dark */
-  --color-foreground: #f4f4f5;
-  --color-card: #17181b;
-  --color-card-foreground: #f4f4f5;
-  --color-popover: #17181b;
-  --color-popover-foreground: #f4f4f5;
-  --color-secondary: #1f2023;
-  --color-secondary-foreground: #f4f4f5;
-  --color-muted: #27272a;
-  --color-muted-foreground: #a1a1aa;
-  --color-input: #2a2b2f;
+  --color-input: #dfe5ee;
+  --color-ring: #0284c7;
 }
 
 body {

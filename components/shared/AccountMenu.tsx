@@ -57,7 +57,7 @@ export function AccountMenu({ nav }: { nav: NavState }) {
         <button
           type="button"
           disabled={busy || pending}
-          className="flex min-h-7 items-center gap-1 rounded-full bg-scheduled-light px-3 py-1 text-sm font-medium text-scheduled-foreground disabled:opacity-60"
+          className="flex min-h-7 items-center gap-1 rounded-full border border-chrome-border bg-chrome-elevated px-3 py-1 text-sm font-medium text-chrome-foreground disabled:opacity-60"
         >
           {nav.isMegaadmin && <Shield size={13} aria-hidden />}
           <span className="max-w-[9ch] truncate">{firstName}</span>

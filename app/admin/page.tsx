@@ -125,14 +125,14 @@ async function ConsoleData() {
       <Link
         key={tile.label}
         href={tile.href}
-        className="flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface p-4 text-text-primary"
+        className="flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface shadow-card p-4 text-text-primary"
       >
         {inner}
       </Link>
     ) : (
       <div
         key={tile.label}
-        className="flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface p-4 text-text-muted opacity-70"
+        className="flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface shadow-card p-4 text-text-muted opacity-70"
       >
         {inner}
       </div>
@@ -145,7 +145,7 @@ async function ConsoleData() {
         <Link
           href="/"
           aria-label="Home"
-          className="flex size-11 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-text-secondary"
+          className="flex size-11 shrink-0 items-center justify-center rounded-md border border-border bg-surface shadow-card text-text-secondary"
         >
           <Home size={18} />
         </Link>

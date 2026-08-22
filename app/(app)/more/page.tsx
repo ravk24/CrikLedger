@@ -39,7 +39,7 @@ function buildFeatures(nav: NavState): Feature[] {
       label: "Car Fee Calculator",
       href: "/car-fee",
       icon: Car,
-      iconClass: "bg-accent-light text-accent",
+      iconClass: "bg-low-light text-low-foreground",
     },
     {
       label: "Car Counter",
@@ -61,7 +61,7 @@ function buildFeatures(nav: NavState): Feature[] {
             label: "Purchases",
             href: "/purchases",
             icon: ShoppingBag,
-            iconClass: "bg-accent-light text-accent",
+            iconClass: "bg-gold-light text-gold-foreground",
           } satisfies Feature,
         ]
       : []),
@@ -69,7 +69,7 @@ function buildFeatures(nav: NavState): Feature[] {
       label: "About us",
       href: "/about-us",
       icon: Info,
-      iconClass: "bg-surface-secondary text-text-secondary",
+      iconClass: "bg-inactive-light text-inactive-foreground",
     },
     {
       label: "Share with a friend",
@@ -103,7 +103,7 @@ async function MoreData() {
           <Link
             key={i}
             href={feature.href}
-            className="flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface p-4 text-text-primary"
+            className="flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface shadow-card p-4 text-text-primary"
           >
             {inner}
           </Link>
@@ -111,7 +111,7 @@ async function MoreData() {
           <div
             key={i}
             aria-disabled="true"
-            className="flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface p-4 text-text-muted opacity-60"
+            className="flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface shadow-card p-4 text-text-muted opacity-60"
           >
             {inner}
           </div>

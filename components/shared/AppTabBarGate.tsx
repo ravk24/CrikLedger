@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { CHROME_BAR, CHROME_TAB, CHROME_TAB_ICON } from "@/lib/ui";
 import { CalendarDays, Home, LayoutGrid, Trophy, Wallet } from "lucide-react";
 import { buildTabs } from "@/lib/nav";
 import { AppTabBar } from "./AppTabBar";
@@ -29,15 +31,17 @@ function AppTabBarShell() {
   ];
 
   return (
-    <nav className="fixed inset-x-0 bottom-[calc(24px+env(safe-area-inset-bottom))] z-10 border-t border-border bg-surface">
+    <nav className={CHROME_BAR}>
       <div className="mx-auto flex max-w-md">
         {tabs.map(({ label, icon: Icon, href }) => (
           <Link
             key={label}
             href={href}
-            className="flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 py-2 text-text-muted"
+            className={cn(CHROME_TAB, "text-chrome-muted")}
           >
-            <Icon size={20} strokeWidth={2} />
+            <span className={CHROME_TAB_ICON}>
+              <Icon size={20} strokeWidth={2} />
+            </span>
             <span className="whitespace-nowrap text-center text-[11px] font-semibold leading-tight">
               {label}
             </span>

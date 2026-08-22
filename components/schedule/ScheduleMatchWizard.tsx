@@ -229,7 +229,7 @@ export function ScheduleMatchWizard({ open, onOpenChange }: Props) {
         setStep((s) => (s === 3 ? 2 : 1));
       }}
       disabled={working}
-      className="h-11 rounded-md border border-border bg-surface px-5 text-sm font-medium text-text-primary disabled:opacity-60"
+      className="h-11 rounded-md border border-border bg-surface shadow-card px-5 text-sm font-medium text-text-primary disabled:opacity-60"
     >
       Back
     </button>

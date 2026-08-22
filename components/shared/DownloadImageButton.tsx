@@ -64,7 +64,7 @@ export function DownloadImageButton({
         disabled={busy}
         aria-label={`Download ${title} as image`}
         title={`Download ${title} as image`}
-        className="flex size-11 shrink-0 items-center justify-center rounded-md border border-border bg-surface text-text-secondary disabled:opacity-60"
+        className="flex size-11 shrink-0 items-center justify-center rounded-md border border-border bg-surface shadow-card text-text-secondary disabled:opacity-60"
       >
         {busy ? (
           <Loader2 size={18} className="animate-spin" />
@@ -75,7 +75,7 @@ export function DownloadImageButton({
       {error && (
         <span
           role="alert"
-          className="absolute right-0 top-full z-10 mt-1 whitespace-nowrap rounded-md border border-border bg-surface px-2 py-1 text-xs text-debit shadow-sm"
+          className="absolute right-0 top-full z-10 mt-1 whitespace-nowrap rounded-md border border-border bg-surface shadow-card px-2 py-1 text-xs text-debit shadow-sm"
         >
           {error}
         </span>

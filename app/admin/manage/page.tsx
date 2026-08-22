@@ -6,6 +6,7 @@ import { AdminManager, type AdminListRow } from "@/components/admin/AdminManager
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSessionAdmin } from "@/lib/session";
 import { pool } from "@/lib/db";
+import { CHROME_HEADER, CHROME_BACK_LINK } from "@/lib/ui";
 
 async function ManageData() {
   const admin = await getSessionAdmin();
@@ -35,17 +36,17 @@ async function ManageData() {
 export default function AdminManage() {
   return (
     <div className="min-h-svh bg-background pb-16">
-      <header className="sticky top-0 z-10 border-b border-border bg-surface">
+      <header className={CHROME_HEADER}>
         <div className="mx-auto flex max-w-md items-center justify-between px-2 py-3">
           <div className="flex items-center gap-1">
             <Link
               href="/admin"
-              className="flex min-h-11 items-center gap-1 px-2 text-sm font-medium text-text-secondary"
+              className={CHROME_BACK_LINK}
             >
               <ChevronLeft size={18} />
               Console
             </Link>
-            <h1 className="text-xl font-semibold text-text-primary">Admins</h1>
+            <h1 className="text-xl font-semibold text-chrome-foreground">Admins</h1>
           </div>
           <span className="mr-2 rounded-full bg-accent-light px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent">
             Superadmin only

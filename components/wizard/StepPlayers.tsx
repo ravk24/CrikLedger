@@ -39,7 +39,7 @@ export function StepPlayers({ players, selected, onToggle }: Props) {
         </span>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border bg-surface">
+      <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
         <div className="max-h-60 divide-y divide-border overflow-y-auto">
         {filtered.map((player) => {
           const checked = selected.has(player.id);

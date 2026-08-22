@@ -8,7 +8,7 @@
 // v5: only offline.html is precached (the icons are fetched by the
 // browser on install, never by pages), and navigations use navigation
 // preload so the network request starts before this worker has booted.
-const STATIC_CACHE = "crikledger-static-v5";
+const STATIC_CACHE = "crikledger-static-v6";
 const STATIC_ASSETS = ["/offline.html"];
 
 self.addEventListener("install", (e) => {

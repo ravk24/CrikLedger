@@ -25,7 +25,7 @@ export default function Signup() {
           Free to create. Buy a Team Ledger when you&apos;re ready to run
           your team.
         </p>
-        <div className="mt-6 rounded-lg border border-border bg-surface p-4">
+        <div className="mt-6 rounded-lg border border-border bg-surface shadow-card p-4">
           <SignupForm />
         </div>
       </main>

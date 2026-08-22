@@ -413,7 +413,7 @@ export function MatchWizard({
             type="button"
             onClick={goBack}
             disabled={pending}
-            className="h-11 rounded-md border border-border bg-surface px-5 text-sm font-medium text-text-primary disabled:opacity-60"
+            className="h-11 rounded-md border border-border bg-surface shadow-card px-5 text-sm font-medium text-text-primary disabled:opacity-60"
           >
             Back
           </button>

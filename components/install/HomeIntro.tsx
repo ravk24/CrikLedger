@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronRight, PlayCircle, Receipt } from "lucide-react";
 import type { NavState } from "@/lib/nav";
+import { cn } from "@/lib/utils";
 import { InstallCard } from "./InstallCard";
 import { renderInstallDiagrams } from "./installDiagrams";
 
@@ -19,12 +20,14 @@ const LINK_CARDS = [
   {
     href: "/schedule",
     icon: PlayCircle,
+    chip: "bg-low-light text-low-foreground",
     title: "See how it works",
     subtitle: "Take a CrikLedger feature for a spin",
   },
   {
     href: "/pricing",
     icon: Receipt,
+    chip: "bg-credit-light text-credit-foreground",
     title: "Pricing",
     subtitle: "Choose the tools your team needs",
   },
@@ -48,13 +51,18 @@ export function HomeIntro({ nav }: { nav: NavState }) {
 
       <InstallCard diagrams={renderInstallDiagrams()} />
 
-      {LINK_CARDS.map(({ href, icon: Icon, title, subtitle }) => (
+      {LINK_CARDS.map(({ href, icon: Icon, chip, title, subtitle }) => (
         <Link
           key={href}
           href={href}
-          className="flex min-h-16 items-center gap-3 rounded-lg border border-border bg-surface p-4"
+          className="flex min-h-16 items-center gap-3 rounded-lg border border-border bg-surface shadow-card p-4"
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-light text-accent">
+          <span
+            className={cn(
+              "flex size-9 shrink-0 items-center justify-center rounded-md",
+              chip,
+            )}
+          >
             <Icon size={18} />
           </span>
           <span className="min-w-0 flex-1">

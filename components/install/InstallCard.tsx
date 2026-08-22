@@ -25,9 +25,9 @@ export function InstallCard({
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
         aria-controls="install-guide"
-        className="flex min-h-16 w-full items-center gap-3 rounded-lg border border-border bg-surface p-4 text-left"
+        className="flex min-h-16 w-full items-center gap-3 rounded-lg border border-border bg-surface shadow-card p-4 text-left"
       >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-light text-accent">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-accent-light text-accent">
           <Smartphone size={18} />
         </span>
         <span className="min-w-0 flex-1">

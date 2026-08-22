@@ -13,7 +13,7 @@ import type { TournamentPublic } from "@/types";
 
 function CardList({ tournaments }: { tournaments: TournamentPublic[] }) {
   return (
-    <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+    <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
       {tournaments.map((t) => (
         <TournamentCard key={t.id} tournament={t} />
       ))}
@@ -53,7 +53,7 @@ async function TournamentDirectory({ hosted }: { hosted: boolean }) {
       </Link>
 
       {all.length === 0 ? (
-        <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+        <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
           No tournaments have been hosted yet.
         </p>
       ) : (
@@ -61,7 +61,7 @@ async function TournamentDirectory({ hosted }: { hosted: boolean }) {
           <h2 className="px-1 text-[11px] font-medium uppercase tracking-wider text-text-muted">
             Hosted on CrikLedger
           </h2>
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
             {all.map((t) => (
               // Plain text, not a control: there is nothing to disable,
               // so no aria-disabled and no <Link>.
@@ -113,7 +113,7 @@ async function HostedTournaments({ nav }: { nav: NavState }) {
       {isAdmin && <CreateTournamentSheet creditsLeft={nav.tournamentCreditsLeft} />}
 
       {tournaments.length === 0 && (
-        <p className="rounded-lg border border-border bg-surface p-4 text-sm text-text-muted">
+        <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
           No tournaments yet
           {isAdmin
             ? " — create the first one above."
@@ -147,7 +147,7 @@ async function HostedTournaments({ nav }: { nav: NavState }) {
 export default function Tournaments() {
   return (
     <>
-      <h1 className="text-xl font-semibold text-text-primary">Tournaments</h1>
+      <h1 className="text-xl font-bold text-text-primary">Tournaments</h1>
       <Suspense fallback={<Skeleton className="h-64 rounded-lg" />}>
         <TournamentsData />
       </Suspense>
