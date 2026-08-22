@@ -76,7 +76,6 @@ export async function getNavState(): Promise<NavState> {
 // More's `also` list: every page that lives behind the More drawer, so
 // the tab stays highlighted while you are down there.
 const MORE_ALSO = [
-  "/matches",
   "/car-fee",
   "/car-count",
   "/about-us",

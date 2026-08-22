@@ -8,7 +8,6 @@ import {
   Share2,
   ShoppingBag,
   Smartphone,
-  Swords,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getNavState, type NavState } from "@/lib/nav";
@@ -35,12 +34,6 @@ function buildFeatures(nav: NavState): Feature[] {
       href: "/install",
       icon: Smartphone,
       iconClass: "bg-accent-light text-accent",
-    },
-    {
-      label: "Matches",
-      href: nav.hasTeamLedger ? "/matches" : null,
-      icon: Swords,
-      iconClass: "bg-low-light text-low-foreground",
     },
     {
       label: "Car Fee Calculator",

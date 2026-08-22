@@ -517,6 +517,32 @@ async function MatchDetailData({
   );
 }
 
+const backLinkClass =
+  "flex min-h-11 items-center gap-1 px-2 text-sm font-medium text-text-secondary";
+
+// Back goes to the list this match lives in: Schedule › Upcoming for a
+// scheduled match, Schedule › Completed once played or abandoned. Only
+// the status is needed, so it streams ahead of the full detail load;
+// the fallback is the Schedule hub.
+async function BackLink({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const { data } = await supabaseServer
+    .from("matches_public")
+    .select("status")
+    .eq("id", id)
+    .maybeSingle();
+  const scheduled = data?.status === "scheduled";
+  return (
+    <Link
+      href={scheduled ? "/schedule/upcoming" : "/schedule/completed"}
+      className={backLinkClass}
+    >
+      <ChevronLeft size={18} />
+      {scheduled ? "Upcoming" : "Completed"}
+    </Link>
+  );
+}
+
 export default function MatchDetail({
   params,
 }: {
@@ -526,13 +552,16 @@ export default function MatchDetail({
     <div className="min-h-svh bg-background pb-16">
       <header className="sticky top-0 z-10 border-b border-border bg-surface">
         <div className="mx-auto flex max-w-md items-center gap-1 px-2 py-3">
-          <Link
-            href="/matches"
-            className="flex min-h-11 items-center gap-1 px-2 text-sm font-medium text-text-secondary"
+          <Suspense
+            fallback={
+              <Link href="/schedule" className={backLinkClass}>
+                <ChevronLeft size={18} />
+                Schedule
+              </Link>
+            }
           >
-            <ChevronLeft size={18} />
-            Matches
-          </Link>
+            <BackLink params={params} />
+          </Suspense>
         </div>
       </header>
       <main className="mx-auto flex max-w-md flex-col gap-4 px-4 py-4">

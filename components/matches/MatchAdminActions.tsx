@@ -64,7 +64,7 @@ export function MatchAdminActions({
         setError(body.error?.message ?? "Could not delete the match.");
         return;
       }
-      router.push("/matches");
+      router.push("/schedule/upcoming");
       startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
