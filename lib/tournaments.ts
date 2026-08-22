@@ -643,13 +643,12 @@ export async function addExpense(
       [tournamentId, body.message, -body.amount, body.entry_date ?? null, adminId],
     );
     const entryId = entryRes.rows[0].id;
-    for (const { id: playerId } of roster.rows) {
-      await client.query(
-        `INSERT INTO tournament_expense_shares (entry_id, player_id, amount)
-         VALUES ($1, $2, $3)`,
-        [entryId, playerId, split.share],
-      );
-    }
+    await client.query(
+      `INSERT INTO tournament_expense_shares
+         (entry_id, player_id, amount, tournament_id)
+       SELECT $1, p, $3, $4 FROM unnest($2::uuid[]) AS p`,
+      [entryId, roster.rows.map((r) => r.id), split.share, tournamentId],
+    );
     return { id: entryId, share: split.share, players: split.players };
   });
 }
@@ -719,13 +718,12 @@ export async function editEntry(
         `DELETE FROM tournament_expense_shares WHERE entry_id = $1`,
         [entryId],
       );
-      for (const { id: playerId } of roster.rows) {
-        await client.query(
-          `INSERT INTO tournament_expense_shares (entry_id, player_id, amount)
-           VALUES ($1, $2, $3)`,
-          [entryId, playerId, split.share],
-        );
-      }
+      await client.query(
+        `INSERT INTO tournament_expense_shares
+           (entry_id, player_id, amount, tournament_id)
+         SELECT $1, p, $3, $4 FROM unnest($2::uuid[]) AS p`,
+        [entryId, roster.rows.map((r) => r.id), split.share, tournamentId],
+      );
       return { id: entryId, share: split.share, players: split.players };
     }
     return { id: entryId };

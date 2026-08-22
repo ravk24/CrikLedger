@@ -63,11 +63,8 @@ export function opponentLabel(opponent: string | null | undefined): string {
   return opponent?.trim() || "Opponent TBD";
 }
 
-// Our side of a "vs …" title. short_name wins when set; both are
-// written together by the superadmin rename (api/sa/team).
-export function teamLabel(team: {
-  short_name: string | null;
-  display_name: string;
-}): string {
-  return team.short_name?.trim() || team.display_name;
+// Our side of a "vs …" title — the team's display name, which the
+// superadmin rename (api/sa/team) keeps current.
+export function teamLabel(team: { display_name: string }): string {
+  return team.display_name;
 }

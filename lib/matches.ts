@@ -8,20 +8,6 @@ import type { matchSubmitSchema } from "@/lib/validate";
 
 type SubmitBody = z.infer<typeof matchSubmitSchema>;
 
-// match_id -> attendee count, for the match lists. A charge-only
-// captain row (is_playing = FALSE, carrying the guests' fee share) is
-// not attendance, so it never counts. Shared by /matches and both
-// schedule lists rather than re-deriving the rule per page.
-export function buildAttendeeCounts(
-  rows: { match_id: string; is_playing: boolean }[],
-): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const row of rows) {
-    if (!row.is_playing) continue;
-    counts.set(row.match_id, (counts.get(row.match_id) ?? 0) + 1);
-  }
-  return counts;
-}
 
 // Complete OR edit a match — identical semantics (kickoff §6). Derived
 // balances make reversal free: participants are replaced wholesale and

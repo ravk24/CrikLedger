@@ -47,6 +47,7 @@ async function StatementData({
     supabaseServer
       .from("tournament_fee_breakdown_public")
       .select("*")
+      .eq("tournament_id", tournamentId)
       .eq("player_id", playerId)
       .order("match_date", { ascending: true })
       .order("match_time", { ascending: true }),

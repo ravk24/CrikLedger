@@ -26,19 +26,19 @@ async function CarCountData() {
       .eq("is_active", true)
       .order("name"),
     supabaseServer
-      .from("match_participants_public")
-      .select("player_name, brought_car")
+      .from("player_car_counts")
+      .select("player_name, car_count")
       .eq("team_id", team.id),
   ]);
 
-  const counts = new Map<string, number>();
-  for (const row of (participantsRes.data ?? []) as {
-    player_name: string;
-    brought_car: boolean;
-  }[]) {
-    if (!row.brought_car) continue;
-    counts.set(row.player_name, (counts.get(row.player_name) ?? 0) + 1);
-  }
+  const counts = new Map(
+    (
+      (participantsRes.data ?? []) as {
+        player_name: string;
+        car_count: number;
+      }[]
+    ).map((r) => [r.player_name, r.car_count]),
+  );
 
   const players = ((playersRes.data ?? []) as { name: string }[])
     .map((p) => ({ name: p.name, count: counts.get(p.name) ?? 0 }))

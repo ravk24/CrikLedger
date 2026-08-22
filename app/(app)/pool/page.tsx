@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { LedgerRow } from "@/components/shared/LedgerRow";
 import { PoolAdminSection } from "@/components/pool/PoolAdminSection";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,20 +10,40 @@ import { supabaseServer } from "@/lib/supabase-server";
 import { getCurrentTeam } from "@/lib/team";
 import type { PlayerPublic, PoolLedgerRow } from "@/types";
 
-async function LedgerData() {
+// The ledger is append-only and grows every match, so it is read a page
+// at a time: newest first, "Show older entries" steps back. The view no
+// longer orders itself (migration 40) — the order lives here.
+const PAGE_SIZE = 50;
+
+async function LedgerData({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  // Read inside the Suspense hole, like the cookies — a dynamic read in
+  // the page body would cost the static shell under cacheComponents.
+  const { page: raw } = await searchParams;
+  const page = Math.max(1, Number.parseInt(raw ?? "1", 10) || 1);
   const nav = await getNavState();
   // No Team Ledger: a worked sample from hardcoded fixtures, never a
   // real team's money.
   if (!nav.hasTeamLedger) return <DemoLedger />;
-  return <PoolLedgerData />;
+  return <PoolLedgerData page={page} />;
 }
 
-async function PoolLedgerData() {
+async function PoolLedgerData({ page }: { page: number }) {
   const team = await getCurrentTeam();
+  const from = (page - 1) * PAGE_SIZE;
   // The players list only matters to a signed-in admin, but it costs
   // nothing to fetch alongside the ledger instead of after it.
   const [entriesRes, admin, playersRes] = await Promise.all([
-    supabaseServer.from("pool_ledger_public").select("*").eq("team_id", team.id),
+    supabaseServer
+      .from("pool_ledger_public")
+      .select("*", { count: "exact" })
+      .eq("team_id", team.id)
+      .order("entry_date", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, from + PAGE_SIZE - 1),
     getSessionAdmin(),
     supabaseServer
       .from("players_public")
@@ -32,6 +53,16 @@ async function PoolLedgerData() {
       .order("name"),
   ]);
   const entries = (entriesRes.data ?? []) as PoolLedgerRow[];
+  const total = entriesRes.count ?? entries.length;
+  const olderLink =
+    from + entries.length < total ? (
+      <Link
+        href={`/pool?page=${page + 1}`}
+        className="flex h-11 items-center justify-center rounded-md border border-border bg-surface text-sm font-medium text-text-primary"
+      >
+        Show older entries ({total - from - entries.length} more)
+      </Link>
+    ) : null;
 
   if (entries.length === 0 && !admin) {
     return (
@@ -47,24 +78,34 @@ async function PoolLedgerData() {
       "id" | "name" | "is_active"
     >[];
     return (
-      <PoolAdminSection
-        entries={entries}
-        players={players.map((p) => ({ id: p.id, name: p.name }))}
-        activePlayerCount={players.length}
-      />
+      <>
+        <PoolAdminSection
+          entries={entries}
+          players={players.map((p) => ({ id: p.id, name: p.name }))}
+          activePlayerCount={players.length}
+        />
+        {olderLink}
+      </>
     );
   }
 
   return (
-    <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
-      {entries.map((entry) => (
-        <LedgerRow key={entry.id} entry={entry} />
-      ))}
-    </section>
+    <>
+      <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+        {entries.map((entry) => (
+          <LedgerRow key={entry.id} entry={entry} />
+        ))}
+      </section>
+      {olderLink}
+    </>
   );
 }
 
-export default function Pool() {
+export default function Pool({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   return (
     <>
       <Suspense
@@ -74,7 +115,7 @@ export default function Pool() {
           </>
         }
       >
-        <LedgerData />
+        <LedgerData searchParams={searchParams} />
       </Suspense>
     </>
   );

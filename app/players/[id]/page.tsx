@@ -18,20 +18,29 @@ import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
 import type { PlayerPublic } from "@/types";
 
+// A statement grows for as long as the player plays; it is read newest
+// first, a page at a time.
+const PAGE_SIZE = 50;
+
 async function StatementData({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, { page: raw }] = await Promise.all([params, searchParams]);
+  const page = Math.max(1, Number.parseInt(raw ?? "1", 10) || 1);
+  const from = (page - 1) * PAGE_SIZE;
   const [playerRes, statementRes, admin] = await Promise.all([
     supabaseServer.from("players_public").select("*").eq("id", id).maybeSingle(),
     supabaseServer
       .from("player_statement")
-      .select("*")
+      .select("*", { count: "exact" })
       .eq("player_id", id)
       .order("entry_date", { ascending: false })
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .range(from, from + PAGE_SIZE - 1),
     getSessionAdmin(),
   ]);
 
@@ -57,6 +66,8 @@ async function StatementData({
   }
 
   const rows = (statementRes.data ?? []) as StatementRow[];
+  const total = statementRes.count ?? rows.length;
+  const remaining = total - from - rows.length;
   // Editing is a write on that player's team, not "am I an admin anywhere".
   const canEdit =
     !!admin && !admin.mustChangePassword && canWrite(admin, "team", player.team_id);
@@ -104,8 +115,17 @@ async function StatementData({
         <StatementList rows={rows} canEdit={canEdit} />
       )}
 
+      {remaining > 0 && (
+        <Link
+          href={`/players/${id}?page=${page + 1}`}
+          className="flex h-11 items-center justify-center rounded-md border border-border bg-surface text-sm font-medium text-text-primary"
+        >
+          Show older entries ({remaining} more)
+        </Link>
+      )}
+
       <p className="text-center text-xs text-text-muted">
-        {rows.length} {rows.length === 1 ? "entry" : "entries"} · balances are
+        {total} {total === 1 ? "entry" : "entries"} · balances are
         derived live from the ledger
       </p>
     </>
@@ -114,8 +134,10 @@ async function StatementData({
 
 export default function PlayerStatement({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   return (
     <div className="min-h-svh bg-background pb-16">
@@ -139,7 +161,7 @@ export default function PlayerStatement({
             </>
           }
         >
-          <StatementData params={params} />
+          <StatementData params={params} searchParams={searchParams} />
         </Suspense>
       </main>
     </div>

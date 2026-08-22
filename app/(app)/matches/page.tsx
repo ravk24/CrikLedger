@@ -4,8 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabaseServer } from "@/lib/supabase-server";
 import { AccessGate } from "@/components/shared/AccessGate";
 import { checkActiveTeamRead } from "@/lib/access";
-import { buildAttendeeCounts } from "@/lib/matches";
-import type { Match, MatchParticipantPublic } from "@/types";
+import type { Match } from "@/types";
 
 async function MatchesData() {
   // Team data needs a session whose membership matches. Renders a panel
@@ -20,17 +19,19 @@ async function MatchesData() {
   const [matchesRes, participantsRes] = await Promise.all([
     supabaseServer.from("matches_public").select("*").eq("team_id", team.id),
     supabaseServer
-      .from("match_participants_public")
-      .select("match_id, is_playing")
+      .from("match_attendee_counts")
+      .select("match_id, attendee_count")
       .eq("team_id", team.id),
   ]);
 
   const matches = (matchesRes.data ?? []) as Match[];
-  const counts = buildAttendeeCounts(
-    (participantsRes.data ?? []) as Pick<
-      MatchParticipantPublic,
-      "match_id" | "is_playing"
-    >[],
+  const counts = new Map(
+    (
+      (participantsRes.data ?? []) as {
+        match_id: string;
+        attendee_count: number;
+      }[]
+    ).map((r) => [r.match_id, r.attendee_count]),
   );
 
   // Upcoming soonest first; played newest first.

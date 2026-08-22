@@ -33,7 +33,8 @@ async function TournamentDirectory({ hosted }: { hosted: boolean }) {
     `SELECT t.id, t.name, t.status, a.name AS host_name
      FROM tournaments t
      LEFT JOIN admins a ON a.id = t.created_by
-     ORDER BY t.created_at DESC`,
+     ORDER BY t.created_at DESC
+     LIMIT 50`,
   );
   const all = rows as {
     id: string;

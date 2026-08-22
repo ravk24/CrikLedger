@@ -27,7 +27,13 @@ export async function GET() {
     const { data } = await supabaseServer
       .from("players_public")
       .select("*")
-      .eq("team_id", team.id);
+      .eq("team_id", team.id)
+      // Same order the JS sort below applies; the DB limit keeps the
+      // fetch bounded to what the image can show.
+      .order("is_active", { ascending: false })
+      .order("balance", { ascending: true })
+      .order("name", { ascending: true })
+      .limit(MAX_ROWS);
     const players = ((data ?? []) as PlayerPublic[])
       // Same order as the Home dashboard: active first, biggest debtors
       // on top, names only break ties.

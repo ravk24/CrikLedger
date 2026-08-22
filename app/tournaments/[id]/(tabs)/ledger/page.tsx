@@ -28,7 +28,11 @@ async function TournamentLedgerData({
     supabaseServer
       .from("tournament_ledger_public")
       .select("*")
-      .eq("tournament_id", id),
+      .eq("tournament_id", id)
+      // The view no longer orders itself (migration 40).
+      .order("entry_date", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(200),
   ]);
 
   const tournament = tRes.data as TournamentPublic | null;

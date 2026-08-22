@@ -18,7 +18,6 @@ export type TeamPublic = {
   id: string;
   slug: string;
   display_name: string;
-  short_name: string | null;
   meeting_point: string | null;
   status_threshold: number;
   car_rate_per_km: number;
