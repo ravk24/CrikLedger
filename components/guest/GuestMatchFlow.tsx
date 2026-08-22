@@ -512,9 +512,6 @@ export function GuestMatchFlow() {
                 fee: r.fee,
               }))}
               players={DEMO_PLAYERS}
-              perPlayerFee={fees.perPlayerFee}
-              carSharePerSharer={fees.carSharePerSharer}
-              sharerCount={fees.sharerCount}
               totalCost={fees.totalCost}
               cashCosts={
                 (Number(costs.ground) || 0) +

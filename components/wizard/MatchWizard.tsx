@@ -598,9 +598,6 @@ export function MatchWizard({
               <StepFeePreview
                 rows={baseRows ?? []}
                 players={players}
-                perPlayerFee={totals.per_player_fee}
-                carSharePerSharer={totals.car_share_per_sharer}
-                sharerCount={totals.sharer_count}
                 totalCost={totals.total_cost}
                 cashCosts={cashCosts}
                 guestRows={totals.guest_rows}

@@ -14,9 +14,6 @@ import {
 type Props = {
   rows: PreviewRow[]; // engine output, shown as-is — fees are not editable
   players: WizardPlayer[];
-  perPlayerFee: number; // the base head share
-  carSharePerSharer: number; // added on top for whoever rode with someone
-  sharerCount: number;
   totalCost: number;
   cashCosts: number; // ground + balls + other (pool pays these)
   guestRows: GuestPreviewRow[];
@@ -28,9 +25,6 @@ type Props = {
 export function StepFeePreview({
   rows,
   players,
-  perPlayerFee,
-  carSharePerSharer,
-  sharerCount,
   totalCost,
   cashCosts,
   guestRows,
@@ -42,29 +36,9 @@ export function StepFeePreview({
     players.find((p) => p.id === id)?.name ?? "Unknown";
   const collected = rows.reduce((sum, r) => sum + r.fee, 0) + captainCharge;
   const surplus = collected - cashCosts;
-  const headCount = rows.length + guestRows.length;
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between rounded-md bg-surface-secondary px-3 py-2">
-        <span className="text-sm text-text-secondary">
-          {/* With a car share the headline is the BASE split — car money
-              is funded separately, by the riders, on the line below. */}
-          ₹{formatRupees(carSharePerSharer > 0 ? cashCosts : totalCost)} ÷{" "}
-          {headCount} {guestRows.length > 0 ? "heads" : "attendees"}
-        </span>
-        <span className="text-sm font-semibold text-text-primary">
-          ₹{formatRupees(perPlayerFee)} each
-        </span>
-      </div>
-      {carSharePerSharer > 0 && (
-        <p className="-mt-1 flex items-center gap-1.5 text-xs text-text-muted">
-          <Users size={13} className="shrink-0" />
-          Plus ₹{formatRupees(carSharePerSharer)} car share for the{" "}
-          {sharerCount} who rode with someone.
-        </p>
-      )}
-
       <div className="overflow-hidden rounded-lg border border-border bg-surface">
         <div className="max-h-56 divide-y divide-border overflow-y-auto">
         {rows.map((row) => {
