@@ -60,7 +60,7 @@ its own allowance of 2 admins.
 | **Signed in** | An account with no purchases: the same as a guest, plus a Purchases page. |
 | **Admin** | Per team or tournament, at most 2 per scope, provisioned by that scope's superadmin with a one-time password. Schedules/completes/edits/abandons matches, manages pool entries and players — **for that scope only**. |
 | **Superadmin** | The purchaser of a scope. Everything above, plus creating/revoking its admins and resetting their passwords. One scope per purchase. |
-| **Megaadmin** | The platform operator (`ravi_kant`). **Reads every team and tournament, writes none** — an observer, so a console bug cannot corrupt a customer's ledger. Holds no membership and cannot: team rights need a separate account. Owns `/ops`: teams, accounts, password resets and suspensions. |
+| **Megaadmin** | The platform operator (`ravi_kant`). **Reads every team and tournament, writes none** — an observer, so a console bug cannot corrupt a customer's ledger. Holds no membership and cannot: team rights need a separate account. Owns `/ops`: grants (Ledger / tournament credits — see `OPERATOR.md`), accounts, password resets and suspensions. |
 | **Captain** | Not a login — a player flag (at most one per team, declared by the superadmin). All guest charges land on the captain's balance; the captain settles guest cash offline. |
 
 **Public by link:** a *completed* match sheet, so it can be shared to WhatsApp
