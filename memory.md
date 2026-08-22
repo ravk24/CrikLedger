@@ -1,6 +1,6 @@
 # Memory — session 17: share sheet fixes, schedule UX, Matches page dropped, light-theme refresh, ops grants
 
-Last updated: 2026-08-22 ~23:30 IST (session 17, end)
+Last updated: 2026-08-23 ~00:05 IST (session 17, end)
 
 ## What was built
 
@@ -32,7 +32,7 @@ All on `main`, pushed; working tree clean. Commits in order: `3249778`, `90781b1
 ## Current state
 
 - Prod DB: `ravi_kant` (megaadmin), `ravi_kant_sgsa` active with Ledger + 1 tournament credit on team `ravi-kant-sgsa` "LR-SuperGiants", `rav_kant_sgsa` suspended. Recent matches are bare scheduled dates (no opponent). The Arezo match from the screenshot is gone.
-- `tsc`, eslint, vitest (81) all green at `ffc97b0`. Vercel deploys from `main`; `/api/health` not re-checked this session.
+- `tsc`, eslint, vitest (81) all green at `ffc97b0`; memory notes pushed as `bf38865`. Vercel deploys from `main`; `/api/health` not re-checked this session. Working tree clean.
 - Not visually verified (need a signed-in/megaadmin session): dashboard navy hero card with balances, `/schedule/upcoming` list + dropdown, Edit schedule sheet, new `/ops` grant picker. Signed-out pages (`/`, `/more`, `/schedule`, match detail) were screenshotted and look right.
 - Git-ignored local docs updated: `context/ui-tokens.md`, `context/ui-rules.md`, `CrikLedger-docs/02`, `03`, `06`.
 
