@@ -44,8 +44,8 @@ export async function completeMatch(
 }> {
   // EVERY fee is canonical: recomputed here from the costs and who
   // attended, never taken from the client. The wizard shows the same
-  // numbers because it renders this engine's output from /preview, but
-  // what gets stored is computed on this side of the wire.
+  // numbers because it runs this same engine in the browser, but what
+  // gets stored is computed on this side of the wire.
   const canonical = calculateMatchFees({
     groundFee: body.ground_fee,
     ballFee: body.ball_fee,

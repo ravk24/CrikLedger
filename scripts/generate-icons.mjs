@@ -116,7 +116,7 @@ const square = (buf, size) =>
       fit: "contain",
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     })
-    .png({ compressionLevel: 9 })
+    .png({ palette: true, quality: 90, compressionLevel: 9, effort: 10 })
     .toBuffer();
 
 async function main() {
@@ -128,10 +128,10 @@ async function main() {
   // Transparent-cornered icons, every size the app references.
   const targets = [
     ["public/icon-512.png", 512],
-    ["public/logo.png", 512], // same art; both paths are referenced
+    ["public/logo.png", 128], // same art; rendered at 16-64px in the header
     ["public/icon-192.png", 192],
     ["public/apple-touch-icon.png", 180],
-    ["app/icon.png", 256],
+    ["app/icon.png", 64],
   ];
   for (const [rel, size] of targets) {
     writeFileSync(out(rel), await square(icon.buffer, size));
@@ -161,14 +161,14 @@ async function main() {
       },
     })
       .composite([{ input: inner, gravity: "centre" }])
-      .png({ compressionLevel: 9 })
+      .png({ palette: true, quality: 90, compressionLevel: 9, effort: 10 })
       .toBuffer(),
   );
   console.log("wrote public/icon-512-maskable.png 512px (bleed rgb", navy, ")");
 
-  // Splash carries the wordmark, so it gets its own asset.
-  writeFileSync(out("public/splash.png"), await square(splash.buffer, 512));
-  console.log("wrote public/splash.png 512px");
+  // The splash asset is no longer shipped (nothing references it); the
+  // master is still lifted above so the review dir shows it.
+  void splash;
 }
 
 main();

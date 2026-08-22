@@ -232,15 +232,6 @@ const guestSchema = z.object({
   shared_car: z.boolean().default(false),
 });
 
-export const matchPreviewSchema = z.object({
-  ground_fee: z.number().int().nonnegative(),
-  ball_fee: z.number().int().nonnegative(),
-  other_fee: z.number().int().nonnegative(),
-  car_allowance_per_car: z.number().int().nonnegative(),
-  attendees: z.array(attendeeSchema).min(1),
-  guests: z.array(guestSchema).max(30).default([]),
-});
-
 export const matchSubmitSchema = z.object({
   result: z.enum(["won", "lost"]),
   ground_fee: z.number().int().nonnegative(),
@@ -322,9 +313,6 @@ export const tournamentScheduleMatchSchema = z.object({
 // No guests in tournaments — .omit removes the key entirely and the
 // non-strict parse strips the wizard's `guests: []`, so a non-empty
 // guests array can never reach the tournament money path.
-export const tournamentMatchPreviewSchema = matchPreviewSchema.omit({
-  guests: true,
-});
 export const tournamentMatchSubmitSchema = matchSubmitSchema.omit({
   guests: true,
 });

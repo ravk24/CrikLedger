@@ -11,6 +11,7 @@ import { StepCarAllowance } from "@/components/wizard/StepCarAllowance";
 import { StepCars } from "@/components/wizard/StepCars";
 import { StepSharedCar } from "@/components/wizard/StepSharedCar";
 import { StepFeePreview } from "@/components/wizard/StepFeePreview";
+import { calculateMatchFees } from "@/engine/calc";
 import { formatRupees } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
@@ -195,38 +196,66 @@ export function MatchWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, step, baseRows]);
 
+  // The fee split is the pure engine (engine/calc.ts) run right here —
+  // the same module the guest sample uses — so stepping through the
+  // wizard costs no round-trip. Submit still recomputes on the server,
+  // which stays the authority for what is written. Kept async/boolean so
+  // the callers' shape did not change.
   async function loadPreview() {
-    setPending(true);
     setError(null);
+    const captain = players.find((p) => p.is_captain) ?? null;
+    if (guests.length > 0 && !captain) {
+      setError(
+        "Declare a captain first (superadmin → Players) — guest fees are deducted from the captain",
+      );
+      return false;
+    }
     try {
-      const res = await fetch(`${base}/preview`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...numericCosts, attendees, guests }),
+      const result = calculateMatchFees({
+        groundFee: numericCosts.ground_fee,
+        ballFee: numericCosts.ball_fee,
+        otherFee: numericCosts.other_fee,
+        carAllowancePerCar: numericCosts.car_allowance_per_car,
+        attendees: attendees.map((a) => ({
+          playerId: a.player_id,
+          broughtCar: a.brought_car,
+          sharedCar: a.shared_car,
+        })),
+        guests: guests.map((g) => ({
+          name: g.name,
+          broughtCar: g.brought_car,
+          sharedCar: g.shared_car,
+        })),
+        carSplit: "sharers",
       });
-      const body = await res.json();
-      if (!body.success) {
-        setError(body.error?.message ?? "Could not calculate fees.");
-        return false;
-      }
-      setBaseRows(body.data.rows as PreviewRow[]);
+      setBaseRows(
+        result.rows.map((r) => ({
+          player_id: r.playerId,
+          brought_car: r.broughtCar,
+          shared_car: r.sharedCar,
+          fee: r.fee,
+        })),
+      );
       setTotals({
-        per_player_fee: body.data.per_player_fee,
-        car_share_per_sharer: Number(body.data.car_share_per_sharer ?? 0),
-        sharer_count: Number(body.data.sharer_count ?? 0),
-        total_cost: body.data.total_cost,
-        collected_total: body.data.collected_total,
-        surplus_to_pool: body.data.surplus_to_pool,
-        guest_rows: body.data.guest_rows ?? [],
-        captain_charge: Number(body.data.captain_charge ?? 0),
-        captain_name: body.data.captain_name ?? null,
+        per_player_fee: result.perPlayerFee,
+        car_share_per_sharer: result.carSharePerSharer,
+        sharer_count: result.sharerCount,
+        total_cost: result.totalCost,
+        collected_total: result.collectedTotal,
+        surplus_to_pool: result.surplusToPool,
+        guest_rows: result.guestRows.map((g) => ({
+          name: g.name,
+          brought_car: g.broughtCar,
+          shared_car: g.sharedCar,
+          fee: g.fee,
+        })),
+        captain_charge: result.captainCharge,
+        captain_name: captain?.name ?? null,
       });
       return true;
-    } catch {
-      setError("Could not reach the server — check your connection.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not calculate fees.");
       return false;
-    } finally {
-      setPending(false);
     }
   }
 
