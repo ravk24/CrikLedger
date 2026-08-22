@@ -55,6 +55,10 @@ async function PurchasesData() {
     team_ledger: nav.hasTeamLedger,
     tournament_credit: nav.hasTournamentCredit,
   };
+  // The Ledger is a one-off; a tournament credit is consumed per
+  // tournament, so it can always be bought again — even while active.
+  const repurchasable = { team_ledger: false, tournament_credit: true };
+  const creditsLeft = nav.tournamentCreditsLeft;
 
   return (
     <>
@@ -72,12 +76,15 @@ async function PurchasesData() {
             </h2>
             {owned[p.key] && (
               <span className="flex shrink-0 items-center gap-1 rounded-full bg-credit-light px-2 py-0.5 text-[11px] font-medium text-credit-foreground">
-                <Check size={12} /> Active
+                <Check size={12} />
+                {p.key === "tournament_credit"
+                  ? `${creditsLeft} ${creditsLeft === 1 ? "credit" : "credits"} left`
+                  : "Active"}
               </span>
             )}
           </div>
           <p className="mt-1 text-sm text-text-secondary">{p.blurb}</p>
-          {owned[p.key] ? (
+          {owned[p.key] && !repurchasable[p.key] ? (
             <div
               aria-disabled="true"
               className="mt-3 flex h-11 items-center justify-center rounded-md border border-border bg-surface-secondary text-sm font-medium text-text-muted opacity-60"
@@ -91,7 +98,9 @@ async function PurchasesData() {
               rel="noopener"
               className="mt-3 flex h-11 items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-foreground"
             >
-              WhatsApp us to buy
+              {p.key === "tournament_credit" && owned[p.key]
+                ? "WhatsApp us to buy another credit"
+                : "WhatsApp us to buy"}
             </a>
           )}
         </section>

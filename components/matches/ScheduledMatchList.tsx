@@ -7,6 +7,7 @@ import {
   scheduledState,
   type ScheduledState,
 } from "@/components/matches/MatchStatusDot";
+import { formatMonth } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Match } from "@/types";
 
@@ -69,15 +70,35 @@ export function ScheduledMatchList({ matches, counts }: Props) {
         </p>
       ) : (
         <section className="flex flex-col gap-2">
-          {visible.map((match) => (
-            <MatchCard
-              key={match.id}
-              match={match}
-              attendeeCount={counts[match.id] ?? 0}
-            />
+          {groupByMonth(visible).map(([month, rows]) => (
+            <div key={month} className="flex flex-col gap-2">
+              <h2 className="pt-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
+                {month}
+              </h2>
+              {rows.map((match) => (
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  attendeeCount={counts[match.id] ?? 0}
+                />
+              ))}
+            </div>
           ))}
         </section>
       )}
     </>
   );
+}
+
+// Rows arrive sorted by date, so consecutive runs share a month; the
+// label is computed in IST like every other date on the page.
+function groupByMonth(rows: Match[]): [string, Match[]][] {
+  const groups: [string, Match[]][] = [];
+  for (const m of rows) {
+    const label = formatMonth(m.match_date);
+    const last = groups[groups.length - 1];
+    if (last && last[0] === label) last[1].push(m);
+    else groups.push([label, [m]]);
+  }
+  return groups;
 }

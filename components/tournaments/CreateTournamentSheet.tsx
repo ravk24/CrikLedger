@@ -79,8 +79,8 @@ export function CreateTournamentSheet({ creditsLeft }: { creditsLeft: number }) 
           {creditsLeft === 0 ? (
             <>
               No tournament credits left ·{" "}
-              <Link href="/pricing" className="font-medium text-accent">
-                Pricing
+              <Link href="/purchases" className="font-medium text-accent">
+                Buy another credit
               </Link>
             </>
           ) : (

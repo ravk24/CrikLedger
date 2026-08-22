@@ -33,6 +33,15 @@ export function formatDateShort(iso: string): string {
   });
 }
 
+// "August 2026" — month separators in the scheduled list.
+export function formatMonth(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+    timeZone: TZ,
+  });
+}
+
 // Today's date (yyyy-mm-dd) in IST regardless of the server timezone.
 export function todayIST(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: TZ });

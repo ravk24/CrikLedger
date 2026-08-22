@@ -73,9 +73,11 @@ async function buildAdminProps(match: MatchPublicRow) {
     pool.query(
       `SELECT ofe.amount AS other_fee_amount,
               gb.amount_paid, gb.slots, gb.amount_pending,
-              pe.amount AS cleared_amount
+              pe.amount AS cleared_amount,
+              mpc.amount AS match_cleared_amount
        FROM matches m
        LEFT JOIN pool_entries ofe ON ofe.id = m.other_fee_entry_id
+       LEFT JOIN pool_entries mpc ON mpc.id = m.pending_cleared_entry_id
        LEFT JOIN ground_bookings gb ON gb.id = m.ground_booking_id
        LEFT JOIN pool_entries pe ON pe.id = gb.pending_cleared_entry_id
        WHERE m.id = $1`,
@@ -132,11 +134,21 @@ async function buildAdminProps(match: MatchPublicRow) {
         slots: number | null;
         amount_pending: string | null;
         cleared_amount: string | null;
+        match_cleared_amount: string | null;
       }
     | undefined;
   if (money?.other_fee_amount != null) {
     otherFee = Math.abs(Number(money.other_fee_amount));
   }
+  // Completion prefill: everything the opponent's fee covers — settled
+  // entry + still-pending + cleared-pending entry (abs: debit entries
+  // are negative). Mirrors bookingFee below for migration-36 matches.
+  const matchFeeTotal =
+    otherFee +
+    Number(match.fee_pending) +
+    (money?.match_cleared_amount != null
+      ? Math.abs(Number(money.match_cleared_amount))
+      : 0);
 
   // Booking money is admin-only, so this stays in the pg code path:
   // the fee switch needs the pending amount (any admin), and the
@@ -186,6 +198,7 @@ async function buildAdminProps(match: MatchPublicRow) {
     bookingShare,
     bookingFee,
     otherFee,
+    matchFeeTotal,
     matchFee,
   };
 }
@@ -399,7 +412,7 @@ async function MatchDetailData({
           isSuperadmin={adminProps.isSuperadmin}
           initial={adminProps.initial}
           initialGroundFee={
-            adminProps.otherFee || adminProps.bookingFee || undefined
+            adminProps.matchFeeTotal || adminProps.bookingFee || undefined
           }
         />
       )}

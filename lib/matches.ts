@@ -338,9 +338,13 @@ export async function clearMatchPending(
     ],
   );
 
-  await client.query(`UPDATE matches SET fee_pending = 0 WHERE id = $1`, [
-    matchId,
-  ]);
+  // Link the cleared entry so the completion prefill can rebuild the
+  // full fee (settled + cleared) from the match row (migration 41).
+  await client.query(
+    `UPDATE matches SET fee_pending = 0, pending_cleared_entry_id = $2
+     WHERE id = $1`,
+    [matchId, entryRes.rows[0].id],
+  );
 
   return { cleared: pending, entry_id: entryRes.rows[0].id };
 }

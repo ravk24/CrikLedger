@@ -37,8 +37,9 @@ type Props = {
   groundLabel: string;
   initial?: WizardInitial;
   // Pre-fills the Costs step's ground fee on completion; editable.
-  // Away matches: the pool-fronted fee (linked debit's current amount)
-  // — the recoup always reads the debit row, so edits can't double-count.
+  // Migration-36 matches: the opponent's full fee — settled entry +
+  // still-pending + cleared-pending entry (migration 41 link).
+  // Editable: the recoup reads the debit row, so edits can't double-count.
   // Home booking matches: this match's slot share of what the opponent
   // paid to book (paid + pending + cleared-pending).
   initialGroundFee?: number;
