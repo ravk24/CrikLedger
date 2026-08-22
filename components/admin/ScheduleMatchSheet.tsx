@@ -39,7 +39,6 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
   const [opponent, setOpponent] = useState(editing.opponent ?? "");
   const [captain, setCaptain] = useState(editing.opponentCaptain ?? "");
   const [detailsOn, setDetailsOn] = useState(editing.feeDirection !== null);
-  const [opponentOn, setOpponentOn] = useState(!!editing.opponent);
   const [fee, setFee] = useState(
     editing.feeAmount ? String(Math.round(editing.feeAmount)) : "",
   );
@@ -75,7 +74,6 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
     setOpponent(editOpponent ?? "");
     setCaptain(editCaptain ?? "");
     setDetailsOn(editDirection !== null);
-    setOpponentOn(!!editOpponent);
     setFee(editFee ? String(Math.round(editFee)) : "");
     setCredit(editDirection === "credit");
     setDebit(editDirection === "debit");
@@ -122,11 +120,11 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
     const feeAmount = Number(fee) || 0;
     const pendingValue = pendingOn ? Number(pendingAmount) || 0 : 0;
 
+    if (!opponent.trim()) {
+      setError("Enter the opponent name.");
+      return;
+    }
     if (detailsOn) {
-      if (opponentOn && !opponent.trim()) {
-        setError("Enter the opponent name.");
-        return;
-      }
       if (feeAmount <= 0) {
         setError("Enter the fee amount.");
         return;
@@ -154,9 +152,7 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
         body: JSON.stringify({
           match_date: date,
           ...(groundName ? { venue: groundName } : {}),
-          ...(opponentOn && opponent.trim()
-            ? { opponent: opponent.trim() }
-            : {}),
+          opponent: opponent.trim(),
           ...(detailsOn
             ? {
                 fee_amount: feeAmount,
@@ -240,28 +236,24 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
           />
         </label>
 
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-text-secondary">
+            Opponent Name
+          </span>
+          <input
+            type="text"
+            value={opponent}
+            onChange={(e) => setOpponent(e.target.value)}
+            placeholder="Opponent team name"
+            required
+            className={inputClass}
+          />
+        </label>
+
         {switchRow("Match details", detailsOn, setDetailsOn)}
 
         {detailsOn && (
           <div className="flex flex-col gap-3 rounded-md border border-border bg-surface p-3">
-            {switchRow("Opponent", opponentOn, setOpponentOn)}
-
-            {opponentOn && (
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-text-secondary">
-                  Opponent Name
-                </span>
-                <input
-                  type="text"
-                  value={opponent}
-                  onChange={(e) => setOpponent(e.target.value)}
-                  placeholder="Opponent team name"
-                  required
-                  className={inputClass}
-                />
-              </label>
-            )}
-
             <MoneyInput label="Fee" value={fee} onChange={setFee} required />
 
             {switchRow(
