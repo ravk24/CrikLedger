@@ -4,18 +4,21 @@ import {
   type TournamentFeeResult,
 } from "./tournamentFee";
 
-// Helper: a match with attendees by player id; drivers bring a car.
+// Helper: a match with attendees by player id; drivers bring a car,
+// sharers rode with someone and fund the car money.
 const match = (
   matchId: string,
   ids: string[],
   drivers: string[] = [],
   allowance = 0,
+  sharers: string[] = [],
 ) => ({
   matchId,
   carAllowancePerCar: allowance,
   attendees: ids.map((id) => ({
     playerId: id,
     broughtCar: drivers.includes(id),
+    sharedCar: sharers.includes(id),
   })),
 });
 
@@ -44,16 +47,18 @@ const p = (n: number) => `p${n}`;
 const players = (n: number) => Array.from({ length: n }, (_, i) => p(i + 1));
 
 describe("calculateTournamentFees (per-match model)", () => {
-  it("splits each match's own pot (Ravi's canonical example)", () => {
+  it("splits each match's own slice, car money on the sharers", () => {
     // Fee 15000 across 5 completed matches → 3000/match (fractional
-    // stays exact here). m1 has 2 cars @250 → CEIL(3500/12) = 292;
-    // m2's cars are ignored (allowance 0) → CEIL(3000/11) = 273.
+    // stays exact here). Base share = CEIL(3000 / attendees); car money
+    // rides on top for the sharers only: m1 has 2 cars @250 shared by
+    // p3–p6 → 500/4 = 125 each; m3 has 1 car @300 shared by p4–p6 →
+    // 100 each. m2's car (allowance 0) is ignored.
     const result = calculateTournamentFees({
       joiningFee: 15000,
       matches: [
-        match("m1", players(12), [p(1), p(2)], 250),
+        match("m1", players(12), [p(1), p(2)], 250, [p(3), p(4), p(5), p(6)]),
         match("m2", players(11)),
-        match("m3", players(10), [p(3)], 300),
+        match("m3", players(10), [p(3)], 300, [p(4), p(5), p(6)]),
         match("m4", players(8)),
         match("m5", players(9)),
       ],
@@ -61,26 +66,30 @@ describe("calculateTournamentFees (per-match model)", () => {
 
     expect(result.matchCount).toBe(5);
     expect(result.costPerMatch).toBe(3000);
-    const shareOf = (id: string) =>
-      result.matches.find((m) => m.matchId === id)?.share;
-    expect(shareOf("m1")).toBe(292); // CEIL(3500/12)
-    expect(shareOf("m2")).toBe(273); // CEIL(3000/11)
-    expect(shareOf("m3")).toBe(330); // (3000+300)/10 exact
-    expect(shareOf("m4")).toBe(375); // 3000/8 exact
-    expect(shareOf("m5")).toBe(334); // CEIL(3000/9)
+    const m = (id: string) => result.matches.find((x) => x.matchId === id)!;
+    expect(m("m1").share).toBe(250); // 3000/12 exact
+    expect(m("m1").carSharePerSharer).toBe(125);
+    expect(m("m2").share).toBe(273); // CEIL(3000/11)
+    expect(m("m3").share).toBe(300); // 3000/10 exact
+    expect(m("m3").carSharePerSharer).toBe(100);
+    expect(m("m4").share).toBe(375); // 3000/8 exact
+    expect(m("m5").share).toBe(334); // CEIL(3000/9)
 
     const rowOf = (id: string) => result.rows.find((r) => r.playerId === id);
     // Same player, different rate per match: p11 played m1 and m2 only.
-    expect(rowOf(p(11))?.charge).toBe(292 + 273);
-    expect(rowOf(p(12))?.charge).toBe(292);
-    // All five matches = 292+273+330+375+334 = 1604; the m1 drivers
-    // get their 250 back, the m3 driver 300.
-    expect(rowOf(p(4))?.charge).toBe(1604);
-    expect(rowOf(p(1))?.charge).toBe(1604 - 250);
-    expect(rowOf(p(3))?.charge).toBe(1604 - 300);
+    expect(rowOf(p(11))?.charge).toBe(250 + 273);
+    expect(rowOf(p(12))?.charge).toBe(250);
+    // All five base shares = 250+273+300+375+334 = 1532. p7 just
+    // played; p4 shared in m1 and m3; p1 drove in m1; p3 shared in m1
+    // and drove in m3.
+    expect(rowOf(p(7))?.charge).toBe(1532);
+    expect(rowOf(p(4))?.charge).toBe(1532 + 125 + 100);
+    expect(rowOf(p(1))?.charge).toBe(1532 - 250);
+    expect(rowOf(p(3))?.charge).toBe(1532 + 125 - 300);
 
-    expect(result.collected).toBe(15013);
-    expect(result.surplus).toBe(13);
+    // Car money nets to zero per match; only the base ceils surplus.
+    expect(result.collected).toBe(15009);
+    expect(result.surplus).toBe(9);
     expectInvariants(result, 15000);
   });
 
@@ -120,45 +129,78 @@ describe("calculateTournamentFees (per-match model)", () => {
   });
 
   it("credits drivers per match and allows a negative charge", () => {
-    // fee 0; one match, big allowance: the lone driver nets a credit.
+    // fee 0; one match, big allowance, both passengers shared: the
+    // lone driver nets a credit funded by the sharers.
     const result = calculateTournamentFees({
       joiningFee: 0,
-      matches: [match("m1", ["a", "b", "c"], ["a"], 300)],
+      matches: [match("m1", ["a", "b", "c"], ["a"], 300, ["b", "c"])],
     });
-    expect(result.matches[0].share).toBe(100); // CEIL(300/3)
-    expect(result.rows.find((r) => r.playerId === "a")?.charge).toBe(-200);
+    expect(result.matches[0].share).toBe(0);
+    expect(result.matches[0].carSharePerSharer).toBe(150);
+    const rowOf = (id: string) => result.rows.find((r) => r.playerId === id);
+    expect(rowOf("a")?.charge).toBe(-300);
+    expect(rowOf("b")?.charge).toBe(150);
     expect(result.collected).toBe(0);
     expect(result.surplus).toBe(0);
     expectInvariants(result, 0);
   });
 
   it("redistributes car money within each match only (fee 0)", () => {
-    // m1: a drives @100 for a,b → share 50, a nets −50.
-    // m2: b drives @90 for a,b,c → share 30, b nets −60 that match.
+    // m1: a drives @100, b rides → b pays 100, a nets −100.
+    // m2: b drives @90, a and c ride → 45 each, b nets −90 that match.
     const result = calculateTournamentFees({
       joiningFee: 0,
       matches: [
-        match("m1", ["a", "b"], ["a"], 100),
-        match("m2", ["a", "b", "c"], ["b"], 90),
+        match("m1", ["a", "b"], ["a"], 100, ["b"]),
+        match("m2", ["a", "b", "c"], ["b"], 90, ["a", "c"]),
       ],
     });
     const rowOf = (id: string) => result.rows.find((r) => r.playerId === id);
-    expect(rowOf("a")?.charge).toBe(50 + 30 - 100);
-    expect(rowOf("b")?.charge).toBe(50 + 30 - 90);
-    expect(rowOf("c")?.charge).toBe(30);
+    expect(rowOf("a")?.charge).toBe(-100 + 45);
+    expect(rowOf("b")?.charge).toBe(100 - 90);
+    expect(rowOf("c")?.charge).toBe(45);
     expect(result.surplus).toBe(0);
     expectInvariants(result, 0);
   });
 
-  it("matches the single-pot formula when there is one match", () => {
+  it("pays no rebate when nobody shared the car", () => {
+    // Nobody rode with a, so there is nothing for the allowance to
+    // compensate: no car money collected, no driver credit.
     const result = calculateTournamentFees({
-      joiningFee: 1000,
+      joiningFee: 300,
       matches: [match("m1", ["a", "b", "c"], ["a"], 100)],
     });
-    expect(result.matches[0].share).toBe(367); // CEIL(1100/3)
-    expect(result.rows.find((r) => r.playerId === "a")?.charge).toBe(267);
-    expect(result.collected).toBe(1001);
-    expect(result.surplus).toBe(1);
+    expect(result.matches[0].carSharePerSharer).toBe(0);
+    expect(result.rows.every((r) => r.charge === 100)).toBe(true);
+    expect(result.rows.find((r) => r.playerId === "a")?.driverCredit).toBe(0);
+    expect(result.surplus).toBe(0);
+    expectInvariants(result, 300);
+  });
+
+  it("treats a driver who also ticked shared as a driver", () => {
+    const result = calculateTournamentFees({
+      joiningFee: 0,
+      matches: [match("m1", ["a", "b"], ["a"], 100, ["a", "b"])],
+    });
+    expect(result.matches[0].sharers).toBe(1);
+    expect(result.rows.find((r) => r.playerId === "a")?.charge).toBe(-100);
+    expect(result.rows.find((r) => r.playerId === "b")?.charge).toBe(100);
+    expectInvariants(result, 0);
+  });
+
+  it("stacks the car share on the base share for one match", () => {
+    // fee 1000 / 3 → base 334 each; b rode with a → +100; a −100.
+    const result = calculateTournamentFees({
+      joiningFee: 1000,
+      matches: [match("m1", ["a", "b", "c"], ["a"], 100, ["b"])],
+    });
+    expect(result.matches[0].share).toBe(334); // CEIL(1000/3)
+    const rowOf = (id: string) => result.rows.find((r) => r.playerId === id);
+    expect(rowOf("a")?.charge).toBe(234);
+    expect(rowOf("b")?.charge).toBe(434);
+    expect(rowOf("c")?.charge).toBe(334);
+    expect(result.collected).toBe(1002);
+    expect(result.surplus).toBe(2);
     expectInvariants(result, 1000);
   });
 

@@ -66,15 +66,17 @@ async function buildAdminProps(
   let initial: WizardInitial | undefined;
   if (match.status === "completed") {
     const rowsRes = await pool.query(
-      `SELECT player_id, brought_car
+      `SELECT player_id, brought_car, shared_car
        FROM tournament_match_participants WHERE match_id = $1`,
       [match.id],
     );
     const selected: string[] = [];
     const cars: string[] = [];
+    const shared: string[] = [];
     for (const row of rowsRes.rows) {
       selected.push(row.player_id);
       if (row.brought_car) cars.push(row.player_id);
+      else if (row.shared_car) shared.push(row.player_id);
     }
     initial = {
       result: match.result ?? "won",
@@ -86,10 +88,7 @@ async function buildAdminProps(
       },
       selected,
       cars,
-      // Tournaments do not ask who shared a car; the sharing step is
-      // dropped for them and their car money still splits across
-      // everyone in the match.
-      shared: [],
+      shared,
       guests: [],
     };
   }
@@ -230,8 +229,8 @@ async function TournamentMatchData({
           </section>
           <p className="text-xs text-text-muted">
             Fees settle for the whole tournament when it is marked completed —
-            this match&apos;s slice of the joining fee plus its car money splits
-            across the players who played it.
+            this match&apos;s slice of the joining fee splits across the players
+            who played it, and its car money across the ones who shared a ride.
           </p>
           {match.updated_by_name && (
             <p className="text-center text-xs text-text-muted">

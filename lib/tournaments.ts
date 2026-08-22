@@ -143,14 +143,21 @@ async function settleTournamentFees(
     [tournament.id],
   );
   const attendeesRes = await client.query(
-    `SELECT match_id, player_id, brought_car
+    `SELECT match_id, player_id, brought_car, shared_car
      FROM tournament_match_participants WHERE tournament_id = $1`,
     [tournament.id],
   );
-  const byMatch = new Map<string, { playerId: string; broughtCar: boolean }[]>();
+  const byMatch = new Map<
+    string,
+    { playerId: string; broughtCar: boolean; sharedCar: boolean }[]
+  >();
   for (const row of attendeesRes.rows) {
     const list = byMatch.get(row.match_id) ?? [];
-    list.push({ playerId: row.player_id, broughtCar: row.brought_car });
+    list.push({
+      playerId: row.player_id,
+      broughtCar: row.brought_car,
+      sharedCar: row.shared_car,
+    });
     byMatch.set(row.match_id, list);
   }
   const matches: TournamentFeeMatch[] = matchesRes.rows.map((m) => ({

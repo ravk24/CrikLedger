@@ -159,9 +159,16 @@ export async function completeTournamentMatch(
     for (const row of body.rows) {
       await client.query(
         `INSERT INTO tournament_match_participants
-           (tournament_id, match_id, player_id, brought_car, fee_amount)
-         VALUES ($1, $2, $3, $4, 0)`,
-        [tournamentId, matchId, row.player_id, row.brought_car],
+           (tournament_id, match_id, player_id, brought_car, shared_car, fee_amount)
+         VALUES ($1, $2, $3, $4, $5, 0)`,
+        [
+          tournamentId,
+          matchId,
+          row.player_id,
+          row.brought_car,
+          // A driver is never a sharer — ticking both means "brought".
+          row.shared_car && !row.brought_car,
+        ],
       );
     }
     // Legacy cleanup: editing a match completed under the old per-match
