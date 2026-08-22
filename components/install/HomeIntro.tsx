@@ -1,23 +1,21 @@
 import Link from "next/link";
-import { ChevronRight, PlayCircle, Receipt, Smartphone } from "lucide-react";
+import { ChevronRight, PlayCircle, Receipt } from "lucide-react";
 import type { NavState } from "@/lib/nav";
+import { InstallCard } from "./InstallCard";
+import { renderInstallDiagrams } from "./installDiagrams";
 
 // Home's three choices: get the app, try it, see what it costs. Rows
 // rather than a catalogue — /pricing holds the actual product cards, so
 // a visitor meets prices, features and refund terms once they ask for
 // them rather than on the landing screen.
 //
-// /install and /schedule are the other two: /schedule renders
+// "How to install" expands in place (InstallCard) so the visitor never
+// leaves Home; /install stays as the standalone route Ledger holders
+// reach from More and from InstallNudge. /schedule renders
 // GuestMatchFlow for anyone without a Ledger, opening on the scheduled
 // sample and its "Complete the match" button, so a plain link lands the
 // visitor exactly there.
-const CARDS = [
-  {
-    href: "/install",
-    icon: Smartphone,
-    title: "How to install",
-    subtitle: "Put CrikLedger on your home screen — no app store needed",
-  },
+const LINK_CARDS = [
   {
     href: "/schedule",
     icon: PlayCircle,
@@ -48,7 +46,9 @@ export function HomeIntro({ nav }: { nav: NavState }) {
         </p>
       </div>
 
-      {CARDS.map(({ href, icon: Icon, title, subtitle }) => (
+      <InstallCard diagrams={renderInstallDiagrams()} />
+
+      {LINK_CARDS.map(({ href, icon: Icon, title, subtitle }) => (
         <Link
           key={href}
           href={href}

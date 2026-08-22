@@ -17,8 +17,9 @@ type BeforeInstallPromptEvent = Event & {
 const PLATFORMS: Platform[] = ["android", "ios"];
 
 /**
- * The Android/iOS install walkthrough — the whole of the Home page for a
- * visitor without a Ledger, and the whole of /install for everyone else.
+ * The Android/iOS install walkthrough. Home renders it inside
+ * InstallCard (collapsed until tapped) for visitors without a Ledger;
+ * /install is the standalone route for Ledger holders.
  *
  * The two platform buttons are the control; the user-agent sniff below
  * only picks which one starts selected. That order matters: an iPhone
