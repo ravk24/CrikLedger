@@ -78,7 +78,7 @@ export async function createTournament(
           body.name,
           body.team_name ?? null,
           body.venue ?? null,
-          body.joining_fee ?? 0,
+          body.joining_fee,
           body.start_date ?? null,
           body.end_date ?? null,
           adminId,

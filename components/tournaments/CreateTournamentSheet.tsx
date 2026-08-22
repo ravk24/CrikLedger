@@ -35,7 +35,7 @@ export function CreateTournamentSheet({ creditsLeft }: { creditsLeft: number }) 
           name: name.trim(),
           ...(teamName.trim() ? { team_name: teamName.trim() } : {}),
           ...(groundName ? { venue: groundName } : {}),
-          ...(Number(joiningFee) > 0 ? { joining_fee: Number(joiningFee) } : {}),
+          joining_fee: Number(joiningFee),
           ...(startDate ? { start_date: startDate } : {}),
           ...(endDate ? { end_date: endDate } : {}),
         }),
@@ -140,9 +140,10 @@ export function CreateTournamentSheet({ creditsLeft }: { creditsLeft: number }) 
             />
           </label>
           <MoneyInput
-            label="Joining Fee (optional — settles when the tournament completes)"
+            label="Joining Fee (settles when the tournament completes)"
             value={joiningFee}
             onChange={setJoiningFee}
+            required
           />
           <div className="flex gap-3">
             <label className="flex flex-1 flex-col gap-1">
@@ -173,7 +174,7 @@ export function CreateTournamentSheet({ creditsLeft }: { creditsLeft: number }) 
           {error && <p className="text-sm text-debit">{error}</p>}
           <button
             type="submit"
-            disabled={pending}
+            disabled={pending || !(Number(joiningFee) > 0)}
             className="mt-1 h-11 w-full rounded-md bg-accent text-sm font-medium text-accent-foreground disabled:opacity-60"
           >
             {pending ? "Creating…" : "Create tournament"}

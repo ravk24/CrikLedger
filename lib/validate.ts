@@ -261,8 +261,10 @@ export const createTournamentSchema = z.object({
   team_name: z.string().trim().min(1).max(80).optional(),
   // Free-text ground name, same as match scheduling.
   venue: z.string().trim().min(1).max(80).optional(),
-  // One participation fee for the whole tournament (0 = none yet).
-  joining_fee: z.number().int().nonnegative().optional(),
+  // One participation fee for the whole tournament — required, since
+  // settlement divides it across the matches; a superadmin can change it
+  // later from the Details sheet.
+  joining_fee: z.number().int().positive(),
   start_date: entryDate,
   end_date: entryDate,
 });
@@ -273,7 +275,8 @@ export const editTournamentSchema = z
     // null clears the field; undefined leaves it untouched.
     team_name: z.string().trim().min(1).max(80).nullable().optional(),
     venue: z.string().trim().min(1).max(80).nullable().optional(),
-    joining_fee: z.number().int().nonnegative().optional(),
+    // Superadmin only — the route enforces it (see app/api/tournaments/[id]).
+    joining_fee: z.number().int().positive().optional(),
     start_date: entryDate,
     end_date: entryDate,
     status: z.enum(["active", "completed"]).optional(),

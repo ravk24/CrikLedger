@@ -86,6 +86,10 @@ export function TournamentAdminPanel({
   async function handleDetailsSubmit(e: React.FormEvent) {
     e.preventDefault();
     const groundName = venue.trim();
+    if (isSuperadmin && !(Number(joiningFee) > 0)) {
+      setDetailsError("Enter the joining fee — it cannot be blank.");
+      return;
+    }
     setPending(true);
     setDetailsError(null);
     setDetailsSaved(false);
@@ -97,7 +101,9 @@ export function TournamentAdminPanel({
           name: name.trim(),
           team_name: teamName.trim() === "" ? null : teamName.trim(),
           venue: groundName === "" ? null : groundName,
-          joining_fee: Number(joiningFee) || 0,
+          // Superadmin only — admins never send it, so a read-only field
+          // can never zero the fee by accident.
+          ...(isSuperadmin ? { joining_fee: Number(joiningFee) } : {}),
           start_date: startDate || null, // null = clear (blanked input)
           end_date: endDate || null,
         }),
@@ -374,8 +380,14 @@ export function TournamentAdminPanel({
             label="Joining Fee (settles when the tournament completes)"
             value={joiningFee}
             onChange={setJoiningFee}
-            disabled={readOnly}
+            disabled={readOnly || !isSuperadmin}
+            required
           />
+          {!isSuperadmin && (
+            <p className="-mt-2 text-xs text-text-muted">
+              Only a superadmin can change the fee.
+            </p>
+          )}
           <div className="flex gap-3">
             <label className="flex flex-1 flex-col gap-1">
               <span className="text-xs font-medium text-text-secondary">

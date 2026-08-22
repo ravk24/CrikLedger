@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, requireSuperadmin } from "@/lib/session";
-import { editTournamentSchema, handleRouteError } from "@/lib/validate";
+import {
+  ApiError,
+  editTournamentSchema,
+  handleRouteError,
+} from "@/lib/validate";
 import { deleteTournament, updateTournament } from "@/lib/tournaments";
 
 // Edit details, Complete (status: 'completed') or Reopen ('active').
@@ -12,6 +16,15 @@ export async function PATCH(
     const admin = await requireAdmin();
     const { id } = await params;
     const body = editTournamentSchema.parse(await req.json());
+    // The joining fee drives the whole settlement, so only a superadmin
+    // may change it after creation; everything else stays admin-editable.
+    if (body.joining_fee !== undefined && admin.scopeRole !== "superadmin") {
+      throw new ApiError(
+        403,
+        "SCOPE_FORBIDDEN",
+        "Only a superadmin can change the joining fee",
+      );
+    }
     const result = await updateTournament(admin.id, id, body);
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
