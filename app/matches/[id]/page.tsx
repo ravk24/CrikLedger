@@ -13,6 +13,7 @@ import { MatchAdminActions } from "@/components/matches/MatchAdminActions";
 import { MatchFeeCard } from "@/components/matches/MatchFeeCard";
 import { DeleteScheduledMatch } from "@/components/matches/DeleteScheduledMatch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { calculateMatchFees } from "@/engine/calc";
 import { computeSlotShare } from "@/lib/bookings";
 import { pool } from "@/lib/db";
 import {
@@ -275,18 +276,33 @@ async function MatchDetailData({
     participants.find((p) => Number(p.guest_fee_share) !== 0) ?? null;
   const updatedStamp = match.updated_at ?? null;
 
-  // Share payload from the stored rows. The base share is a plain
-  // attendee's fee (no car, no ride); a rider's extra over that is the
-  // car share. Guests are listed after the roster like the sample sheet.
+  // Share payload: re-run the engine on the match inputs rather than
+  // reverse-engineering the stored rows (a match with no plain attendee
+  // used to fall back to a driver's credit as the "base fee"). Members
+  // keep their stored fee_amount, except the captain, whose own share is
+  // shown with the guest charge itemised per guest row below the roster.
   let sheetPayload: MatchSheetPayload | null = null;
   if (match.status === "completed") {
     const playing = participants.filter((p) => p.is_playing);
-    const plain = playing.find((p) => !p.brought_car && !p.shared_car);
-    const rider = playing.find((p) => p.shared_car && !p.brought_car);
-    const own = (p: MatchParticipantPublic) =>
-      Number(p.fee_amount) - Number(p.guest_fee_share);
-    const perPlayerFee = plain ? own(plain) : playing[0] ? own(playing[0]) : 0;
-    const sharerCount = playing.filter((p) => p.shared_car && !p.brought_car).length;
+    const guestShared = match.guest_shared_cars ?? [];
+    const calc = calculateMatchFees({
+      groundFee: Number(match.ground_fee),
+      ballFee: Number(match.ball_fee),
+      otherFee: Number(match.other_fee),
+      carAllowancePerCar: Number(match.car_allowance_per_car),
+      attendees: playing.map((p) => ({
+        playerId: p.player_name,
+        broughtCar: p.brought_car,
+        sharedCar: p.shared_car,
+      })),
+      guests: guests.map((g, i) => ({
+        name: g.name,
+        broughtCar: g.brought_car,
+        sharedCar: guestShared[i] ?? false,
+      })),
+      carSplit: "sharers",
+    });
+    // Cash the team actually spent; the car pool is kept by the drivers.
     const cash =
       Number(match.ground_fee) + Number(match.ball_fee) + Number(match.other_fee);
     sheetPayload = {
@@ -297,21 +313,21 @@ async function MatchDetailData({
       groundFee: Number(match.ground_fee),
       ballFee: Number(match.ball_fee),
       otherFee: Number(match.other_fee),
-      perPlayerFee,
-      carSharePerSharer: rider ? Math.max(0, own(rider) - perPlayerFee) : 0,
-      sharerCount,
+      perPlayerFee: calc.perPlayerFee,
+      carSharePerSharer: calc.carSharePerSharer,
+      sharerCount: calc.sharerCount,
       totalCost: cash,
       surplus: Math.max(0, collectedTotal - cash),
       rows: [
         ...playing.map((p) => ({
           name: p.player_name,
-          fee: Number(p.fee_amount),
+          fee: Number(p.fee_amount) - Number(p.guest_fee_share),
           broughtCar: p.brought_car,
         })),
-        ...guests.map((g) => ({
+        ...calc.guestRows.map((g) => ({
           name: `${g.name} (guest)`,
-          fee: 0,
-          broughtCar: g.brought_car,
+          fee: g.fee,
+          broughtCar: g.broughtCar,
         })),
       ].slice(0, 30),
       captainNote:
