@@ -1,45 +1,41 @@
-# Memory — session 15: fee prefill, month headers, share features, backups armed
+# Memory — session 16: light-only theme, pre-launch DB reset, inline install guide
 
-Last updated: 2026-08-22 ~19:15 IST (session 15, end)
+Last updated: 2026-08-22 ~21:00 IST (session 16, end)
 
 ## What was built
 
-All on `main`, commits `917070f` → `04e1471`, deployed to prod via Vercel.
+All on `main`, pushed; working tree clean.
 
-- **Full opponent-fee ground-fee prefill** (`917070f`): `db/migration-41.sql` adds `matches.pending_cleared_entry_id` (FK → `pool_entries`, ON DELETE SET NULL, with an idempotent message-based backfill); `clearMatchPending` in `lib/matches.ts` now sets it; `app/matches/[id]/page.tsx` computes `matchFeeTotal = settled + fee_pending + cleared` and feeds `initialGroundFee`. Migration 41 APPLIED to the DB (runner + manual backfill; one entry backfilled: Arezo ₹1000).
-- **Month separators** in the scheduled-matches list: `formatMonth()` in `lib/format.ts`; `groupByMonth` in `components/matches/ScheduledMatchList.tsx`.
-- **Repurchasable tournament credits**: `app/(app)/purchases/page.tsx` always shows the WhatsApp buy button for the Tournament card (badge "N credits left"); `CreateTournamentSheet` links "Buy another credit" → `/purchases`.
-- **Tournament balances share image** (`52ef33b`): new `app/api/share/tournament-balances/route.tsx` (`?id=`, gated like the tournament Home tab); `BalanceRows`/`balanceImageHeight` extracted into `lib/share-image.tsx` and reused by `share/balances`; download button wired on `app/tournaments/[id]/(tabs)/page.tsx`.
-- **Virtual Match Fee removed, "Share with a friend" added** (`c910bbb`): deleted `app/(app)/virtual-fee`, `components/more/VirtualFeeCalculator.tsx`, `engine/virtualFee*.ts`; new `app/(app)/share-app/page.tsx` + `components/more/ShareAppActions.tsx` (native share / clipboard copy / `wa.me/?text=` link using `SITE_URL`); last tile on `/more`; `/share-app` in `MORE_ALSO`.
-- **Backups armed** (`0cb7f7b`): `db/BACKUP.md` corrected (5-day schedule, env-secret location, pooler URL guidance, status); workflow guard messages point at Settings → Environments → Production.
-- **`pending-tasks.md` untracked + git-ignored** (`04e1471`); rewritten locally to the current open list.
+- **Light theme enforced** (`d9cc978`): `app/layout.tsx` `ThemeProvider` now `defaultTheme="light" forcedTheme="light" enableSystem={false}`; `viewport.themeColor` collapsed to `#4f46e5`. `ThemeSwitcher` import/render removed from `components/shared/AppHeader.tsx` (the only place it was rendered). Dark code deliberately kept: `.dark` block in `globals.css`, `components/theme-switcher.tsx`, `switch.tsx` `dark:` utilities, `public/offline.html`. Re-enable = drop `forcedTheme`, `defaultTheme="system"`, `enableSystem`, re-add `<ThemeSwitcher />`.
+- **Pre-launch DB reset executed** (`972d388`): `db/clear-dev-data.sql` rewritten to wipe all 19 data tables in FK-safe order (tournament tables → entitlements → team tables → `admins WHERE platform_role <> 'megaadmin'`, then bump megaadmin `session_epoch`). New `db/reset.mjs` (`node db/reset.mjs --confirm`; reads `DATABASE_URL` from `.env.local`; refuses without flag; aborts unless exactly one megaadmin row; prints before/after counts). Ran against live Supabase after GitHub backup run 32579010470 succeeded. Before: 5 accounts, 2 teams, 22 players, 10 matches, 14 pool entries, 1 tournament. After: every data table 0, `_migrations` 41, `admins` = `ravi_kant` only. `our-xi` and `ravi_kant_SA` are gone.
+- **Home install card expands in place** (`4ccacfb`): new `components/install/InstallCard.tsx` (client; button with `aria-expanded` + rotating `ChevronDown`, renders `InstallGuide` below when open). `HomeIntro.tsx` (still a server component) renders `<InstallCard diagrams={renderInstallDiagrams()} />` then the two remaining link rows (`/schedule`, `/pricing`). `/install` route unchanged (used by More + `InstallNudge`). Verified in browser signed out.
+- Git-ignored docs updated locally: `context/progress-tracker.md` item 17 (reset done), `context/build-plan.md`, `context/ui-registry.md:109`, `context/ui-rules.md` Theme section, `CrikLedger-docs/01`, `06` (data volume), `07` (accounts).
 
 ## Decisions made
 
-- Tournament credit is a consumable: never show "Already yours" for it; Ledger stays one-off.
-- Friend-share uses a number-less `wa.me/?text=` link + `navigator.share`; the hardcoded WhatsApp number is support only.
-- Share-image layout lives in one component (`BalanceRows`) — team and tournament PNGs must stay identical.
-- Backups: secrets are **environment** secrets in GitHub env `Production`; `SUPABASE_DB_URL` must be the session pooler (user `postgres.<ref>`, host `aws-0-ap-southeast-1.pooler.supabase.com`, port 5432). Direct `db.<ref>.supabase.co` host and plain `postgres` user both fail.
+- Dark theme is disabled, not deleted (user's explicit ask).
+- Reset scope: wipe everything incl. `our-xi` and `ravi_kant_SA`; teams/superadmins are to be created via `/ops` grants from now on, not seed files.
+- Home for anonymous and signed-in-no-ledger users is the three-collapsed-card layout; only "How to install" is a disclosure, the other two stay links.
 
 ## Problems solved
 
-- Ground fee prefilled ₹0 when a match fee had been entered as pending and later cleared: the cleared pool entry was never linked to the match. Fixed by migration 41 link.
-- Backup workflow failed 6 times: runs 1–4 no secrets; run 5 direct-connection URL (IPv6-only from runners); run 6 `password authentication failed for user "postgres"` = missing project-ref suffix in username. Run 7 green (artifact `db-backup-2026-08-22-run7`, 19 KB, expires 2026-09-21).
-- The earlier daily cadence (18–21 Aug) was the original `Daily DB Backup` cron; `*/5` schedule has been on main since `8986600`. Next scheduled run: 26 Aug 3:00 AM IST.
-- A stale `.next/types/validator.ts` referencing the deleted `virtual-fee` route makes `tsc` fail while the dev server is running — cache artifact only; restart `next dev` or ignore `.next/`.
+- Stale `.next/types/validator.ts` pointing at the deleted `virtual-fee` page: cleared by `rm -rf .next`; `tsc --noEmit` now clean.
+- A stray uncommitted edit in `db/migration-26.sql` (dangling `INSERT INTO team_grounds` with its VALUES list deleted) was discarded with `git checkout` — migration files must stay immutable.
+- The Chrome MCP screenshot occasionally times out right after navigation/click on localhost; retrying the screenshot works.
 
 ## Current state
 
-- Working tree clean; prod healthy: `/api/health` bom1, db ok, warm 0.15 s; pages 0.15–0.39 s. No performance regression.
-- Tests: 81/81 (7 virtualFee tests removed). Perf plan: all items done/dropped except #6 stage 3 (Server Actions), #18 partial (share images at 1080 px), #20 ignore.
-- Out-of-scope notes flagged to the user, not changed: completion recoup (`lib/matches.ts` ~line 236) reads only the settled entry for DEBIT fees; deleting a scheduled match reverts the settled entry but not the cleared-pending one.
+- Live DB: schema intact (41 migrations), zero data, one account `ravi_kant` (megaadmin). User's existing login cookie is invalid (epoch bumped) — must re-login.
+- Prod deploys from `main` via Vercel; last pushed commit `4ccacfb`. Not re-checked `/api/health` after these pushes.
+- `memory.md` is tracked in git; this file is not yet committed.
 
 ## Next session starts with
 
-1. **Rotate the DB password** — it was displayed in-session on 2026-08-22 via an editor selection. Update Vercel `DATABASE_URL`, `.env.local`, and GitHub `Production` secret `SUPABASE_DB_URL` together; re-run "DB Backup (every 5 days)" to confirm green.
-2. Then the open items in local `pending-tasks.md`: visual checks of signed-in `/schedule` and `/admin` in prod (user), Server Actions (deferred), share images at 720 px, V1 launch checklist re-read.
+1. User re-logs in as `ravi_kant`, creates the real team + grants a team superadmin in `/ops`, enters real players (progress-tracker item 17 continues from there).
+2. **Rotate the DB password** (carried over from session 15, still open) — update Vercel `DATABASE_URL`, `.env.local`, GitHub `Production` secret `SUPABASE_DB_URL` together; re-run the backup workflow to confirm green.
+3. Remaining `pending-tasks.md` items: visual checks of signed-in `/schedule` and `/admin` in prod, Server Actions (deferred), share images at 720 px, V1 launch checklist re-read.
 
 ## Open questions
 
-- Should the cleared-pending entry also be recouped on completion (DEBIT fees) and reverted on scheduled-match delete, like `other_fee_entry_id`? Left as-is pending the user's call.
-- `/share-app` and the tournament download button were verified by route status only (browser was logged out) — user to eyeball once.
+- Carried over: should the cleared-pending entry be recouped on completion (DEBIT fees) and reverted on scheduled-match delete, like `other_fee_entry_id`? (`lib/matches.ts` ~line 236.)
+- `/share-app` and the tournament download button still only verified by route status — user to eyeball once signed in with a team.
