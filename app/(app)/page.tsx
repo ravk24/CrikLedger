@@ -66,6 +66,14 @@ async function DashboardData() {
 
   return (
     <>
+      <section className="rounded-lg border border-border bg-surface p-3 text-center shadow-card">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-text-muted">
+          Team
+        </p>
+        <p className="truncate text-lg font-bold text-text-primary">
+          {team.display_name}
+        </p>
+      </section>
       <PoolSummaryCard
         balance={balance}
         entryCount={countRes.count ?? 0}
@@ -91,6 +99,7 @@ async function DashboardData() {
 function DashboardSkeleton() {
   return (
     <>
+      <Skeleton className="h-16 rounded-lg" />
       <Skeleton className="h-28 rounded-lg" />
       <Skeleton className="h-11 rounded-md" />
       <Skeleton className="h-64 rounded-lg" />
