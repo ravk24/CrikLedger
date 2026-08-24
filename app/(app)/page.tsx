@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import { PoolSummaryCard } from "@/components/dashboard/PoolSummaryCard";
 import { PlayerGrid } from "@/components/dashboard/PlayerGrid";
 import { InstallNudge } from "@/components/dashboard/InstallNudge";
+import { LedgerHowTo } from "@/components/dashboard/LedgerHowTo";
+import { TournamentHowTo } from "@/components/dashboard/TournamentHowTo";
 import { DownloadImageButton } from "@/components/shared/DownloadImageButton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeIntro } from "@/components/install/HomeIntro";
@@ -74,6 +76,10 @@ async function DashboardData() {
           {team.display_name}
         </p>
       </section>
+      {/* Post-purchase checklists — each computes its ✓s live and
+          returns null once done (or for anyone who can't act on it). */}
+      <LedgerHowTo team={team} players={players} admin={admin} />
+      <TournamentHowTo />
       <PoolSummaryCard
         balance={balance}
         entryCount={countRes.count ?? 0}

@@ -60,7 +60,11 @@ export function ChangePasswordForm({
         );
         return;
       }
-      router.push("/admin");
+      // The forced first-login change (no current password asked) is a
+      // fresh purchaser's first real screen — land them on Home, where
+      // the "How to use" checklist waits. A voluntary change returns to
+      // the console it was launched from.
+      router.push(requireCurrent ? "/admin" : "/");
       startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");
