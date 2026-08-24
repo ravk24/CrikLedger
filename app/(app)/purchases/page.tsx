@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WHATSAPP_NUMBER } from "@/lib/contact";
 import { getNavState } from "@/lib/nav";
 
 // Purchases placeholder. The catalogue and entitlement grants are
@@ -35,9 +36,6 @@ const PRODUCTS = [
 
 // The buy button opens WhatsApp with a prefilled message; the chat
 // happens on the user's device, so nothing is sent through our servers.
-// Same number as the contact and pricing pages.
-const WHATSAPP_NUMBER = "919142349007";
-
 function buyWhatsApp(name: string, price: string) {
   const text = [
     `Hi CrikLedger, I would like to buy the ${name} feature (${price}).`,

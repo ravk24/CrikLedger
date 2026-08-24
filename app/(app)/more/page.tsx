@@ -4,14 +4,20 @@ import {
   Car,
   CarFront,
   Info,
+  MessageSquarePlus,
   Receipt,
   Share2,
   ShoppingBag,
   Smartphone,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SUPPORT_EMAIL, WHATSAPP_NUMBER } from "@/lib/contact";
 import { getNavState, type NavState } from "@/lib/nav";
 import { cn } from "@/lib/utils";
+
+const FEEDBACK_PREFILL = encodeURIComponent(
+  "Hi CrikLedger, I have a suggestion: ",
+);
 
 type Feature = {
   label: string;
@@ -135,6 +141,36 @@ export default function More() {
       <Suspense fallback={<Skeleton className="h-64 rounded-lg" />}>
         <MoreData />
       </Suspense>
+
+      {/* Session-free, so it sits outside the boundary and stays in the
+          prerendered shell. Plain <a>s — no client JS. */}
+      <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface shadow-card p-4">
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-accent-light text-accent">
+            <MessageSquarePlus size={18} />
+          </span>
+          <h2 className="text-sm font-semibold text-text-primary">
+            Help us make CrikLedger better
+          </h2>
+        </div>
+        <p className="text-sm text-text-secondary">
+          Think a feature could work better, or have an idea for how
+          something should be built? Send it straight to us — it goes to
+          the person who builds the app.
+        </p>
+        <a
+          href={`https://wa.me/${WHATSAPP_NUMBER}?text=${FEEDBACK_PREFILL}`}
+          className="flex h-11 w-full items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-foreground"
+        >
+          WhatsApp your idea
+        </a>
+        <a
+          href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("CrikLedger feedback")}`}
+          className="flex h-11 w-full items-center justify-center rounded-md border border-border text-sm font-medium text-text-primary"
+        >
+          Email us
+        </a>
+      </section>
     </>
   );
 }
