@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TournamentAdminPanel } from "@/components/tournaments/TournamentAdminPanel";
+import { pool } from "@/lib/db";
 import { canWrite, isScopeSuperadmin } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
@@ -45,6 +46,16 @@ async function TournamentAdminData({
 
   const players = (playersRes.data ?? []) as TournamentPlayerPublic[];
 
+  // phone is deliberately absent from tournament_players_public
+  // (migration 44) — read off the base table, after the canEdit gate
+  // above so the query never runs for a bounced visitor.
+  const phoneRes = await pool.query<{ phone: string | null }>(
+    `SELECT phone FROM tournament_players
+      WHERE tournament_id = $1 AND is_captain LIMIT 1`,
+    [id],
+  );
+  const captainPhone = phoneRes.rows[0]?.phone ?? null;
+
   return (
     <>
       <h1 className="text-xl font-semibold text-text-primary">Admin</h1>
@@ -52,6 +63,7 @@ async function TournamentAdminData({
       <TournamentAdminPanel
         tournament={tournament}
         players={players}
+        captainPhone={captainPhone}
         isSuperadmin={isSuperadmin}
       />
     </>

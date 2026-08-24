@@ -8,6 +8,11 @@ type Props = {
   endpoint: string; // GET route that returns a PNG
   filename: string;
   title: string; // share-sheet title and aria-label
+  // Companion message: copied to the clipboard on tap (WhatsApp drops
+  // share-sheet text riding with files, so paste-below-the-image is
+  // the reliable channel) and passed to navigator.share as best
+  // effort. Callers build it server-side, admin-gated.
+  shareText?: string;
   className?: string;
 };
 
@@ -18,14 +23,29 @@ export function DownloadImageButton({
   endpoint,
   filename,
   title,
+  shareText,
   className,
 }: Props) {
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function run() {
     setBusy(true);
     setError(null);
+    // Copy FIRST, inside the tap's user activation — iOS revokes the
+    // gesture after the fetch await below, and a failed copy must not
+    // block the image share.
+    if (shareText) {
+      try {
+        await navigator.clipboard.writeText(shareText);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 3000);
+      } catch {
+        // Clipboard needs a secure context — the text still rides
+        // navigator.share below where the target accepts it.
+      }
+    }
     try {
       const res = await fetch(endpoint, { cache: "no-store" });
       if (!res.ok) throw new Error("render failed");
@@ -36,7 +56,21 @@ export function DownloadImageButton({
         typeof navigator !== "undefined" &&
         navigator.canShare?.({ files: [file] })
       ) {
-        await navigator.share({ files: [file], title });
+        try {
+          await navigator.share({
+            files: [file],
+            title,
+            ...(shareText ? { text: shareText } : {}),
+          });
+        } catch (e) {
+          // Some UAs accept files but reject a text rider — retry
+          // image-only rather than losing the share.
+          if (shareText && (e as Error)?.name === "TypeError") {
+            await navigator.share({ files: [file], title });
+          } else {
+            throw e;
+          }
+        }
         return;
       }
 
@@ -49,6 +83,7 @@ export function DownloadImageButton({
     } catch (e) {
       // A cancelled native share rejects too — not worth an error.
       if ((e as Error)?.name !== "AbortError") {
+        setCopied(false);
         setError("Could not build the image — try again.");
       }
     } finally {
@@ -72,14 +107,21 @@ export function DownloadImageButton({
           <Download size={18} />
         )}
       </button>
-      {error && (
+      {error ? (
         <span
           role="alert"
           className="absolute right-0 top-full z-10 mt-1 whitespace-nowrap rounded-md border border-border bg-surface shadow-card px-2 py-1 text-xs text-debit shadow-sm"
         >
           {error}
         </span>
-      )}
+      ) : copied ? (
+        <span
+          role="status"
+          className="absolute right-0 top-full z-10 mt-1 whitespace-nowrap rounded-md border border-border bg-surface shadow-card px-2 py-1 text-xs text-credit shadow-sm"
+        >
+          Message copied — paste it below the image.
+        </span>
+      ) : null}
     </span>
   );
 }

@@ -10,19 +10,26 @@ import type { TournamentPlayerPublic } from "@/types";
 type Props = {
   tournamentId: string;
   players: TournamentPlayerPublic[]; // active roster only
+  // Current captain's stored number (tournament_players.phone,
+  // migration 44) — read off the base table, never the public view.
+  captainPhone: string | null;
   disabled?: boolean; // completed tournament
 };
 
 // Tournament Admin console tile: declare / transfer / remove this
-// tournament's captain. Any admin (unlike the SG captain tile).
+// tournament's captain. Any admin (unlike the SG captain tile). Also
+// holds the captain's contact phone for the dues-settlement share
+// message on the balances image.
 export function TournamentCaptainTile({
   tournamentId,
   players,
+  captainPhone,
   disabled = false,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [selectedId, setSelectedId] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -31,9 +38,10 @@ export function TournamentCaptainTile({
   useEffect(() => {
     if (open) {
       setSelectedId(captain?.id ?? "");
+      setPhone(captainPhone ?? "");
       setError(null);
     }
-  }, [open, captain?.id]);
+  }, [open, captain?.id, captainPhone]);
 
   async function callApi(playerId: string, method: "POST" | "DELETE") {
     setPending(true);
@@ -41,7 +49,18 @@ export function TournamentCaptainTile({
     try {
       const res = await fetch(
         `/api/tournaments/${tournamentId}/players/${playerId}/captain`,
-        { method },
+        {
+          method,
+          ...(method === "POST"
+            ? {
+                headers: { "Content-Type": "application/json" },
+                // Empty input = explicit clear.
+                body: JSON.stringify({
+                  phone: phone.trim() === "" ? null : phone.trim(),
+                }),
+              }
+            : {}),
+        },
       );
       const body = await res.json();
       if (!body.success) {
@@ -111,18 +130,40 @@ export function TournamentCaptainTile({
             ))}
           </select>
         </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-text-secondary">
+            Captain&rsquo;s phone (optional) — used in the dues-settlement
+            message
+          </span>
+          <input
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+91 98765 43210"
+            className="h-11 w-full rounded-md border border-border bg-surface-secondary px-3 text-base text-text-primary focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+        </label>
         {error && <p className="text-sm text-debit">{error}</p>}
         <button
           type="button"
-          disabled={pending || !selectedId || selectedId === captain?.id}
+          disabled={
+            pending ||
+            !selectedId ||
+            (selectedId === captain?.id &&
+              phone.trim() === (captainPhone ?? ""))
+          }
           onClick={() => callApi(selectedId, "POST")}
           className="h-11 w-full rounded-md bg-accent text-sm font-medium text-accent-foreground disabled:opacity-60"
         >
           {pending
             ? "Saving…"
-            : captain
-              ? "Transfer captaincy"
-              : "Declare captain"}
+            : selectedId === captain?.id
+              ? "Save phone number"
+              : captain
+                ? "Transfer captaincy"
+                : "Declare captain"}
         </button>
         {captain && (
           <button

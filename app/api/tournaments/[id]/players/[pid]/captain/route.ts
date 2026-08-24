@@ -1,18 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/session";
-import { handleRouteError } from "@/lib/validate";
+import { captainPhoneSchema, handleRouteError } from "@/lib/validate";
 import { clearCaptain, setCaptain } from "@/lib/tournaments";
 
 // Tournament captain — declared by any admin (unlike the SG captain,
-// which is superadmin-only). No body; ids come from the params.
+// which is superadmin-only). Ids come from the params; the body is
+// optional — the plain toggle sends none. phone null clears,
+// undefined leaves the stored number untouched.
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string; pid: string }> },
 ) {
   try {
     await requireAdmin();
     const { id, pid } = await params;
-    const result = await setCaptain(id, pid);
+    const body = captainPhoneSchema.parse(await req.json().catch(() => ({})));
+    const result = await setCaptain(id, pid, body.phone);
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
     return handleRouteError("[tournaments/captain]", error);

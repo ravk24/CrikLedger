@@ -4,6 +4,8 @@ import { PlayerGrid } from "@/components/dashboard/PlayerGrid";
 import { PoolSummaryCard } from "@/components/dashboard/PoolSummaryCard";
 import { DownloadImageButton } from "@/components/shared/DownloadImageButton";
 import { Skeleton } from "@/components/ui/skeleton";
+import { pool } from "@/lib/db";
+import { buildDuesMessage } from "@/lib/feeMessage";
 import { formatDateShort } from "@/lib/format";
 import { canWrite } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
@@ -93,6 +95,41 @@ async function TournamentHomeData({
 
   const subtitle = tournamentSubtitle(tournament);
 
+  // Companion text for the balances share: owing players (negative
+  // balance = in debt to the fund, per the view's status rule) settle
+  // via the tournament captain. Biggest debtor first, matching the
+  // image order; the captain is excluded — they cannot transfer to
+  // themselves. Works for active tournaments too: deposits and shared
+  // expenses move balances long before settlement runs at completion.
+  const captainRow = players.find((p) => p.is_captain) ?? null;
+  const owing = players
+    .filter((p) => p.is_active && Number(p.balance) < 0 && !p.is_captain)
+    .sort((a, b) => Number(a.balance) - Number(b.balance))
+    .map((p) => p.name);
+
+  // phone is deliberately absent from tournament_players_public
+  // (migration 44) — read off the base table, only for admins with a
+  // message to build, so anonymous renders never touch it.
+  const captainPhone =
+    isAdmin && captainRow && owing.length > 0
+      ? ((
+          await pool.query<{ phone: string | null }>(
+            `SELECT phone FROM tournament_players
+              WHERE tournament_id = $1 AND is_captain LIMIT 1`,
+            [id],
+          )
+        ).rows[0]?.phone ?? null)
+      : null;
+
+  const shareText =
+    captainRow && captainPhone && owing.length > 0
+      ? buildDuesMessage({
+          captainName: captainRow.name,
+          captainPhone,
+          players: owing,
+        })
+      : undefined;
+
   return (
     <>
       <section className="flex flex-col gap-1">
@@ -123,6 +160,7 @@ async function TournamentHomeData({
               endpoint={`/api/share/tournament-balances?id=${id}`}
               filename={`${tournament.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-balances.png`}
               title={`${tournament.name} · Balances`}
+              shareText={shareText}
             />
           ) : null
         }

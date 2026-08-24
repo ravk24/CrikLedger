@@ -35,6 +35,10 @@ export const DEMO_PLAYERS: WizardPlayer[] = [
   { id: "d11", name: "Sunil" },
 ];
 
+// Clearly-fake captain contact for the sample's fee-collection message.
+// Nine repeated zeros cannot be a real Indian mobile.
+export const DEMO_CAPTAIN_PHONE = "9000000000";
+
 // Who drove. Three cars for eleven players is a typical split.
 export const DEMO_DRIVERS = ["d2", "d5", "d9"] as const;
 

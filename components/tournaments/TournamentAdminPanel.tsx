@@ -26,6 +26,9 @@ import type { TournamentPlayerPublic, TournamentPublic } from "@/types";
 type Props = {
   tournament: TournamentPublic;
   players: TournamentPlayerPublic[]; // full roster, active + removed
+  // Captain's contact number (tournament_players.phone, migration 44) —
+  // fetched off the base table by the admin-gated page.
+  captainPhone: string | null;
   isSuperadmin: boolean;
 };
 
@@ -42,6 +45,7 @@ const tileClass =
 export function TournamentAdminPanel({
   tournament,
   players,
+  captainPhone,
   isSuperadmin,
 }: Props) {
   const router = useRouter();
@@ -283,6 +287,7 @@ export function TournamentAdminPanel({
         <TournamentCaptainTile
           tournamentId={tournament.id}
           players={activePlayers}
+          captainPhone={captainPhone}
           disabled={readOnly}
         />
         <TournamentViceCaptainTile

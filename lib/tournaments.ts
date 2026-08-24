@@ -473,7 +473,13 @@ export async function removePlayer(tournamentId: string, playerId: string) {
 // scoped per tournament; any admin may declare (Ravi 2026-08-15).
 // Declaring captain clears is_vice_captain on the same row, or the
 // t_captain_is_not_vice CHECK aborts the transaction.
-export async function setCaptain(tournamentId: string, playerId: string) {
+export async function setCaptain(
+  tournamentId: string,
+  playerId: string,
+  // Contact number for the dues-settlement message (migration 44):
+  // null clears, undefined leaves the stored number untouched.
+  phone?: string | null,
+) {
   return withTransaction(async (client) => {
     await lockTournament(client, tournamentId);
     await client.query(
@@ -483,10 +489,11 @@ export async function setCaptain(tournamentId: string, playerId: string) {
     );
     const res = await client.query(
       `UPDATE tournament_players
-       SET is_captain = TRUE, is_vice_captain = FALSE
+       SET is_captain = TRUE, is_vice_captain = FALSE,
+           phone = CASE WHEN $3 THEN $4 ELSE phone END
        WHERE id = $1 AND tournament_id = $2 AND is_active
-       RETURNING id, name`,
-      [playerId, tournamentId],
+       RETURNING id, name, phone`,
+      [playerId, tournamentId, phone !== undefined, phone ?? null],
     );
     if (res.rowCount === 0) {
       throw new ApiError(

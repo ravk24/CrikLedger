@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { Car, ChevronLeft, Download, Share2, Users } from "lucide-react";
 import { formatRupees } from "@/lib/format";
-import { DEMO_PLAYERS, DEMO_TEAM } from "@/lib/demo/fixtures";
+import {
+  DEMO_CAPTAIN_PHONE,
+  DEMO_PLAYERS,
+  DEMO_TEAM,
+} from "@/lib/demo/fixtures";
+import { buildGuestFeeMessage } from "@/lib/feeMessage";
 import type { FeeRow, MatchFeeResult } from "@/engine/calc";
 import type { WizardCosts } from "@/components/wizard/wizardTypes";
 import { CaptainMark } from "@/components/shared/CaptainMark";
@@ -30,6 +35,7 @@ export function GuestMatchSheet({
   onBack: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Totals follow the rows on screen, so an edited fee is reflected here
@@ -79,6 +85,29 @@ export function GuestMatchSheet({
   async function share(mode: "share" | "download") {
     setBusy(true);
     setError(null);
+    // Same fee-collection message the paid flow sends, with the sample's
+    // fake number — the demo exists to showcase the whole loop. Copy
+    // FIRST, inside the tap's user activation (iOS revokes the gesture
+    // after the fetch await), and in download mode too: the notice below
+    // is how the visitor discovers the message at all.
+    const message =
+      result.guestRows.length > 0 && captainName
+        ? buildGuestFeeMessage({
+            captainName,
+            captainPhone: DEMO_CAPTAIN_PHONE,
+            guests: result.guestRows.map((g) => g.name),
+          })
+        : null;
+    if (message) {
+      try {
+        await navigator.clipboard.writeText(message);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 3000);
+      } catch {
+        // Clipboard needs a secure context — the text still rides
+        // navigator.share below where the target accepts it.
+      }
+    }
     try {
       const res = await fetch("/api/share/match-sheet", {
         method: "POST",
@@ -96,7 +125,21 @@ export function GuestMatchSheet({
         typeof navigator !== "undefined" &&
         navigator.canShare?.({ files: [file] })
       ) {
-        await navigator.share({ files: [file], title: "Match sheet" });
+        try {
+          await navigator.share({
+            files: [file],
+            title: "Match sheet",
+            ...(message ? { text: message } : {}),
+          });
+        } catch (e) {
+          // Some UAs accept files but reject a text rider — retry
+          // image-only rather than losing the share.
+          if (message && (e as Error)?.name === "TypeError") {
+            await navigator.share({ files: [file], title: "Match sheet" });
+          } else {
+            throw e;
+          }
+        }
         return;
       }
 
@@ -249,6 +292,11 @@ export function GuestMatchSheet({
           <span className="sr-only">Download</span>
         </button>
       </div>
+      {copied && (
+        <p className="text-xs text-credit">
+          Fee message copied — paste it below the image.
+        </p>
+      )}
       {error && <p className="text-sm text-debit">{error}</p>}
 
       <p className="text-center text-xs text-text-muted">
