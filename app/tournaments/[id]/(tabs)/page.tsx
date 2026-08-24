@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PlayerGrid } from "@/components/dashboard/PlayerGrid";
 import { PoolSummaryCard } from "@/components/dashboard/PoolSummaryCard";
 import { DownloadImageButton } from "@/components/shared/DownloadImageButton";
+import { TournamentHowTo } from "@/components/tournaments/TournamentHowTo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { pool } from "@/lib/db";
 import { buildDuesMessage } from "@/lib/feeMessage";
@@ -108,10 +109,11 @@ async function TournamentHomeData({
     .map((p) => p.name);
 
   // phone is deliberately absent from tournament_players_public
-  // (migration 44) — read off the base table, only for admins with a
-  // message to build, so anonymous renders never touch it.
+  // (migration 44) — read off the base table, only for admins, so
+  // anonymous renders never touch it. One read feeds both the dues
+  // message and the onboarding checklist's captain-phone tick.
   const captainPhone =
-    isAdmin && captainRow && owing.length > 0
+    isAdmin && captainRow
       ? ((
           await pool.query<{ phone: string | null }>(
             `SELECT phone FROM tournament_players
@@ -143,6 +145,17 @@ async function TournamentHomeData({
         <p className="rounded-lg bg-inactive-light px-4 py-2 text-sm text-inactive-foreground">
           This tournament is completed — the ledger is read-only.
         </p>
+      )}
+
+      {/* Onboarding checklist for whoever can act on this tournament;
+          returns null once both steps are done. Completed tournaments
+          are read-only, so nothing to onboard. */}
+      {isAdmin && tournament.status === "active" && (
+        <TournamentHowTo
+          tournamentId={id}
+          hasPlayers={players.length > 0}
+          hasCaptainPhone={!!captainRow && captainPhone !== null}
+        />
       )}
 
       <PoolSummaryCard

@@ -4,17 +4,20 @@ import type { SessionAdmin } from "@/lib/session";
 import type { PlayerPublic } from "@/types";
 
 // The Team Ledger onboarding checklist, rendered on the dashboard for
-// the team's superadmin only: rename team and set captain are
-// superadmin actions, and the captain-phone read must stay inside a
+// the team's superadmin only: setting the captain is a superadmin
+// action, and the captain-phone read must stay inside a
 // superadmin-gated path (migration 43 — phone is view-absent by
 // design). Viewers, plain members and the observing megaadmin see
 // nothing, and no query runs for them.
+//
+// Two reminders on purpose — players first (the captain is picked from
+// them), then the captain's number for the fee-collection message.
 export async function LedgerHowTo({
-  team,
+  teamId,
   players,
   admin,
 }: {
-  team: { id: string; display_name: string };
+  teamId: string;
   players: PlayerPublic[];
   admin: SessionAdmin | null;
 }) {
@@ -26,46 +29,25 @@ export async function LedgerHowTo({
     return null;
   }
 
-  const { rows } = await pool.query<{
-    captain_phone: string | null;
-    has_match: boolean;
-  }>(
-    `SELECT
-       (SELECT phone FROM players
-         WHERE team_id = $1 AND is_captain LIMIT 1) AS captain_phone,
-       EXISTS (SELECT 1 FROM matches WHERE team_id = $1) AS has_match`,
-    [team.id],
+  const { rows } = await pool.query<{ captain_phone: string | null }>(
+    `SELECT phone AS captain_phone FROM players
+      WHERE team_id = $1 AND is_captain LIMIT 1`,
+    [teamId],
   );
   const captainPhone = rows[0]?.captain_phone ?? null;
-  const hasMatch = rows[0]?.has_match ?? false;
 
   const steps: HowToStep[] = [
     {
-      label: "Name your team",
-      sublabel: "Replace the placeholder name from your admin console",
-      href: "/admin",
-      // Exact match against the placeholder the grant writes
-      // (app/api/ops/grants) — a deliberate "<name>'s team" rename
-      // counts as done, which is harmless.
-      done: team.display_name !== `${admin.name}'s team`,
-    },
-    {
       label: "Add your players",
-      sublabel: "Every fee and balance hangs off a player",
+      sublabel: "See every player's balance right here",
       href: "/admin/players",
       done: players.length > 0,
     },
     {
-      label: "Set your captain and phone",
+      label: "Add your captain and phone number",
       sublabel: "The number goes on the fee-collection WhatsApp message",
       href: "/admin",
       done: players.some((p) => p.is_captain) && captainPhone !== null,
-    },
-    {
-      label: "Schedule your first match",
-      sublabel: "Fees and car allowances are worked out per match",
-      href: "/schedule",
-      done: hasMatch,
     },
   ];
 

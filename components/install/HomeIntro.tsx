@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ChevronRight, PlayCircle, Receipt } from "lucide-react";
-import { TournamentHowTo } from "@/components/dashboard/TournamentHowTo";
 import type { NavState } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 import { InstallCard } from "./InstallCard";
@@ -49,11 +48,6 @@ export function HomeIntro({ nav }: { nav: NavState }) {
           Match fees, car allowances and the team pool — worked out for you
         </p>
       </div>
-
-      {/* A tournament-only buyer has no Team Ledger, so this intro IS
-          their Home — the purchase checklist outranks the install
-          pitch. Renders null for everyone else. */}
-      <TournamentHowTo />
 
       <InstallCard diagrams={renderInstallDiagrams()} />
 
