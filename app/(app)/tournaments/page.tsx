@@ -2,6 +2,10 @@ import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TournamentCard } from "@/components/tournaments/TournamentCard";
 import { CreateTournamentSheet } from "@/components/tournaments/CreateTournamentSheet";
+import { TournamentPricingCurtain } from "@/components/tournaments/TournamentPricingCurtain";
+import { HowPaymentWorks } from "@/components/shared/HowPaymentWorks";
+import { ProductCard } from "@/components/shared/ProductCard";
+import { TOURNAMENT } from "@/lib/products";
 import Link from "next/link";
 import { getNavState, type NavState } from "@/lib/nav";
 import { canWrite } from "@/lib/roles";
@@ -51,6 +55,11 @@ async function TournamentDirectory({ hosted }: { hosted: boolean }) {
       >
         {hosted ? "Host a new tournament" : "Manage your tournament"}
       </Link>
+
+      <TournamentPricingCurtain>
+        <ProductCard product={TOURNAMENT} />
+        <HowPaymentWorks />
+      </TournamentPricingCurtain>
 
       {all.length === 0 ? (
         <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
