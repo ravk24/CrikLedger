@@ -158,6 +158,7 @@ export function CreditSheet({
         player_name: playerLinked
           ? (players.find((p) => p.id === playerId)?.name ?? null)
           : null,
+        created_at: new Date().toISOString(),
       },
     );
   }

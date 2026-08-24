@@ -38,6 +38,7 @@ export type PoolLedgerRow = {
   amount: number;
   edited_by: string | null;
   player_name: string | null; // linked player, deposit / opening_due only
+  created_at: string; // same-day tiebreak; entry_date alone is just a DATE
 };
 
 export type MatchStatus = "scheduled" | "completed" | "abandoned";
@@ -134,6 +135,7 @@ export type TournamentLedgerRow = {
   amount: number;
   edited_by: string | null;
   player_name: string | null; // deposits only
+  created_at: string; // same-day tiebreak; entry_date alone is just a DATE
 };
 
 export type TournamentStatementRow = {

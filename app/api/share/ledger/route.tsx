@@ -42,6 +42,7 @@ export async function GET() {
         .select("*")
         .eq("team_id", team.id)
         .order("entry_date", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(LIMIT),
       supabaseServer
         .from("pool_balance")

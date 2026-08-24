@@ -42,7 +42,7 @@ async function PoolLedgerData({ page }: { page: number }) {
       .select("*", { count: "exact" })
       .eq("team_id", team.id)
       .order("entry_date", { ascending: false })
-      .order("id", { ascending: false })
+      .order("created_at", { ascending: false })
       .range(from, from + PAGE_SIZE - 1),
     getSessionAdmin(),
     supabaseServer

@@ -41,9 +41,10 @@ async function DashboardData() {
       .eq("team_id", team.id)
       .eq("kind", "match_collection")
       // Explicit — the view's internal ORDER BY isn't guaranteed to
-      // survive a filtered LIMIT pushdown. (created_at isn't exposed
-      // by the view; entry_date is the best available key.)
+      // survive a filtered LIMIT pushdown. created_at breaks
+      // same-day ties (migration 42).
       .order("entry_date", { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
     getSessionAdmin(),

@@ -29,9 +29,10 @@ async function TournamentLedgerData({
       .from("tournament_ledger_public")
       .select("*")
       .eq("tournament_id", id)
-      // The view no longer orders itself (migration 40).
+      // The view no longer orders itself (migration 40); created_at
+      // breaks same-day ties (migration 42).
       .order("entry_date", { ascending: false })
-      .order("id", { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(200),
   ]);
 
