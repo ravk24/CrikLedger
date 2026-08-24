@@ -151,7 +151,7 @@ async function ConsoleData() {
         </Link>
         <div className="min-w-0 text-center">
           <h1 className="truncate text-lg font-bold text-text-primary">
-            Hello, {admin.name.split(" ")[0]} · {team.display_name}
+            {admin.name.split(" ")[0]}
           </h1>
           <p className="text-xs capitalize text-text-secondary">
             {admin.activeTeamRole ?? admin.platformRole}
@@ -178,12 +178,13 @@ async function ConsoleData() {
 
       <p className="text-center text-xs text-text-muted">
         <DatabaseBackup size={18} className="mr-1.5 inline-block align-text-bottom" />
-        Your data is protected — database backed up every 5th day.
+        Your data is protected — database backed up every 5th day, passwords
+        are hashed.
       </p>
 
       <p className="flex items-center justify-center gap-1.5 text-center text-xs text-text-muted">
         <Image src="/logo.png" alt="" width={16} height={16} />
-        CrikLedger · v0.1
+        CrikLedger · v1.1
       </p>
     </>
   );
