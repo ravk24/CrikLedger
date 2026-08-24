@@ -102,7 +102,7 @@ export function TournamentScheduleMatchSheet({
       description={
         editing
           ? "Fix the opponent, date or time — the card updates right away."
-          : "The match appears on this tournament's Matches tab right away."
+          : "The match appears on this tournament's Schedule tab right away."
       }
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">

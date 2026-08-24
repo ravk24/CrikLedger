@@ -1,6 +1,7 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Car } from "lucide-react";
+import { Car, ChevronLeft } from "lucide-react";
 import { CaptainMark } from "@/components/shared/CaptainMark";
 import { ResultBadge } from "@/components/shared/ResultBadge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,7 +25,7 @@ import type {
   TournamentMatch,
   TournamentPublic,
 } from "@/types";
-import { CHROME_HEADER } from "@/lib/ui";
+import { CHROME_BACK_LINK, CHROME_HEADER } from "@/lib/ui";
 
 // Sibling of the SG match detail page, scoped to the tournament's
 // isolated data — no bookings, no other-fee, no guests.
@@ -256,6 +257,32 @@ async function TournamentMatchData({
   );
 }
 
+// Status-aware back link, mirroring the SG match page: a scheduled
+// match came from Scheduled, anything else from Completed. Needs the
+// match row, so it streams over the pathname-based fallback.
+async function BackLink({
+  params,
+}: {
+  params: Promise<{ id: string; mid: string }>;
+}) {
+  const { id, mid } = await params;
+  const { data } = await supabaseServer
+    .from("tournament_matches_public")
+    .select("status")
+    .eq("id", mid)
+    .maybeSingle();
+  const scheduled = (data as { status: string } | null)?.status === "scheduled";
+  return (
+    <Link
+      href={`/tournaments/${id}/schedule/${scheduled ? "upcoming" : "completed"}`}
+      className={CHROME_BACK_LINK}
+    >
+      <ChevronLeft size={18} />
+      {scheduled ? "Upcoming" : "Completed"}
+    </Link>
+  );
+}
+
 export default function TournamentMatchDetail({
   params,
 }: {
@@ -265,7 +292,11 @@ export default function TournamentMatchDetail({
     <div className="min-h-svh bg-background pb-16">
       <header className={CHROME_HEADER}>
         <div className="mx-auto flex max-w-md items-center gap-1 px-2 py-3">
-          <TournamentBackLink segment="matches" label="Matches" />
+          <Suspense
+            fallback={<TournamentBackLink segment="schedule" label="Schedule" />}
+          >
+            <BackLink params={params} />
+          </Suspense>
         </div>
       </header>
       <main className="mx-auto flex max-w-md flex-col gap-4 px-4 py-4">

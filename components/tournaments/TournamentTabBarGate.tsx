@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Home, Settings, Swords, Undo2, Wallet } from "lucide-react";
+import { CalendarDays, Home, Settings, Undo2, Wallet } from "lucide-react";
 import { getSessionAdmin } from "@/lib/session";
 import { TournamentTabBar } from "./TournamentTabBar";
 
@@ -13,13 +13,13 @@ async function Gate() {
 // real bar but no hooks (usePathname is runtime data under Cache
 // Components, so the hook-reading bar must stream in via Suspense).
 function TabBarShell() {
-  // Same 5 slots/order as the real bar (Home, Matches, Admin, Ledger,
+  // Same 5 slots/order as the real bar (Home, Schedule, Admin, Ledger,
   // Tournaments) so the streamed bar replaces this one with zero width
   // jump. The Tournaments href is static — no pathname, no cookies —
   // so it can be a real Link even in the prerendered shell.
   const tabs = [
     { label: "Home", icon: Home, href: null },
-    { label: "Matches", icon: Swords, href: null },
+    { label: "Schedule", icon: CalendarDays, href: null },
     { label: "Admin", icon: Settings, href: null },
     { label: "Ledger", icon: Wallet, href: null },
     { label: "Tournaments", icon: Undo2, href: "/tournaments" },

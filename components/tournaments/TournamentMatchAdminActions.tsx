@@ -57,7 +57,13 @@ export function TournamentMatchAdminActions({
         setError(body.error?.message ?? "Could not delete the match.");
         return;
       }
-      router.push(`/tournaments/${tournamentId}/matches`);
+      // Status-aware, like the list the match came from: tournament
+      // delete exists on scheduled matches too (unlike SG).
+      router.push(
+        status === "scheduled"
+          ? `/tournaments/${tournamentId}/schedule/upcoming`
+          : `/tournaments/${tournamentId}/schedule/completed`,
+      );
       startTransition(() => router.refresh());
     } catch {
       setError("Could not reach the server — check your connection.");

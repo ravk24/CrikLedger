@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Settings, Swords, Undo2, Wallet } from "lucide-react";
+import { CalendarDays, Home, Settings, Undo2, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -25,9 +25,9 @@ export function TournamentTabBar({ isAdmin }: Props) {
   const tabs = [
     { href: base, label: "Home", icon: Home, exact: true, disabled: false },
     {
-      href: `${base}/matches`,
-      label: "Matches",
-      icon: Swords,
+      href: `${base}/schedule`,
+      label: "Schedule",
+      icon: CalendarDays,
       exact: false,
       disabled: false,
     },

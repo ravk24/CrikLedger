@@ -3,7 +3,6 @@
 import { startTransition, useOptimistic, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  CalendarPlus,
   FileText,
   Flag,
   MinusCircle,
@@ -16,7 +15,6 @@ import { SheetShell } from "@/components/shared/SheetShell";
 import { CaptainMark } from "@/components/shared/CaptainMark";
 import { ViceCaptainMark } from "@/components/shared/ViceCaptainMark";
 import { TournamentDepositSheet } from "@/components/tournaments/TournamentDepositSheet";
-import { TournamentScheduleMatchSheet } from "@/components/tournaments/TournamentScheduleMatchSheet";
 import { TournamentExpenseSheet } from "@/components/tournaments/TournamentExpenseSheet";
 import { TournamentCaptainTile } from "@/components/tournaments/TournamentCaptainTile";
 import { TournamentViceCaptainTile } from "@/components/tournaments/TournamentViceCaptainTile";
@@ -63,7 +61,6 @@ export function TournamentAdminPanel({
   const [rosterOpen, setRosterOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
-  const [scheduleOpen, setScheduleOpen] = useState(false);
   const [name, setName] = useState(tournament.name);
   const [teamName, setTeamName] = useState(tournament.team_name ?? "");
   const [joiningFee, setJoiningFee] = useState(
@@ -247,23 +244,8 @@ export function TournamentAdminPanel({
           </span>
         </button>
 
-        <button
-          type="button"
-          disabled={readOnly}
-          onClick={() => setScheduleOpen(true)}
-          className={tileClass}
-        >
-          <span className="flex size-9 items-center justify-center rounded-md bg-accent-light text-accent">
-            <CalendarPlus size={18} />
-          </span>
-          <span className="text-sm font-semibold">
-            Schedule Matches
-            <span className="block text-[11px] font-normal text-text-muted">
-              Opponent, Date, Time
-            </span>
-          </span>
-        </button>
-
+        {/* Match creation moved to the Schedule tab's hub — one entry
+            point, mirroring the SG /schedule layout. */}
         <button
           type="button"
           disabled={readOnly}
@@ -477,12 +459,6 @@ export function TournamentAdminPanel({
         </div>
       </SheetShell>
 
-      <TournamentScheduleMatchSheet
-        open={scheduleOpen}
-        onOpenChange={setScheduleOpen}
-        tournamentId={tournament.id}
-        venue={tournament.venue}
-      />
       <TournamentDepositSheet
         open={depositOpen}
         onOpenChange={setDepositOpen}
