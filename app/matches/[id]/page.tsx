@@ -53,7 +53,7 @@ async function buildAdminProps(match: MatchPublicRow) {
   // it never aggregates another tenant's participants.
   const [playersRes, rowsRes, moneyRes] = await Promise.all([
     pool.query(
-      `SELECT p.id, p.name, p.is_captain
+      `SELECT p.id, p.name, p.is_captain, p.phone
        FROM players p
        LEFT JOIN (
          SELECT mp.player_id, MAX(m.match_date) AS last_played
@@ -88,9 +88,21 @@ async function buildAdminProps(match: MatchPublicRow) {
       [match.id],
     ),
   ]);
-  const players = (
-    playersRes.rows as { id: string; name: string; is_captain: boolean }[]
-  ).map((p) => ({ id: p.id, name: p.name, is_captain: p.is_captain }));
+  const playerRows = playersRes.rows as {
+    id: string;
+    name: string;
+    is_captain: boolean;
+    phone: string | null;
+  }[];
+  // phone rides only these admin-gated props (migration 43): the map
+  // below strips it from the players list handed to client components.
+  const captainPhone =
+    playerRows.find((p) => p.is_captain)?.phone ?? null;
+  const players = playerRows.map((p) => ({
+    id: p.id,
+    name: p.name,
+    is_captain: p.is_captain,
+  }));
 
   let initial: WizardInitial | undefined;
   if (match.status === "completed") {
@@ -197,6 +209,7 @@ async function buildAdminProps(match: MatchPublicRow) {
 
   return {
     players,
+    captainPhone,
     isSuperadmin,
     initial,
     bookingShare,
@@ -339,6 +352,22 @@ async function MatchDetailData({
           : undefined,
     };
   }
+
+  // Companion text for the WhatsApp share: guests reimburse the standing
+  // captain directly (their fees are charged to his balance), so the
+  // message names the captain's number and lists the guests to tick off.
+  // The phone rides adminProps only — an anonymous visitor of this
+  // publicly link-readable page never receives it.
+  const feeMessage =
+    match.status === "completed" &&
+    adminProps?.captainPhone &&
+    guestNames.length > 0
+      ? {
+          captainName: teamCaptain ?? captainRow?.player_name ?? "the captain",
+          captainPhone: adminProps.captainPhone,
+          guests: guestNames,
+        }
+      : undefined;
 
   return (
     <>
@@ -497,7 +526,12 @@ async function MatchDetailData({
           )}
 
           <FeeTable participants={participants} guests={guests} />
-          {sheetPayload && <ShareMatchSheetButton payload={sheetPayload} />}
+          {sheetPayload && (
+            <ShareMatchSheetButton
+              payload={sheetPayload}
+              feeMessage={feeMessage}
+            />
+          )}
           <CostBreakdownFooter
             match={match}
             carCount={drivers.length + guestCarCount}

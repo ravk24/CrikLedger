@@ -74,7 +74,7 @@ async function ConsoleData() {
 
   const isSuperadmin = admin.activeTeamRole === "superadmin";
   const team = await getCurrentTeam();
-  const [playersRes, adminCountRes] = await Promise.all([
+  const [playersRes, adminCountRes, captainPhoneRes] = await Promise.all([
     isSuperadmin
       ? supabaseServer
           .from("players_public")
@@ -90,8 +90,18 @@ async function ConsoleData() {
           [team.id],
         )
       : Promise.resolve({ rows: [{ n: "0" }] }),
+    // phone is deliberately absent from players_public (migration 43),
+    // so the captain's number comes straight off the base table.
+    isSuperadmin
+      ? pool.query<{ phone: string | null }>(
+          `SELECT phone FROM players
+            WHERE team_id = $1 AND is_captain LIMIT 1`,
+          [team.id],
+        )
+      : Promise.resolve({ rows: [] as { phone: string | null }[] }),
   ]);
   const adminCount = Number(adminCountRes.rows[0]?.n ?? 0);
+  const captainPhone = captainPhoneRes.rows[0]?.phone ?? null;
   const captainPlayers = (playersRes.data ?? []) as {
     id: string;
     name: string;
@@ -170,7 +180,9 @@ async function ConsoleData() {
       )}
 
       <section className="grid grid-cols-2 gap-3">
-        {isSuperadmin && <CaptainTile players={captainPlayers} />}
+        {isSuperadmin && (
+          <CaptainTile players={captainPlayers} captainPhone={captainPhone} />
+        )}
         {isSuperadmin && <ViceCaptainTile players={captainPlayers} />}
         {tiles.map(renderTile)}
         {renderTile(PASSWORD_TILE)}

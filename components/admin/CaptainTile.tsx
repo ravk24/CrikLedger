@@ -10,14 +10,20 @@ type PlayerRow = { id: string; name: string; is_captain: boolean };
 
 type Props = {
   players: PlayerRow[]; // active players only
+  // Current captain's stored number (players.phone, migration 43) —
+  // read off the base table, never players_public.
+  captainPhone: string | null;
 };
 
 // Superadmin-only console tile: declare / transfer / remove the
 // standing team captain (guest fees are deducted from his balance).
-export function CaptainTile({ players }: Props) {
+// Also holds the captain's contact phone for the fee-collection
+// share message on completed matches.
+export function CaptainTile({ players, captainPhone }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [selectedId, setSelectedId] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -26,15 +32,27 @@ export function CaptainTile({ players }: Props) {
   useEffect(() => {
     if (open) {
       setSelectedId(captain?.id ?? "");
+      setPhone(captainPhone ?? "");
       setError(null);
     }
-  }, [open, captain?.id]);
+  }, [open, captain?.id, captainPhone]);
 
   async function callCaptainApi(playerId: string, method: "POST" | "DELETE") {
     setPending(true);
     setError(null);
     try {
-      const res = await fetch(`/api/players/${playerId}/captain`, { method });
+      const res = await fetch(`/api/players/${playerId}/captain`, {
+        method,
+        ...(method === "POST"
+          ? {
+              headers: { "Content-Type": "application/json" },
+              // Empty input = explicit clear.
+              body: JSON.stringify({
+                phone: phone.trim() === "" ? null : phone.trim(),
+              }),
+            }
+          : {}),
+      });
       const body = await res.json();
       if (!body.success) {
         setError(body.error?.message ?? "Could not update the captain.");
@@ -102,18 +120,40 @@ export function CaptainTile({ players }: Props) {
             ))}
           </select>
         </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-text-secondary">
+            Captain&rsquo;s phone (optional) — used in the fee-collection
+            message
+          </span>
+          <input
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+91 98765 43210"
+            className="h-11 w-full rounded-md border border-border bg-surface-secondary px-3 text-base text-text-primary focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          />
+        </label>
         {error && <p className="text-sm text-debit">{error}</p>}
         <button
           type="button"
-          disabled={pending || !selectedId || selectedId === captain?.id}
+          disabled={
+            pending ||
+            !selectedId ||
+            (selectedId === captain?.id &&
+              phone.trim() === (captainPhone ?? ""))
+          }
           onClick={() => callCaptainApi(selectedId, "POST")}
           className="h-11 w-full rounded-md bg-accent text-sm font-medium text-accent-foreground disabled:opacity-60"
         >
           {pending
             ? "Saving…"
-            : captain
-              ? "Transfer captaincy"
-              : "Declare captain"}
+            : selectedId === captain?.id
+              ? "Save phone number"
+              : captain
+                ? "Transfer captaincy"
+                : "Declare captain"}
         </button>
         {captain && (
           <button

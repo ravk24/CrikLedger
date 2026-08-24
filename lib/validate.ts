@@ -28,6 +28,20 @@ export const editPlayerSchema = z
     message: "Nothing to update",
   });
 
+// Captain contact phone (migration 43): normalized to +?digits so the
+// fee-collection message carries a dialable number. Mirrors the DB CHECK.
+const phoneField = z
+  .string()
+  .trim()
+  .transform((s) => s.replace(/[\s()\-.]/g, ""))
+  .pipe(z.string().regex(/^\+?\d{8,15}$/, "8–15 digits, optional +"));
+
+// null = explicit clear; undefined = leave untouched (same convention
+// as entryDate below).
+export const captainPhoneSchema = z.object({
+  phone: phoneField.nullable().optional(),
+});
+
 // null = explicit clear (tournament dates); undefined = leave untouched.
 const entryDate = z
   .string()

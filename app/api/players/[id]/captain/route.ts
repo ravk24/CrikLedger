@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withTransaction } from "@/lib/db";
 import { requireSuperadmin } from "@/lib/session";
-import { ApiError, handleRouteError } from "@/lib/validate";
+import { ApiError, captainPhoneSchema, handleRouteError } from "@/lib/validate";
 
 // Superadmin only — the captain is a standing role for the whole
 // TEAM (not per match). Exactly one per team: declaring a new
 // captain replaces that team's previous one atomically.
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -17,6 +17,10 @@ export async function POST(
     const { scopeId: teamId } = await requireSuperadmin();
     const { id } = await params;
 
+    // Body is optional — the plain captain toggle sends none. phone
+    // null clears, undefined leaves the stored number untouched.
+    const body = captainPhoneSchema.parse(await req.json().catch(() => ({})));
+
     const result = await withTransaction(async (client) => {
       await client.query(
         `UPDATE players SET is_captain = FALSE
@@ -24,10 +28,11 @@ export async function POST(
         [teamId],
       );
       const res = await client.query(
-        `UPDATE players SET is_captain = TRUE, is_vice_captain = FALSE
+        `UPDATE players SET is_captain = TRUE, is_vice_captain = FALSE,
+                phone = CASE WHEN $3 THEN $4 ELSE phone END
          WHERE id = $1 AND team_id = $2 AND is_active
-         RETURNING id, name`,
-        [id, teamId],
+         RETURNING id, name, phone`,
+        [id, teamId, body.phone !== undefined, body.phone ?? null],
       );
       const row = res.rows[0];
       if (!row) {
