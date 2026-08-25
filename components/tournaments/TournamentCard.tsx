@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Trophy } from "lucide-react";
-import { Money } from "@/components/shared/Money";
 import { formatDateShort } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { TournamentPublic } from "@/types";
@@ -24,6 +23,8 @@ function subtitle(t: TournamentPublic): string {
   return parts.join(" · ");
 }
 
+// Name and subtitle only — no fund balance on the directory card (Ravi
+// 2026-08-25); the balance lives inside the tournament.
 export function TournamentCard({ tournament }: Props) {
   const completed = tournament.status === "completed";
   return (
@@ -57,11 +58,6 @@ export function TournamentCard({ tournament }: Props) {
           {subtitle(tournament)}
         </span>
       </span>
-      <Money
-        amount={tournament.fund_balance}
-        variant="balance"
-        className={cn("text-base font-bold", completed && "text-text-muted")}
-      />
     </Link>
   );
 }
