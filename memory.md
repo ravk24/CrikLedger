@@ -4,7 +4,7 @@ Last updated: 2026-08-25 (session 21, end)
 
 ## What was built
 
-All on `main`, pushed; working tree clean. Latest commits `be8070f` (fee rule) and `9db07de` (PNG trim). No DB migration this session; migrations 43 and 44 remain the latest applied.
+All on `main`, pushed; working tree clean. Latest commits `be8070f` (fee rule), `9db07de` (PNG trim), `977e015` (same trim on-screen). No DB migration this session; migrations 43 and 44 remain the latest applied.
 
 ### `be8070f` — one car-money rule everywhere
 - `engine/calc.ts`: `carSplit` option deleted. `isSharer = broughtCar || sharedCar`; result gains `cashCosts`, `headCount`, `carCount`, `ownWayCount`. Header comment carries the full rule + a "do not reinstate" history note.
@@ -24,7 +24,7 @@ All on `main`, pushed; working tree clean. Latest commits `be8070f` (fee rule) a
 - **THE fee rule (Ravi, locked 2026-08-25; also in auto-memory `crikledger-fee-rule-locked`):** base = ground+balls+other across ALL heads (players + guests), `baseShare = ceil(base/H)`; car money = cars × allowance as ONE pooled pot split evenly across everyone who rode — **drivers included** (`S = shared OR brought`), never per car; rider = base + car, own way = base, driver = base + car − allowance (may be negative). Total shown = cash + cars everywhere; surplus = collected − cash. Two separate ceils are canonical. Canonical: 2500+60, A 250, 11 players (3 drivers) + 2 guests all shared → 197 + 58 = 255 / drivers 5 / surplus 5; guests unticked → 69 → 266 / 16 / guests 197 / surplus 10. A solo driver nets the base share.
 - Wizard default: everyone ticked, drivers locked on, admin unticks own-way people.
 - Display convention: never a bare `+₹`/`−₹` on a per-person fee (Ravi reads "+5" as "pays 5"); tournament *statement* rows keep signed amounts because they are ledger deltas.
-- Shared PNG stays minimal: rows + one footer line; no "Own way", no captain-note.
+- Every fee surface stays minimal (PNG `9db07de`, on-screen `977e015`): rows + Total / Per head / Collected / Surplus; no "Own way" line, no "guest fees charged to the captain" sentence anywhere. The captain's "incl. ₹x guest fees" sub-label in FeeTable stays (explains a number, not the rule).
 - `shared_car` columns stay (no migration) and now mean "funded the car pot" (drivers always true).
 
 ## Problems solved
@@ -44,6 +44,5 @@ On-device walk of the fee flow with the new rule: (1) demo sample → "Who share
 
 ## Open questions
 
-- Should the on-screen previews/footers also drop "Own way" and the guest-charge line to match the PNG? Left as-is (admin working views) pending Ravi.
 - Migrate the ~15 remaining hardcoded contact literals to `lib/contact.ts`? Still deferred.
 - Old tournament matches-list URL redirect streams as HTTP 200 + redirect payload — fine for browsers; revisit only if SEO matters.
