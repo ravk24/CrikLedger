@@ -55,7 +55,6 @@ export function GuestMatchSheet({
     perPlayerFee: result.perPlayerFee,
     carSharePerSharer: result.carSharePerSharer,
     sharerCount: result.sharerCount,
-    ownWayCount: result.ownWayCount,
     surplus: result.surplusToPool,
     rows: [
       ...result.rows.map((r) => ({
@@ -70,10 +69,6 @@ export function GuestMatchSheet({
         broughtCar: g.broughtCar,
       })),
     ],
-    captainNote:
-      result.guestRows.length > 0 && captainName
-        ? `Guest fees charged to ${captainName}`
-        : undefined,
   };
 
   async function share(mode: "share" | "download") {

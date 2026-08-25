@@ -25,18 +25,17 @@ const payloadSchema = z.object({
   ballFee: z.number().finite(),
   otherFee: z.number().finite(),
   // Footer figures, straight from engine/calc.ts: "Per head" is the base
-  // share plus the car share; "Own way" (base share only) prints when
-  // someone was unticked on the sharing step.
+  // share plus the car share. Anyone who made their own way is visible
+  // from their row, so the image does not spell that out (Ravi
+  // 2026-08-25); the on-screen previews still do.
   perPlayerFee: z.number().finite().optional(),
   carSharePerSharer: z.number().finite().default(0),
   sharerCount: z.number().int().nonnegative().optional(),
-  ownWayCount: z.number().int().nonnegative().default(0),
   carAllowancePerCar: z.number().finite().default(0),
   carCount: z.number().int().nonnegative().default(0),
   totalCost: z.number().finite(), // cash + cars
   surplus: z.number().finite(), // collected − cash costs
   rows: z.array(rowSchema).min(1).max(30),
-  captainNote: z.string().trim().max(80).optional(),
 });
 
 // satori has no icon runtime, so the car mark is drawn inline. Same
@@ -214,12 +213,6 @@ export async function POST(req: NextRequest) {
           ))}
         </div>
 
-        {data.captainNote ? (
-          <div style={{ display: "flex", marginTop: 20, fontSize: 24, color: "#94a3b8" }}>
-            {data.captainNote}
-          </div>
-        ) : null}
-
         <div style={{ display: "flex", marginTop: "auto", fontSize: 24, color: "#94a3b8" }}>
           Ground ₹{rupees(data.groundFee)} · Balls ₹{rupees(data.ballFee)}
           {data.otherFee > 0 ? ` · Other ₹${rupees(data.otherFee)}` : ""}
@@ -229,9 +222,6 @@ export async function POST(req: NextRequest) {
           · Total ₹{rupees(data.totalCost)}
           {data.perPlayerFee !== undefined
             ? ` · Per head ₹${rupees(data.perPlayerFee + data.carSharePerSharer)}`
-            : ""}
-          {data.perPlayerFee !== undefined && data.ownWayCount > 0
-            ? ` · Own way ₹${rupees(data.perPlayerFee)}`
             : ""}
           {data.surplus > 0 ? ` · Surplus ₹${rupees(data.surplus)}` : ""}
         </div>

@@ -330,7 +330,6 @@ async function MatchDetailData({
       perPlayerFee: calc.perPlayerFee,
       carSharePerSharer: calc.carSharePerSharer,
       sharerCount: calc.sharerCount,
-      ownWayCount: calc.ownWayCount,
       surplus: calc.surplusToPool,
       rows: [
         ...calc.rows.map((r) => ({
@@ -345,10 +344,6 @@ async function MatchDetailData({
           broughtCar: g.broughtCar,
         })),
       ].slice(0, 30),
-      captainNote:
-        captainRow && Number(captainRow.guest_fee_share) !== 0
-          ? `Guest fees charged to ${captainRow.player_name}`
-          : undefined,
     };
   }
 

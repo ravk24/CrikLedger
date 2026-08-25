@@ -21,10 +21,8 @@ export type MatchSheetPayload = {
   perPlayerFee?: number; // base share
   carSharePerSharer?: number;
   sharerCount?: number;
-  ownWayCount?: number;
   surplus: number;
   rows: { name: string; fee: number; broughtCar: boolean; isCaptain?: boolean }[];
-  captainNote?: string;
 };
 
 export type { ShareFeeMessage };
