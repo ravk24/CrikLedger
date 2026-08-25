@@ -350,10 +350,10 @@ export function MatchWizard({
       }
       const collected = Number(body.data.collected);
       const surplus = Number(body.data.surplus ?? collected - cashCosts);
-      const guestFee = Number(body.data.guestFee ?? 0);
-      const captainName = body.data.captainName as string | null;
       // Other matches recoup the pool-fronted ground fee on top of the
       // roundoff surplus; the toast shows the full credit either way.
+      // No guest-fee sentence: guests paying the captain is a standing
+      // team rule (Ravi 2026-08-25).
       const recouped = Number(body.data.recouped ?? 0);
       const credited = Number(body.data.credited ?? Math.max(surplus, 0));
       setSuccess(
@@ -363,10 +363,6 @@ export function MatchWizard({
               ? `₹${formatRupees(credited)} credited to ${fundLabel} (₹${formatRupees(recouped)} ground fee recouped)`
               : `₹${formatRupees(credited)} surplus credited to ${fundLabel}`
             : `no surplus — nothing credited to ${fundLabel}`
-        }${
-          guestFee !== 0 && captainName
-            ? ` · ₹${formatRupees(guestFee)} guest fees deducted from ${captainName}`
-            : ""
         }`,
       );
       startTransition(() => router.refresh());
