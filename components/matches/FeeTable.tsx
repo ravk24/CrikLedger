@@ -13,16 +13,15 @@ type Props = {
 
 // One fee row per playing participant; a driver the team owes reads
 // "gets ₹x". Guests (v2 rule) count in the split; their charges sit on
-// the captain — merged into his row when he played, else a charge-only
-// row below.
+// the captain — merged into his row when he played ("incl. ₹x guest
+// fees" under his name), else a charge-only row below. No sentence
+// spells the rule out (Ravi 2026-08-25): the team knows guests pay the
+// captain.
 export function FeeTable({ participants, guests }: Props) {
   const playing = participants.filter((row) => row.is_playing);
   const captainCharge = participants.find(
     (row) => Number(row.guest_fee_share) !== 0,
   );
-  const chargeAmount = captainCharge
-    ? Number(captainCharge.guest_fee_share)
-    : 0;
   const attendeeCount = playing.length + guests.length;
 
   return (
@@ -111,31 +110,6 @@ export function FeeTable({ participants, guests }: Props) {
           </div>
         )}
       </div>
-      {guests.length > 0 && (
-        <p className="border-t border-border bg-surface-secondary px-4 py-2 text-xs text-text-muted">
-          {captainCharge ? (
-            <>
-              Guests {guests.map((g) => g.name).join(" & ")} transferred their
-              fee to{" "}
-              <span className="font-semibold text-text-primary">
-                {captainCharge.player_name}
-              </span>{" "}
-              in cash — ₹{formatRupees(Math.abs(chargeAmount))} was{" "}
-              {chargeAmount >= 0 ? "deducted from" : "credited to"} the
-              captain&apos;s balance.
-            </>
-          ) : (
-            // Either a legacy match completed before guest billing, or the
-            // guests' fees and driver credits netted to exactly zero (no
-            // charge row is written then).
-            <>
-              No net guest deduction was recorded for this match — either the
-              guest fees netted to zero, or the captain settled offline
-              (pre-billing match).
-            </>
-          )}
-        </p>
-      )}
     </section>
   );
 }

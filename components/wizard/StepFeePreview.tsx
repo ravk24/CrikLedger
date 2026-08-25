@@ -101,16 +101,6 @@ export function StepFeePreview({
               </div>
             ))}
           </div>
-          {totals.captain_name && (
-            <p className="border-t border-border px-4 py-2 text-xs text-text-secondary">
-              ₹{formatRupees(Math.abs(totals.captain_charge))} will be{" "}
-              {totals.captain_charge >= 0 ? "deducted from" : "credited to"}{" "}
-              <span className="font-semibold text-text-primary">
-                {totals.captain_name}
-              </span>{" "}
-              — guests hand their fee to the captain in cash.
-            </p>
-          )}
         </div>
       )}
 
@@ -134,14 +124,6 @@ export function StepFeePreview({
           <span className="text-text-secondary">Per head</span>
           <Money amount={perHead} className="font-semibold" />
         </div>
-        {totals.own_way_count > 0 && (
-          <div className="mt-0.5 flex justify-between">
-            <span className="text-text-secondary">
-              Own way ({totals.own_way_count})
-            </span>
-            <Money amount={totals.per_player_fee} className="font-semibold" />
-          </div>
-        )}
         <div className="mt-0.5 flex justify-between">
           <span className="text-text-secondary">Collected</span>
           <Money amount={totals.collected_total} className="font-semibold" />

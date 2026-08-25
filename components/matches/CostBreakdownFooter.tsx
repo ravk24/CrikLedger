@@ -1,4 +1,3 @@
-import { FeeAmount } from "@/components/shared/FeeAmount";
 import { Money } from "@/components/shared/Money";
 import { formatRupees } from "@/lib/format";
 
@@ -17,7 +16,6 @@ type FeeSummary = {
   carCount: number;
   perPlayerFee: number; // base share
   carSharePerSharer: number;
-  ownWayCount: number;
   collectedTotal: number;
   surplusToPool: number;
 };
@@ -25,16 +23,16 @@ type FeeSummary = {
 type Props = {
   match: MatchCosts;
   result: FeeSummary;
-  guestFee?: number;
-  captainName?: string | null;
   fundLabel?: string; // "pool" (SG) or "fund" (tournaments)
 };
 
+// Ground · Balls · Cars, then Total / Per head / Collected / Surplus.
+// Deliberately no "Own way" or "guest fees via the captain" lines (Ravi
+// 2026-08-25): the rows say who paid what, and guests paying the captain
+// is a standing team rule.
 export function CostBreakdownFooter({
   match,
   result,
-  guestFee = 0,
-  captainName = null,
   fundLabel = "pool",
 }: Props) {
   const allowance = Number(match.car_allowance_per_car);
@@ -59,27 +57,10 @@ export function CostBreakdownFooter({
         <span className="text-text-secondary">Per head</span>
         <Money amount={perHead} className="font-semibold" />
       </div>
-      {result.ownWayCount > 0 && (
-        <div className="mt-1 flex justify-between">
-          <span className="text-text-secondary">
-            Own way ({result.ownWayCount})
-          </span>
-          <Money amount={result.perPlayerFee} className="font-semibold" />
-        </div>
-      )}
       <div className="mt-1 flex justify-between">
         <span className="text-text-secondary">Collected (net of rebates)</span>
         <Money amount={result.collectedTotal} className="font-semibold" />
       </div>
-      {guestFee !== 0 && captainName && (
-        <div className="mt-1 flex justify-between">
-          <span className="text-text-secondary">
-            Guest fees via {captainName}
-          </span>
-          {/* "gets ₹x" when a guest driver's credit outweighs the guest fees */}
-          <FeeAmount fee={guestFee} className="font-semibold" />
-        </div>
-      )}
       <div className="mt-1 flex justify-between">
         <span className="font-semibold text-credit">
           Rounding surplus credited to {fundLabel}

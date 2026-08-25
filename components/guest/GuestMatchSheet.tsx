@@ -244,18 +244,6 @@ export function GuestMatchSheet({
           )}
           <Line label="Total cost" value={result.totalCost} strong />
           <Line label="Per head" value={perHead} />
-          {result.ownWayCount > 0 && (
-            <Line
-              label={`Own way (${result.ownWayCount})`}
-              value={result.perPlayerFee}
-            />
-          )}
-          {result.captainCharge !== 0 && (
-            <Line
-              label={`Guests · charged to ${captainName ?? "the captain"}`}
-              value={result.captainCharge}
-            />
-          )}
           {result.surplusToPool > 0 && (
             <Line label="Surplus to pool" value={result.surplusToPool} />
           )}
@@ -313,7 +301,7 @@ function Line({
           strong ? "font-semibold text-text-primary" : "text-text-primary"
         }
       >
-        {value < 0 ? "gets " : ""}₹{formatRupees(value)}
+        ₹{formatRupees(value)}
       </dd>
     </div>
   );

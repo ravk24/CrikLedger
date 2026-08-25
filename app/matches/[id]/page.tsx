@@ -527,12 +527,7 @@ async function MatchDetailData({
             />
           )}
           {calc && (
-            <CostBreakdownFooter
-              match={match}
-              result={calc}
-              guestFee={captainRow ? Number(captainRow.guest_fee_share) : 0}
-              captainName={captainRow?.player_name ?? null}
-            />
+            <CostBreakdownFooter match={match} result={calc} />
           )}
           {updatedStamp && (
             <p className="text-xs text-text-muted">
