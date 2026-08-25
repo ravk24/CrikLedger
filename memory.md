@@ -17,7 +17,10 @@ All on `main`, pushed; working tree clean. Latest commits `be8070f` (fee rule), 
 - Docs: README fee section, `CrikLedger-docs/08-business-rules.md` R-11..R-14b rewritten (worked examples + history note), `db/seed-matches-dev.sql` marks everyone shared and fixes the captain's stored fee (178 = −36 + 214), `lib/demo/fixtures.ts` ledger collection 2561 → 2572.
 
 ### `9db07de` — shared PNG trimmed
-- `app/api/share/match-sheet/route.tsx`: no `Own way ₹…` footer segment, no `Guest fees charged to …` line; `ownWayCount`/`captainNote` removed from the zod schema, `MatchSheetPayload`, and both assemblers (`app/matches/[id]/page.tsx`, `GuestMatchSheet.tsx`). Footer: `Ground · Balls[ · Other] · Cars N × ₹A · Total · Per head · Surplus`. On-screen previews/footers still show Own way and the guest line.
+- `app/api/share/match-sheet/route.tsx`: no `Own way ₹…` footer segment, no `Guest fees charged to …` line; `ownWayCount`/`captainNote` removed from the zod schema, `MatchSheetPayload`, and both assemblers (`app/matches/[id]/page.tsx`, `GuestMatchSheet.tsx`). Footer: `Ground · Balls[ · Other] · Cars N × ₹A · Total · Per head · Surplus`.
+
+### `977e015` — same trim on-screen
+- `StepFeePreview` (Own way row + captain paragraph), `CostBreakdownFooter` (Own way + "Guest fees via" rows; `guestFee`/`captainName` props removed), `GuestMatchSheet` (Own way + Guests lines), `FeeTable` (the "guests transferred their fee to the captain" paragraph). `PreviewTotals.own_way_count` and `MatchFeeResult.ownWayCount` still exist for the engine/tests; nothing renders them.
 
 ## Decisions made
 
@@ -36,11 +39,11 @@ All on `main`, pushed; working tree clean. Latest commits `be8070f` (fee rule), 
 
 ## Current state
 
-Deployed to main → Vercel (`9db07de`). `tsc`, `eslint`, 87 vitest tests, `next build` all green (pre-existing `[ops/accounts]` cookies-during-prerender line, exit 0). PNG verified from the built server for the canonical examples. Prod DB still has no completed matches, so the wizard defaults/`ownWay` flow and the real match page footer were verified by type-check + tests + PNG, not on device.
+Deployed to main → Vercel (`977e015`). `tsc`, `eslint`, 87 vitest tests, `next build` all green (pre-existing `[ops/accounts]` cookies-during-prerender line, exit 0). PNG verified from the built server for the canonical examples. Prod DB still has no completed matches, so the wizard defaults/`ownWay` flow and the real match page footer were verified by type-check + tests + PNG, not on device.
 
 ## Next session starts with
 
-On-device walk of the fee flow with the new rule: (1) demo sample → "Who shared the car" shows all ticked, 3 drivers locked "Drove · shares", caption "₹750 … 11 ways — ₹69 each"; add 2 guests → "13 ways — ₹58"; preview riders ₹255 / drivers ₹5 / footer `Total ₹3,310 · Per head ₹255 · Surplus ₹5`; untick both guests → 266 / 16 / 197 with `Own way ₹197` on screen and NOT on the PNG. (2) Complete a real match with those inputs → FeeTable, footer and PNG agree; ledger "Match surplus +₹5"; captain balance moves by own fee + 510; edit → guests unticked → surplus row ₹10. (3) Tournament: one match, 11 players, 3 drivers, defaults, joining fee 2,560 → driver charge 52, rider 302, fund surplus 12. Then continue the session-20 device walk (onboarding checklists, captain phone + WhatsApp fee message, Schedule hub dues share).
+On-device walk of the fee flow with the new rule: (1) demo sample → "Who shared the car" shows all ticked, 3 drivers locked "Drove · shares", caption "₹750 … 11 ways — ₹69 each"; add 2 guests → "13 ways — ₹58"; preview riders ₹255 / drivers ₹5 / footer `Total ₹3,310 · Per head ₹255 · Surplus ₹5`; untick both guests → 266 / 16 / 197, and no "Own way" or guest-charge line on screen or on the PNG. (2) Complete a real match with those inputs → FeeTable, footer and PNG agree; ledger "Match surplus +₹5"; captain balance moves by own fee + 510; edit → guests unticked → surplus row ₹10. (3) Tournament: one match, 11 players, 3 drivers, defaults, joining fee 2,560 → driver charge 52, rider 302, fund surplus 12. Then continue the session-20 device walk (onboarding checklists, captain phone + WhatsApp fee message, Schedule hub dues share).
 
 ## Open questions
 
