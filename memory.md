@@ -1,49 +1,49 @@
-# Memory — session 20: 2-step onboarding checklists; tournament card moved to the tournament Home tab (on top of sessions 18–19: captain phone + fee messages, Schedule tab, pricing curtain, feedback card)
+# Memory — session 21: match-fee rule fixed once and for all (drivers share the car pot); shared PNG trimmed
 
-Last updated: 2026-08-25 (session 20, end)
+Last updated: 2026-08-25 (session 21, end)
 
 ## What was built
 
-All on `main`, pushed; working tree clean. Latest commit `6e5431a`. Migrations **43 and 44 are applied** to the shared Supabase project.
+All on `main`, pushed; working tree clean. Latest commits `be8070f` (fee rule) and `9db07de` (PNG trim). No DB migration this session; migrations 43 and 44 remain the latest applied.
 
-### Session 20 (`6e5431a`)
-- `components/dashboard/LedgerHowTo.tsx` — now exactly two reminders: (1) "Add your players" → `/admin/players`, done = `players.length > 0`; (2) "Add your captain and phone number" → `/admin`, done = captain exists AND `players.phone` not null. Team-name and first-match steps removed; prop is now `teamId: string` (not `team`). One pool query (captain phone), superadmin-only gate unchanged.
-- `components/tournaments/TournamentHowTo.tsx` (moved from `components/dashboard/`) — props-driven `{ tournamentId, hasPlayers, hasCaptainPhone }`, no session/DB access; same two steps, both linking to `/tournaments/{id}/admin`.
-- `app/tournaments/[id]/(tabs)/page.tsx` renders it (after the heading/completed banner, before `PoolSummaryCard`) gated by `isAdmin && tournament.status === "active"`. The tab's captain-phone `pool.query` now runs whenever `isAdmin && captainRow` (was also `owing.length > 0`) and feeds both the dues `shareText` (still requires owing) and the checklist tick.
-- `<TournamentHowTo />` removed from `app/(app)/page.tsx` (DashboardData) and `components/install/HomeIntro.tsx` — the app Home shows only the ledger checklist; `HomeIntro` has no async children again.
+### `be8070f` — one car-money rule everywhere
+- `engine/calc.ts`: `carSplit` option deleted. `isSharer = broughtCar || sharedCar`; result gains `cashCosts`, `headCount`, `carCount`, `ownWayCount`. Header comment carries the full rule + a "do not reinstate" history note.
+- `engine/tournamentFee.ts`: same fix in the per-match loop (`payCars` gone; `driverCredit = broughtCar ? allowance : 0`).
+- `engine/calc.test.ts`, `engine/tournamentFee.test.ts`, `lib/demo/fixtures.test.ts` rewritten around the canonical examples + an invariant sweep. New `lib/format.test.ts`. 87 tests.
+- `lib/matches.ts`, `lib/tournamentMatches.ts`: store the EFFECTIVE `shared_car` (`shared OR brought`) so `COUNT(shared_car)` = sharer count. `lib/validate.ts` unchanged shape (`shared_car` default false = own way).
+- Wizard: `components/wizard/MatchWizard.tsx` and `components/guest/GuestMatchFlow.tsx` now track `ownWay` (the exceptions) instead of `shared`; everyone shares by default, new guests share, deselecting a player clears them from `ownWay`. `components/wizard/StepSharedCar.tsx` takes `carSharePerSharer`/`sharerCount`/`carCount` from the engine (its local `Math.ceil` is gone); drivers render ticked + locked ("Drove · shares"); "Everyone shared" master tick.
+- Display: `lib/format.ts formatFee` + `components/shared/FeeAmount.tsx` — `₹5` to pay, `gets ₹53` when the team owes them. Used by `FeeTable`, `StepFeePreview`, `GuestMatchSheet`, `CostBreakdownFooter`; inlined in `app/api/share/match-sheet/route.tsx`.
+- Totals: `app/matches/[id]/page.tsx` runs the engine once (`calc`) for the sheet payload AND `CostBreakdownFooter` (which now takes `result` and computes nothing). `StepFeePreview` takes `totals: PreviewTotals` (new fields `own_way_count`, `car_count`, `cash_costs`). `GuestMatchSheet` takes `result` only (no `rows` prop).
+- Docs: README fee section, `CrikLedger-docs/08-business-rules.md` R-11..R-14b rewritten (worked examples + history note), `db/seed-matches-dev.sql` marks everyone shared and fixes the captain's stored fee (178 = −36 + 214), `lib/demo/fixtures.ts` ledger collection 2561 → 2572.
 
-### Sessions 18–19 (still relevant, unverified on device)
-- Pricing curtain on `/tournaments` (`ProductCard` + `components/shared/HowPaymentWorks.tsx`).
-- Captain phone: `players.phone` (migration 43) and `tournament_players.phone` (migration 44), CHECK `^\+?[0-9]{8,15}$`, absent from every public view; read only via pool inside admin-gated paths. Set via `CaptainTile` / `TournamentCaptainTile` (re-POST of current captain = phone-only edit).
-- Fee messages: `lib/feeMessage.ts` (`buildGuestFeeMessage`, `buildDuesMessage`); `ShareMatchSheetButton` and `DownloadImageButton` copy the text to the clipboard BEFORE the image fetch, then best-effort share with `text`. Demo uses `DEMO_CAPTAIN_PHONE` fixture.
-- Tournament Schedule tab (`app/tournaments/[id]/(tabs)/schedule/…`) replaces Matches (old URL redirects); creation only from the Schedule hub.
-- Feedback card on More, `lib/contact.ts` for WhatsApp/email constants.
-- `ChangePasswordForm` redirect: forced first-login → `/`, voluntary → `/admin`.
+### `9db07de` — shared PNG trimmed
+- `app/api/share/match-sheet/route.tsx`: no `Own way ₹…` footer segment, no `Guest fees charged to …` line; `ownWayCount`/`captainNote` removed from the zod schema, `MatchSheetPayload`, and both assemblers (`app/matches/[id]/page.tsx`, `GuestMatchSheet.tsx`). Footer: `Ground · Balls[ · Other] · Cars N × ₹A · Total · Per head · Surplus`. On-screen previews/footers still show Own way and the guest line.
 
 ## Decisions made
 
-- Onboarding checklists: exactly two reminders each, players first (the captain is chosen from existing players, so the order ticks top-to-bottom). Live-computed, auto-hide when both done, no stored flag, no dismiss.
-- The tournament checklist lives ONLY on each tournament's Home tab (`/tournaments/{id}`), per tournament, for admins of an active tournament. Never on the app Home — not even for tournament-only buyers who see `HomeIntro`.
-- Captain phone stays on the person (players / tournament_players), never per match, never in a public view.
-- Clipboard-copy-first is the primary channel for fee messages (WhatsApp drops share-sheet `text` when `files` are present).
-- Team fee list = guests; tournament list = owing players (dues model).
+- **THE fee rule (Ravi, locked 2026-08-25; also in auto-memory `crikledger-fee-rule-locked`):** base = ground+balls+other across ALL heads (players + guests), `baseShare = ceil(base/H)`; car money = cars × allowance as ONE pooled pot split evenly across everyone who rode — **drivers included** (`S = shared OR brought`), never per car; rider = base + car, own way = base, driver = base + car − allowance (may be negative). Total shown = cash + cars everywhere; surplus = collected − cash. Two separate ceils are canonical. Canonical: 2500+60, A 250, 11 players (3 drivers) + 2 guests all shared → 197 + 58 = 255 / drivers 5 / surplus 5; guests unticked → 69 → 266 / 16 / guests 197 / surplus 10. A solo driver nets the base share.
+- Wizard default: everyone ticked, drivers locked on, admin unticks own-way people.
+- Display convention: never a bare `+₹`/`−₹` on a per-person fee (Ravi reads "+5" as "pays 5"); tournament *statement* rows keep signed amounts because they are ledger deltas.
+- Shared PNG stays minimal: rows + one footer line; no "Own way", no captain-note.
+- `shared_car` columns stay (no migration) and now mean "funded the car pot" (drivers always true).
 
 ## Problems solved
 
-- Commits on Windows: PowerShell here-strings break multi-line messages — use the Bash tool.
-- `redirect()` as the last statement of an async component → TS2786; write `return redirect(...)`.
-- `nav.hasTeamLedger` is true for any member incl. viewers, and megaadmin passes `hasEntitlement` for everything — role-gate onboarding/config surfaces explicitly (LedgerHowTo: `activeTeamRole === "superadmin"`; tournament card: scope-aware `isAdmin`).
-- Onboarding cards need no Home-branch duplication any more (the tournament one moved off Home entirely).
+- Root cause of "wrong calculation every time": commit `1c680ee` (2026-08-20) encoded "a driver is never a sharer" + no rebate when nobody ticked shared; it was documented as a FACT (R-14b), copied to tournaments (`876bc43`) and locked by tests, so later sessions preserved it. README/seed/migration comments described a *third* model. Fixed by collapsing to one model and rewriting docs/tests; SQL comments in `db/migration-7/-25/-34/-39.sql` are stale prose (noted in R-14b), SQL untouched.
+- Five re-implementations of Total/Surplus disagreed (`/matches/[id]` PNG printed cash-only Total; demo printed cash + cars; `CostBreakdownFooter`, `StepFeePreview`, `StepSharedCar` recomputed locally) — all now read engine output.
+- Bash heredocs with large Python scripts broke on Git Bash quoting; writing the script to the scratchpad and running `python <file>` works.
+- Verifying the PNG: `npm run build && npm start`, POST a JSON payload to `/api/share/match-sheet`, Read the PNG; then kill the port-3000 node child (`netstat -ano | grep :3000` → `taskkill //F //PID … //T`).
 
 ## Current state
 
-Deployed to main → Vercel. `tsc`, `eslint`, 81 vitest tests, `next build` all green (pre-existing build noise: `[ops/accounts]` cookies-during-prerender line, exit still 0 — not ours). Prod phones are all NULL until the superadmin enters the real captain phone. No completed matches in the rebuilt prod DB yet, so share flows were verified structurally + via curl only.
+Deployed to main → Vercel (`9db07de`). `tsc`, `eslint`, 87 vitest tests, `next build` all green (pre-existing `[ops/accounts]` cookies-during-prerender line, exit 0). PNG verified from the built server for the canonical examples. Prod DB still has no completed matches, so the wizard defaults/`ownWay` flow and the real match page footer were verified by type-check + tests + PNG, not on device.
 
 ## Next session starts with
 
-On-device walk of the real flows: (1) ops grant → temp password → forced change → lands on Home → 2-row "How to use your Team Ledger" card ticks and disappears, and NO tournament card on Home; (2) open an active tournament's Home tab → 2-row "How to use your Tournament" card, add players / set captain + phone on the Admin tab → ticks, card disappears; a completed tournament shows no card; (3) set captain phone, complete a match with guests, share to WhatsApp and paste the copied message; (4) schedule a tournament match from the Schedule hub and share balances with the dues message. Fix copy/UX rough edges found.
+On-device walk of the fee flow with the new rule: (1) demo sample → "Who shared the car" shows all ticked, 3 drivers locked "Drove · shares", caption "₹750 … 11 ways — ₹69 each"; add 2 guests → "13 ways — ₹58"; preview riders ₹255 / drivers ₹5 / footer `Total ₹3,310 · Per head ₹255 · Surplus ₹5`; untick both guests → 266 / 16 / 197 with `Own way ₹197` on screen and NOT on the PNG. (2) Complete a real match with those inputs → FeeTable, footer and PNG agree; ledger "Match surplus +₹5"; captain balance moves by own fee + 510; edit → guests unticked → surplus row ₹10. (3) Tournament: one match, 11 players, 3 drivers, defaults, joining fee 2,560 → driver charge 52, rider 302, fund surplus 12. Then continue the session-20 device walk (onboarding checklists, captain phone + WhatsApp fee message, Schedule hub dues share).
 
 ## Open questions
 
-- Migrate the ~15 remaining hardcoded contact literals (contact / how-to-buy / policies / HowPaymentWorks) to `lib/contact.ts`? Deferred to keep diffs small.
-- Old tournament matches-list URL redirect streams as HTTP 200 + redirect payload (Suspense) — fine for browsers; revisit only if crawlers/SEO matter.
+- Should the on-screen previews/footers also drop "Own way" and the guest-charge line to match the PNG? Left as-is (admin working views) pending Ravi.
+- Migrate the ~15 remaining hardcoded contact literals to `lib/contact.ts`? Still deferred.
+- Old tournament matches-list URL redirect streams as HTTP 200 + redirect payload — fine for browsers; revisit only if SEO matters.
