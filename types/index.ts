@@ -58,7 +58,7 @@ export type Match = {
   car_allowance_per_car: number;
   guest_names: string[];
   guest_cars: boolean[]; // index-aligned with guest_names; legacy = []
-  guest_shared_cars: boolean[]; // same alignment; who rode with someone
+  guest_shared_cars: boolean[]; // same alignment; funded the car pot (drivers always true)
   ground_booking_id: string | null; // legacy link; bookings no longer create matches
   venue: string | null; // free-text ground name, typed when scheduling
   fee_paid_to: "opponent" | "owner" | null; // legacy; nothing new writes it
@@ -74,7 +74,7 @@ export type MatchParticipantPublic = {
   match_id: string;
   player_name: string;
   brought_car: boolean;
-  shared_car: boolean;
+  shared_car: boolean; // funded the car pot (always true for a driver)
   fee_amount: number;
   is_captain: boolean;
   is_playing: boolean; // FALSE = charge-only captain row (guest fees)

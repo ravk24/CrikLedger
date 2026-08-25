@@ -16,10 +16,9 @@ import {
 const drove = (id: string) =>
   (DEMO_DRIVERS as readonly string[]).includes(id);
 
-// Mirrors what the sample actually runs: the team rule, with everyone
-// who did not drive pre-marked as having ridden along (what the sample
-// opens with, and what Include all does).
-const run = () =>
+// Mirrors what the sample opens with: everyone shared a car (the wizard
+// default), three of them drove.
+const run = (guests: { name: string; broughtCar: boolean; sharedCar: boolean }[] = []) =>
   calculateMatchFees({
     groundFee: Number(DEMO_COSTS.ground),
     ballFee: Number(DEMO_COSTS.ball),
@@ -28,48 +27,33 @@ const run = () =>
     attendees: DEMO_PLAYERS.map((p) => ({
       playerId: p.id,
       broughtCar: drove(p.id),
-      sharedCar: !drove(p.id),
+      sharedCar: true,
     })),
-    guests: [],
-    carSplit: "sharers",
+    guests,
   });
 
 describe("guest sample match", () => {
   it("produces a fee for every player", () => {
-    const result = run();
-    expect(result.rows).toHaveLength(DEMO_PLAYERS.length);
+    expect(run().rows).toHaveLength(DEMO_PLAYERS.length);
   });
 
-  it("balances: collected covers the cash costs, surplus is never negative", () => {
+  it("is the canonical 2560 + 3 cars over 11 heads: 233 + 69, riders 302, drivers 52, surplus 12", () => {
     const result = run();
-    const cash =
-      Number(DEMO_COSTS.ground) +
-      Number(DEMO_COSTS.ball) +
-      Number(DEMO_COSTS.other);
-    expect(result.collectedTotal).toBeGreaterThanOrEqual(cash);
-    expect(result.surplusToPool).toBeGreaterThanOrEqual(0);
-  });
-
-  it("charges riders base + car share and credits drivers the allowance", () => {
-    const result = run();
-    const allowance = Number(DEMO_COSTS.allowance);
-    const base = result.perPlayerFee;
+    expect(result.totalCost).toBe(3310);
+    expect(result.perPlayerFee).toBe(233);
+    expect(result.carSharePerSharer).toBe(69);
+    expect(result.sharerCount).toBe(11);
+    expect(result.ownWayCount).toBe(0);
     for (const row of result.rows) {
-      if (row.broughtCar) {
-        expect(row.fee).toBe(base - allowance);
-      } else {
-        expect(row.fee).toBe(base + result.carSharePerSharer);
-        expect(row.fee).toBeGreaterThan(0);
-      }
+      expect(row.fee).toBe(row.broughtCar ? 52 : 302);
+      expect(row.sharedCar).toBe(true);
     }
+    expect(result.collectedTotal).toBe(2572);
+    expect(result.surplusToPool).toBe(12);
   });
 
-  it("funds the cars from the riders only", () => {
-    const result = run();
-    expect(result.sharerCount).toBe(
-      DEMO_PLAYERS.length - DEMO_DRIVERS.length,
-    );
-    expect(result.carSharePerSharer).toBeGreaterThan(0);
+  it("its ledger row is what the sample match collects", () => {
+    expect(DEMO_LEDGER[0].amount).toBe(run().collectedTotal);
   });
 
   it("has exactly one captain — the guest charge lands on them", () => {
@@ -88,21 +72,23 @@ describe("guest sample match", () => {
 
   // The sample's guests step adds guests to this same call. Their fees
   // land on the captain, so the roster must keep one.
-  it("charges a guest's fee to the captain", () => {
-    const withGuest = calculateMatchFees({
-      groundFee: Number(DEMO_COSTS.ground),
-      ballFee: Number(DEMO_COSTS.ball),
-      otherFee: Number(DEMO_COSTS.other),
-      carAllowancePerCar: Number(DEMO_COSTS.allowance),
-      attendees: DEMO_PLAYERS.map((p) => ({
-        playerId: p.id,
-        broughtCar: (DEMO_DRIVERS as readonly string[]).includes(p.id),
-      })),
-      guests: [{ name: "Ravi", broughtCar: false }],
-    });
+  it("charges a guest's fee to the captain — a sharing guest pays like a rider", () => {
+    const withGuest = run([{ name: "Ravi", broughtCar: false, sharedCar: true }]);
+    // 12 heads: base CEIL(2560/12) = 214, car CEIL(750/12) = 63.
+    expect(withGuest.perPlayerFee).toBe(214);
+    expect(withGuest.carSharePerSharer).toBe(63);
     expect(withGuest.guestRows).toHaveLength(1);
-    expect(withGuest.captainCharge).toBe(withGuest.guestRows[0].fee);
-    expect(withGuest.captainCharge).toBeGreaterThan(0);
+    expect(withGuest.guestRows[0].fee).toBe(277);
+    expect(withGuest.captainCharge).toBe(277);
+  });
+
+  it("a guest who came on their own pays only the base share", () => {
+    const withGuest = run([{ name: "Ravi", broughtCar: false, sharedCar: false }]);
+    expect(withGuest.sharerCount).toBe(11);
+    expect(withGuest.ownWayCount).toBe(1);
+    expect(withGuest.carSharePerSharer).toBe(69);
+    expect(withGuest.guestRows[0].fee).toBe(214);
+    expect(withGuest.captainCharge).toBe(214);
   });
 });
 

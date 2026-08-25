@@ -284,24 +284,20 @@ async function MatchDetailData({
   }));
   const drivers = participants.filter((p) => p.is_playing && p.brought_car);
   const guestCarCount = guests.filter((g) => g.brought_car).length;
-  const collectedTotal = participants.reduce(
-    (sum, p) => sum + Number(p.fee_amount),
-    0,
-  );
   const captainRow =
     participants.find((p) => Number(p.guest_fee_share) !== 0) ?? null;
   const updatedStamp = match.updated_at ?? null;
 
-  // Share payload: re-run the engine on the match inputs rather than
-  // reverse-engineering the stored rows (a match with no plain attendee
-  // used to fall back to a driver's credit as the "base fee"). Members
-  // keep their stored fee_amount, except the captain, whose own share is
-  // shown with the guest charge itemised per guest row below the roster.
+  // Every figure on the sheet and in the footer is ONE engine run on the
+  // stored inputs (costs + attendance). completeMatch wrote exactly this
+  // output, so it matches the ledger rows in FeeTable by construction —
+  // and there is no second formula anywhere on this page to drift.
   let sheetPayload: MatchSheetPayload | null = null;
+  let calc: ReturnType<typeof calculateMatchFees> | null = null;
   if (match.status === "completed") {
     const playing = participants.filter((p) => p.is_playing);
     const guestShared = match.guest_shared_cars ?? [];
-    const calc = calculateMatchFees({
+    calc = calculateMatchFees({
       groundFee: Number(match.ground_fee),
       ballFee: Number(match.ball_fee),
       otherFee: Number(match.other_fee),
@@ -316,11 +312,10 @@ async function MatchDetailData({
         broughtCar: g.brought_car,
         sharedCar: guestShared[i] ?? false,
       })),
-      carSplit: "sharers",
     });
-    // Cash the team actually spent; the car pool is kept by the drivers.
-    const cash =
-      Number(match.ground_fee) + Number(match.ball_fee) + Number(match.other_fee);
+    const isCaptain = new Set(
+      playing.filter((p) => p.is_captain).map((p) => p.player_name),
+    );
     sheetPayload = {
       team: teamLabel(team),
       opponent: opponentLabel(match.opponent),
@@ -330,15 +325,19 @@ async function MatchDetailData({
       ballFee: Number(match.ball_fee),
       otherFee: Number(match.other_fee),
       carAllowancePerCar: Number(match.car_allowance_per_car),
-      carCount: drivers.length + guestCarCount,
-      totalCost: cash,
-      surplus: Math.max(0, collectedTotal - cash),
+      carCount: calc.carCount,
+      totalCost: calc.totalCost,
+      perPlayerFee: calc.perPlayerFee,
+      carSharePerSharer: calc.carSharePerSharer,
+      sharerCount: calc.sharerCount,
+      ownWayCount: calc.ownWayCount,
+      surplus: calc.surplusToPool,
       rows: [
-        ...playing.map((p) => ({
-          name: p.player_name,
-          fee: Number(p.fee_amount) - Number(p.guest_fee_share),
-          broughtCar: p.brought_car,
-          isCaptain: p.is_captain,
+        ...calc.rows.map((r) => ({
+          name: r.playerId,
+          fee: r.fee,
+          broughtCar: r.broughtCar,
+          isCaptain: isCaptain.has(r.playerId),
         })),
         ...calc.guestRows.map((g) => ({
           name: `${g.name} (guest)`,
@@ -532,13 +531,14 @@ async function MatchDetailData({
               feeMessage={feeMessage}
             />
           )}
-          <CostBreakdownFooter
-            match={match}
-            carCount={drivers.length + guestCarCount}
-            collectedTotal={collectedTotal}
-            guestFee={captainRow ? Number(captainRow.guest_fee_share) : 0}
-            captainName={captainRow?.player_name ?? null}
-          />
+          {calc && (
+            <CostBreakdownFooter
+              match={match}
+              result={calc}
+              guestFee={captainRow ? Number(captainRow.guest_fee_share) : 0}
+              captainName={captainRow?.player_name ?? null}
+            />
+          )}
           {updatedStamp && (
             <p className="text-xs text-text-muted">
               Last updated

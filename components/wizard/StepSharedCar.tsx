@@ -8,8 +8,8 @@ import type { WizardGuest, WizardPlayer } from "@/components/wizard/wizardTypes"
 
 type Props = {
   players: WizardPlayer[]; // selected players only
-  cars: Set<string>; // who drove — drivers cannot be sharers
-  shared: Set<string>; // who rode with someone
+  cars: Set<string>; // who drove — always a sharer, shown locked on
+  shared: Set<string>; // non-drivers who rode along (drivers implied)
   onToggleShared: (playerId: string) => void;
   // Bulk, not a loop over onToggleShared: MatchWizard's per-id handler
   // builds its next Set from a render-time closure, so calling it N times
@@ -19,15 +19,20 @@ type Props = {
   onToggleGuestShared: (index: number) => void;
   allowance: number;
   carCount: number;
+  // From the engine — this step never does money maths of its own.
+  carSharePerSharer: number;
+  sharerCount: number; // drivers included
 };
 
-// Who rode with someone. This is the step that decides who FUNDS the car
-// allowance: the total is split across these people only, so anyone who
-// made their own way stops paying for other people's cars.
+// Who rode in a car. This is the step that decides who FUNDS the car
+// allowance: cars × allowance is one pot, split evenly across everyone
+// who rode — drivers included, since they sat in a car too. Anyone who
+// made their own way pays only the base share.
 //
-// Drivers are listed but not tickable — they provided the car and take
-// the rebate. Guests are tickable: they are heads in the split and their
-// charge lands on the captain either way.
+// Everyone starts ticked (most people ride together); the admin unticks
+// the exceptions. Drivers are shown ticked and locked. Guests are
+// tickable: they are heads in the split and their charge lands on the
+// captain either way.
 export function StepSharedCar({
   players,
   cars,
@@ -38,35 +43,32 @@ export function StepSharedCar({
   onToggleGuestShared,
   allowance,
   carCount,
+  carSharePerSharer,
+  sharerCount,
 }: Props) {
   const riders = players.filter((p) => !cars.has(p.id));
   const guestRiders = guests.filter((g) => !g.brought_car);
-  const sharerCount =
-    riders.filter((p) => shared.has(p.id)).length +
-    guestRiders.filter((g) => g.shared_car).length;
-  // "all" means everyone the list can tick — guests included, since they
-  // are heads in the split and sit in the same list.
   const tickable = riders.length + guestRiders.length;
   const allOn =
-    tickable > 0 &&
-    riders.every((p) => shared.has(p.id)) &&
-    guestRiders.every((g) => g.shared_car);
+    tickable === 0 ||
+    (riders.every((p) => shared.has(p.id)) &&
+      guestRiders.every((g) => g.shared_car));
   const carPool = carCount * allowance;
-  const each = sharerCount > 0 ? Math.ceil(carPool / sharerCount) : 0;
 
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs text-text-muted">
-        {sharerCount > 0
-          ? `₹${formatRupees(carPool)} of car allowance split ${sharerCount} ways — ₹${formatRupees(each)} each, on top of their share.`
-          : "Nobody has ridden along yet. With no one sharing, no car money is collected and drivers get no rebate."}
+        {carPool > 0
+          ? `₹${formatRupees(carPool)} of car allowance split ${sharerCount} ways — ₹${formatRupees(carSharePerSharer)} each, on top of the base share. Untick anyone who made their own way.`
+          : "No car money this match — nobody brought a car."}
       </p>
 
       <div className="flex items-center justify-between">
         <button
           type="button"
           onClick={() => onSetAllShared(!allOn)}
-          className="flex min-h-11 items-center gap-2 text-sm font-medium text-text-primary"
+          disabled={tickable === 0}
+          className="flex min-h-11 items-center gap-2 text-sm font-medium text-text-primary disabled:opacity-50"
         >
           <span
             className={cn(
@@ -78,7 +80,7 @@ export function StepSharedCar({
           >
             {allOn && <Check size={14} strokeWidth={3} />}
           </span>
-          Include all
+          Everyone shared
         </button>
         <span className="ml-3 shrink-0 rounded-full bg-text-primary px-3 py-1 text-xs font-bold text-surface">
           {sharerCount} sharing
@@ -89,23 +91,24 @@ export function StepSharedCar({
         <div className="max-h-60 divide-y divide-border overflow-y-auto">
           {players.map((player) => {
             const drove = cars.has(player.id);
-            const on = shared.has(player.id);
+            const on = drove || shared.has(player.id);
 
             if (drove) {
               return (
                 <div
                   key={player.id}
-                  className="flex min-h-11 items-center gap-3 px-4 py-2.5 opacity-50"
+                  className="flex min-h-11 items-center gap-3 px-4 py-2.5"
                 >
-                  <span className="flex size-[22px] shrink-0 items-center justify-center">
-                    <Car size={16} className="text-accent" />
+                  <span className="flex size-[22px] shrink-0 items-center justify-center rounded-sm border-[1.5px] border-accent bg-accent text-accent-foreground opacity-70">
+                    <Check size={14} strokeWidth={3} />
                   </span>
                   <span className="flex flex-1 items-center gap-1.5 text-sm font-medium text-text-primary">
                     {player.name}
                     {player.is_captain && <CaptainMark compact />}
+                    <Car size={14} className="shrink-0 text-accent" />
                   </span>
                   <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                    Drove
+                    Drove · shares
                   </span>
                 </div>
               );
@@ -132,6 +135,11 @@ export function StepSharedCar({
                   {player.name}
                   {player.is_captain && <CaptainMark compact />}
                 </span>
+                {!on && (
+                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                    Own way
+                  </span>
+                )}
               </button>
             );
           })}
@@ -141,17 +149,18 @@ export function StepSharedCar({
               return (
                 <div
                   key={`g${i}`}
-                  className="flex min-h-11 items-center gap-3 px-4 py-2.5 opacity-50"
+                  className="flex min-h-11 items-center gap-3 px-4 py-2.5"
                 >
-                  <span className="flex size-[22px] shrink-0 items-center justify-center">
-                    <Car size={16} className="text-accent" />
+                  <span className="flex size-[22px] shrink-0 items-center justify-center rounded-sm border-[1.5px] border-accent bg-accent text-accent-foreground opacity-70">
+                    <Check size={14} strokeWidth={3} />
                   </span>
-                  <span className="flex-1 text-sm font-medium text-text-primary">
+                  <span className="flex flex-1 items-center gap-1.5 text-sm font-medium text-text-primary">
                     {guest.name}
-                    <span className="ml-1.5 text-xs text-text-muted">guest</span>
+                    <span className="text-xs text-text-muted">guest</span>
+                    <Car size={14} className="shrink-0 text-accent" />
                   </span>
                   <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                    Drove
+                    Drove · shares
                   </span>
                 </div>
               );
@@ -177,6 +186,11 @@ export function StepSharedCar({
                   {guest.name}
                   <span className="ml-1.5 text-xs text-text-muted">guest</span>
                 </span>
+                {!guest.shared_car && (
+                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                    Own way
+                  </span>
+                )}
               </button>
             );
           })}

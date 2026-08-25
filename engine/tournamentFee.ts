@@ -8,13 +8,13 @@ import { ceilRupees } from "./split";
 // Canonical: fee 15000, N 5 → 3000/match; 12 players → CEIL(3000/12) =
 // 250; 11 players → CEIL(3000/11) = 273.
 //
-// Car money follows the team rule (migration-34 / engine/calc.ts): the
-// cars × allowance pool is funded only by the people who SHARED a ride,
-// split CEIL(carPool / sharers) on top of their base share, and each
-// driver gets that match's allowance off their total (may go negative).
-// A driver is never a sharer. When nobody shared, no car money is
-// collected and no rebate is paid — otherwise the rebate would quietly
-// drain the fund.
+// Car money follows THE team rule (engine/calc.ts, locked 2026-08-25):
+// that match's cars × allowance is one pooled pot split CEIL(pool /
+// sharers) across everyone who rode in a car — DRIVERS INCLUDED — on
+// top of their base share, and each driver gets the allowance off their
+// total (may go negative). Someone who made their own way pays only the
+// base share. A driver who carried nobody is the sole sharer of their
+// own car: pays the pool, gets it back, nets the base share.
 //
 // Both shares CEIL and are the only rounding sites, so per match
 // Σ shares ≥ costPerMatch + carPool ≥ costPerMatch + Σ driver credits;
@@ -24,7 +24,7 @@ import { ceilRupees } from "./split";
 export type TournamentFeeAttendee = {
   playerId: string;
   broughtCar: boolean;
-  sharedCar?: boolean; // rode with someone; ignored for drivers
+  sharedCar?: boolean; // rode in a car; drivers count as sharers regardless
 };
 
 export type TournamentFeeMatch = {
@@ -44,7 +44,7 @@ export type TournamentFeeLine = {
   playerId: string;
   matchId: string;
   share: number; // base share, plus the car share if they rode
-  driverCredit: number; // that match's allowance if they drove (and someone shared), else 0
+  driverCredit: number; // that match's allowance if they drove, else 0
 };
 
 export type TournamentFeeMatchBreakdown = {
@@ -53,7 +53,7 @@ export type TournamentFeeMatchBreakdown = {
   cars: number;
   sharers: number;
   share: number; // base share per head: CEIL(costPerMatch / attendees)
-  carSharePerSharer: number; // 0 when nobody shared
+  carSharePerSharer: number; // 0 when there are no cars
 };
 
 export type TournamentFeeRow = {
@@ -93,13 +93,13 @@ export function calculateTournamentFees(
 
   for (const match of input.matches) {
     const isSharer = (a: TournamentFeeAttendee) =>
-      !!a.sharedCar && !a.broughtCar;
+      a.broughtCar || !!a.sharedCar;
     const cars = match.attendees.filter((a) => a.broughtCar).length;
     const sharers = match.attendees.filter(isSharer).length;
-    const payCars = sharers > 0;
-    const carPool = payCars ? cars * match.carAllowancePerCar : 0;
+    const carPool = cars * match.carAllowancePerCar;
     const share = ceilRupees(costPerMatch / match.attendees.length);
-    const carSharePerSharer = payCars ? ceilRupees(carPool / sharers) : 0;
+    const carSharePerSharer =
+      carPool > 0 && sharers > 0 ? ceilRupees(carPool / sharers) : 0;
     matches.push({
       matchId: match.matchId,
       attendeeCount: match.attendees.length,
@@ -110,8 +110,7 @@ export function calculateTournamentFees(
     });
 
     for (const attendee of match.attendees) {
-      const driverCredit =
-        attendee.broughtCar && payCars ? match.carAllowancePerCar : 0;
+      const driverCredit = attendee.broughtCar ? match.carAllowancePerCar : 0;
       const lineShare = share + (isSharer(attendee) ? carSharePerSharer : 0);
       lines.push({
         playerId: attendee.playerId,

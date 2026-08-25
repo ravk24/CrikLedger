@@ -10,16 +10,26 @@ A mobile-first web app that manages a **cricket team's money** — match fee spl
 
 ### Match fee engine
 
-When a match is completed, an admin enters the costs (ground fee, ball cost, other/misc cost, car allowance per car), selects the participating players, records any guest names, and tags who brought cars (guest cars included). The app splits the cost across **all heads — players and guests alike**:
+When a match is completed, an admin enters the costs (ground fee, ball cost, other/misc cost, car allowance per car), selects the participating players, records any guest names, tags who brought cars (guest cars included), and unticks anyone who made their own way. The rule (`engine/calc.ts`, locked 2026-08-25):
 
 ```
-Total Match Cost = Ground Fee + Ball Cost + Other Cost + (Car Allowance × Cars)
-Per-Head Fee     = CEILING(Total ÷ (Players + Guests))  ← rounded UP to whole rupee
-Driver Fee       = Per-Head Fee − Car Allowance         ← can be negative (net credit)
+Heads        = Players + Guests
+Base         = Ground Fee + Ball Cost + Other Cost
+Car pot      = Car Allowance × Cars
+Sharers      = everyone who rode in a car — DRIVERS INCLUDED (only "own way" people are left out)
+Base share   = CEILING(Base ÷ Heads)                       ← rounded UP to whole rupee
+Car share    = CEILING(Car pot ÷ Sharers)                   ← ONE pot, split evenly; never per car
+Rider        = Base share + Car share
+Own way      = Base share
+Driver       = Base share + Car share − Car Allowance      ← can be negative: "gets ₹x"
+Total shown  = Base + Car pot
+Surplus      = Collected − Base                             ← the two ceiling remainders, always ≥ 0
 ```
+
+Worked: ground 2,500 + balls 60, 3 cars @ ₹250, 11 players + 2 guests, everyone shared → base 197, car CEIL(750 ÷ 13) = 58, riders **₹255**, drivers **₹5**, surplus ₹5. Same match with the two guests unticked → 11 sharers, car 69, riders ₹266, drivers ₹16, guests ₹197, surplus ₹10.
 
 - Rounding always favors the pool — the small ceiling surplus is auto-credited to the team fund. Match fees themselves stay on player balances; besides this credit and the away-match ground-fee flow (below), every pool credit/debit is entered manually by an admin.
-- Every computed fee is shown in an **editable preview table** before submission, so admins can handle edge cases by adjusting individual amounts.
+- Fees are computed server-side from attendance; the wizard preview runs the same engine in the browser and nothing is editable by hand.
 - **Guests** count in the split like players, and their charges land on the **standing captain's balance** — merged into the captain's own fee row when they play, or a charge-only row when they don't. Guests hand the captain cash offline; the app never bills a guest directly. Guest drivers get the same car-allowance credit, which reduces the captain's charge.
 - On submit, one database transaction updates the match, writes the final fee rows, and auto-credits the pool with the rounding surplus (collected − cash costs). If admin edits erase the surplus, no pool entry is created.
 - **Away (Other) matches**: the pool fronts the team's ground-fee contribution when the match is scheduled (a linked debit), and the completion credit recoups it on top of the surplus (collected − cash costs + contribution). Abandoning, cancelling, or deleting the match returns the fee to the pool. Barne matches never touch money at scheduling — the season's slots were block-paid up front.

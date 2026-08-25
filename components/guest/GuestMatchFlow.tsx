@@ -109,15 +109,10 @@ export function GuestMatchFlow() {
   const [guests, setGuests] = useState<WizardGuest[]>([]);
   const [ignoreAllowance, setIgnoreAllowance] = useState(false);
   const [cars, setCars] = useState<Set<string>>(new Set(DEMO_DRIVERS));
-  // Who rode with someone. Pre-filled with everyone who did not drive,
-  // which is the common case and the same thing Include all does.
-  const [shared, setShared] = useState<Set<string>>(
-    new Set(
-      DEMO_PLAYERS.filter(
-        (p) => !(DEMO_DRIVERS as readonly string[]).includes(p.id),
-      ).map((p) => p.id),
-    ),
-  );
+  // Everyone shares a car unless unticked, so this is the set of
+  // EXCEPTIONS — who made their own way. Empty to start, like the paid
+  // wizard.
+  const [ownWay, setOwnWay] = useState<Set<string>>(new Set());
 
   // The ignore switch never clears the typed amount, so toggling it off
   // restores it — same contract as StepCarAllowance's docs.
@@ -144,23 +139,30 @@ export function GuestMatchFlow() {
         attendees: selectedPlayers.map((p) => ({
           playerId: p.id,
           broughtCar: effectiveCars.has(p.id),
-          sharedCar: shared.has(p.id),
+          sharedCar: effectiveCars.has(p.id) || !ownWay.has(p.id),
         })),
         guests: guests.map((g) => ({
           name: g.name,
           broughtCar: g.brought_car,
           sharedCar: g.shared_car,
         })),
-        // The team flow's rule: only the people who rode fund the cars.
-        carSplit: "sharers",
       });
     } catch {
       // NO_PLAYERS: everyone was deselected. The preview step handles it.
       return null;
     }
-  }, [costs, selectedPlayers, effectiveCars, shared, guests, allowance]);
+  }, [costs, selectedPlayers, effectiveCars, ownWay, guests, allowance]);
 
-  const displayRows = fees?.rows ?? [];
+  // Non-drivers who shared — what the sharing step ticks.
+  const sharedPlayers = useMemo(
+    () =>
+      new Set(
+        selectedPlayers
+          .filter((p) => !effectiveCars.has(p.id) && !ownWay.has(p.id))
+          .map((p) => p.id),
+      ),
+    [selectedPlayers, effectiveCars, ownWay],
+  );
 
   const steps = buildSteps(ignoreAllowance);
   const wizardSteps = steps.length - 2; // intro and sheet sit outside the count
@@ -195,13 +197,7 @@ export function GuestMatchFlow() {
     setGuests([]);
     setIgnoreAllowance(false);
     setCars(new Set(DEMO_DRIVERS));
-    setShared(
-      new Set(
-        DEMO_PLAYERS.filter(
-          (p) => !(DEMO_DRIVERS as readonly string[]).includes(p.id),
-        ).map((p) => p.id),
-      ),
-    );
+    setOwnWay(new Set());
   }
 
   // Abandoning skips every remaining step in the paid wizard too — there
@@ -241,7 +237,6 @@ export function GuestMatchFlow() {
     return (
       <GuestMatchSheet
         result={fees}
-        rows={displayRows}
         costs={costs}
         captainName={CAPTAIN?.name ?? null}
         captainId={CAPTAIN?.id ?? null}
@@ -359,11 +354,11 @@ export function GuestMatchFlow() {
                     nextCars.delete(id);
                     return nextCars;
                   });
-                  setShared((prevShared) => {
-                    if (!prevShared.has(id)) return prevShared;
-                    const nextShared = new Set(prevShared);
-                    nextShared.delete(id);
-                    return nextShared;
+                  setOwnWay((prev) => {
+                    if (!prev.has(id)) return prev;
+                    const nextOwnWay = new Set(prev);
+                    nextOwnWay.delete(id);
+                    return nextOwnWay;
                   });
                 } else {
                   nextSelected.add(id);
@@ -384,7 +379,7 @@ export function GuestMatchFlow() {
             onAddGuest={(name) =>
               setGuests((prev) => [
                 ...prev,
-                { name, brought_car: false, shared_car: false },
+                { name, brought_car: false, shared_car: true },
               ])
             }
             onRemoveGuest={(i) =>
@@ -435,7 +430,7 @@ export function GuestMatchFlow() {
           </h2>
           <p className="-mt-2 text-xs text-text-muted">
             {allowance > 0
-              ? `Drivers get ${formatRupees(allowance)} back per car — funded by whoever rides with them, on the next step.`
+              ? `Drivers get ₹${formatRupees(allowance)} back per car — the car money is split across everyone who rode, drivers included. Next step: who made their own way.`
               : "The car fee is ignored for this match — driving earns no rebate."}
           </p>
           <StepCars
@@ -456,24 +451,24 @@ export function GuestMatchFlow() {
           <StepSharedCar
             players={selectedPlayers}
             cars={effectiveCars}
-            shared={shared}
+            shared={sharedPlayers}
             onToggleShared={(id) =>
-              setShared((prev) => {
-                const nextShared = new Set(prev);
-                if (nextShared.has(id)) nextShared.delete(id);
-                else nextShared.add(id);
-                return nextShared;
+              setOwnWay((prev) => {
+                const nextOwnWay = new Set(prev);
+                if (nextOwnWay.has(id)) nextOwnWay.delete(id);
+                else nextOwnWay.add(id);
+                return nextOwnWay;
               })
             }
             onSetAllShared={(on) => {
-              setShared(
+              setOwnWay(
                 on
-                  ? new Set(
+                  ? new Set()
+                  : new Set(
                       selectedPlayers
                         .filter((p) => !effectiveCars.has(p.id))
                         .map((p) => p.id),
-                    )
-                  : new Set(),
+                    ),
               );
               setGuests((prev) =>
                 prev.map((g) =>
@@ -490,10 +485,9 @@ export function GuestMatchFlow() {
               )
             }
             allowance={allowance}
-            carCount={
-              selectedPlayers.filter((p) => effectiveCars.has(p.id)).length +
-              guests.filter((g) => g.brought_car).length
-            }
+            carCount={fees?.carCount ?? 0}
+            carSharePerSharer={fees?.carSharePerSharer ?? 0}
+            sharerCount={fees?.sharerCount ?? 0}
           />
           <NextButton onClick={next} label={nextLabel} />
         </>
@@ -506,28 +500,33 @@ export function GuestMatchFlow() {
               What everyone pays
             </h2>
             <StepFeePreview
-              rows={displayRows.map((r) => ({
+              rows={fees.rows.map((r) => ({
                 player_id: r.playerId,
                 brought_car: r.broughtCar,
                 shared_car: r.sharedCar,
                 fee: r.fee,
               }))}
               players={DEMO_PLAYERS}
-              totalCost={fees.totalCost}
+              totals={{
+                per_player_fee: fees.perPlayerFee,
+                car_share_per_sharer: fees.carSharePerSharer,
+                sharer_count: fees.sharerCount,
+                own_way_count: fees.ownWayCount,
+                car_count: fees.carCount,
+                total_cost: fees.totalCost,
+                cash_costs: fees.cashCosts,
+                collected_total: fees.collectedTotal,
+                surplus_to_pool: fees.surplusToPool,
+                guest_rows: fees.guestRows.map((g) => ({
+                  name: g.name,
+                  brought_car: g.broughtCar,
+                  shared_car: g.sharedCar,
+                  fee: g.fee,
+                })),
+                captain_charge: fees.captainCharge,
+                captain_name: CAPTAIN?.name ?? null,
+              }}
               carAllowancePerCar={allowance}
-              cashCosts={
-                (Number(costs.ground) || 0) +
-                (Number(costs.ball) || 0) +
-                (Number(costs.other) || 0)
-              }
-              guestRows={fees.guestRows.map((g) => ({
-                name: g.name,
-                brought_car: g.broughtCar,
-                shared_car: g.sharedCar,
-                fee: g.fee,
-              }))}
-              captainCharge={fees.captainCharge}
-              captainName={CAPTAIN?.name ?? null}
             />
             <button
               type="button"

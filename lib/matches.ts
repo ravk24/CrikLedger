@@ -47,7 +47,6 @@ export async function completeMatch(
       broughtCar: g.brought_car,
       sharedCar: g.shared_car,
     })),
-    carSplit: "sharers",
   });
   const guestFee = canonical.captainCharge;
   // player_id -> the fee this engine says they owe
@@ -63,8 +62,7 @@ export async function completeMatch(
   }
   // Drivers are already netted inside collected, and drivers keep their
   // allowance — so the pool's gain is measured against cash costs only.
-  const cashCosts = body.ground_fee + body.ball_fee + body.other_fee;
-  const surplus = collected - cashCosts;
+  const surplus = canonical.surplusToPool;
 
   return withTransaction(async (client) => {
     const matchRes = await client.query(
@@ -170,7 +168,9 @@ export async function completeMatch(
         body.car_allowance_per_car,
         body.guests.map((g) => g.name),
         body.guests.map((g) => g.brought_car),
-        body.guests.map((g) => g.shared_car),
+        // Stored as the EFFECTIVE flag: a driver always funds the car
+        // pot, so the column reads "shared the car money" everywhere.
+        body.guests.map((g) => g.shared_car || g.brought_car),
         adminId,
       ],
     );
@@ -189,7 +189,7 @@ export async function completeMatch(
       return {
         playerId: row.player_id,
         broughtCar: row.brought_car,
-        sharedCar: row.shared_car && !row.brought_car,
+        sharedCar: row.shared_car || row.brought_car,
         feeAmount: fee + share,
         guestFeeShare: share,
       };

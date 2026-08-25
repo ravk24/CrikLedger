@@ -122,9 +122,10 @@ export async function createTournament(
 
 // ---- Per-match fee settlement (Ravi 2026-08-17, migration-25) ---------
 // One joining fee for the whole tournament, split equally across the
-// COMPLETED matches; each match's pot (fee share + car money) divides
-// across that match's attendees (engine/tournamentFee.ts). Runs when
-// the tournament is marked completed; reopening reverses it entirely.
+// COMPLETED matches; each match's slice divides across that match's
+// attendees, and its car money across everyone who shared a ride —
+// drivers included (engine/tournamentFee.ts). Runs when the tournament
+// is marked completed; reopening reverses it entirely.
 
 async function settleTournamentFees(
   client: PoolClient,

@@ -22,9 +22,12 @@ export type GuestPreviewRow = {
 
 export type PreviewTotals = {
   per_player_fee: number; // the base head share
-  car_share_per_sharer: number; // what each sharer adds on top (0 if nobody shared)
+  car_share_per_sharer: number; // what each sharer (drivers included) adds on top
   sharer_count: number;
-  total_cost: number;
+  own_way_count: number; // heads who pay only the base share
+  car_count: number;
+  total_cost: number; // cash + cars
+  cash_costs: number; // ground + balls + other
   collected_total: number;
   surplus_to_pool: number;
   guest_rows: GuestPreviewRow[];

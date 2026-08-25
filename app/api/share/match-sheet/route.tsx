@@ -24,17 +24,17 @@ const payloadSchema = z.object({
   groundFee: z.number().finite(),
   ballFee: z.number().finite(),
   otherFee: z.number().finite(),
-  // Accepted for compatibility but no longer drawn: the base-fee /
-  // car-share headline confused readers, the per-person rows are the
-  // only numbers that matter on the shared sheet.
+  // Footer figures, straight from engine/calc.ts: "Per head" is the base
+  // share plus the car share; "Own way" (base share only) prints when
+  // someone was unticked on the sharing step.
   perPlayerFee: z.number().finite().optional(),
-  carSharePerSharer: z.number().finite().optional(),
+  carSharePerSharer: z.number().finite().default(0),
   sharerCount: z.number().int().nonnegative().optional(),
-  // Informational: drivers keep the car money, so it is not in totalCost.
+  ownWayCount: z.number().int().nonnegative().default(0),
   carAllowancePerCar: z.number().finite().default(0),
   carCount: z.number().int().nonnegative().default(0),
-  totalCost: z.number().finite(),
-  surplus: z.number().finite(),
+  totalCost: z.number().finite(), // cash + cars
+  surplus: z.number().finite(), // collected − cash costs
   rows: z.array(rowSchema).min(1).max(30),
   captainNote: z.string().trim().max(80).optional(),
 });
@@ -103,6 +103,10 @@ function CaptainMark() {
 
 const rupees = (n: number) =>
   Math.abs(Math.round(n)).toLocaleString("en-IN");
+// "₹5" to pay; "gets ₹53" when the team owes them. Never a bare sign —
+// "+₹53" read as "pays 53 more" (lib/format.ts formatFee, inlined
+// because satori renders this file without the app's helpers).
+const fee = (n: number) => (n < 0 ? `gets ₹${rupees(n)}` : `₹${rupees(n)}`);
 
 // The route is unauthenticated (the guest sample has no session), and
 // rendering a PNG is CPU-heavy, so each client gets a small bucket per
@@ -202,7 +206,7 @@ export async function POST(req: NextRequest) {
                       color: r.fee < 0 ? "#4ade80" : "#f8fafc",
                     }}
                   >
-                    {r.fee < 0 ? "+" : ""}₹{rupees(r.fee)}
+                    {fee(r.fee)}
                   </div>
                 </div>
               ))}
@@ -223,6 +227,12 @@ export async function POST(req: NextRequest) {
             ? ` · Cars ${data.carCount} × ₹${rupees(data.carAllowancePerCar)}`
             : ""}{" "}
           · Total ₹{rupees(data.totalCost)}
+          {data.perPlayerFee !== undefined
+            ? ` · Per head ₹${rupees(data.perPlayerFee + data.carSharePerSharer)}`
+            : ""}
+          {data.perPlayerFee !== undefined && data.ownWayCount > 0
+            ? ` · Own way ₹${rupees(data.perPlayerFee)}`
+            : ""}
           {data.surplus > 0 ? ` · Surplus ₹${rupees(data.surplus)}` : ""}
         </div>
 

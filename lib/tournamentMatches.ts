@@ -156,8 +156,8 @@ export async function completeTournamentMatch(
       `DELETE FROM tournament_match_participants WHERE match_id = $1`,
       [matchId],
     );
-    // One multi-row insert. A driver is never a sharer — ticking both
-    // means "brought".
+    // One multi-row insert. shared_car is stored as the EFFECTIVE flag:
+    // a driver always funds the car pot (engine/tournamentFee.ts).
     await client.query(
       `INSERT INTO tournament_match_participants
          (tournament_id, match_id, player_id, brought_car, shared_car, fee_amount)
@@ -169,7 +169,7 @@ export async function completeTournamentMatch(
         matchId,
         body.rows.map((r) => r.player_id),
         body.rows.map((r) => r.brought_car),
-        body.rows.map((r) => r.shared_car && !r.brought_car),
+        body.rows.map((r) => r.shared_car || r.brought_car),
       ],
     );
     // Legacy cleanup: editing a match completed under the old per-match

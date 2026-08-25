@@ -1,47 +1,36 @@
 "use client";
 
 import { Car, Users } from "lucide-react";
+import { FeeAmount } from "@/components/shared/FeeAmount";
 import { Money } from "@/components/shared/Money";
 import { formatRupees } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { CaptainMark } from "@/components/shared/CaptainMark";
 import {
   rowKey,
-  type GuestPreviewRow,
   type PreviewRow,
+  type PreviewTotals,
   type WizardPlayer,
 } from "@/components/wizard/wizardTypes";
 
 type Props = {
   rows: PreviewRow[]; // engine output, shown as-is — fees are not editable
   players: WizardPlayer[];
-  totalCost: number;
-  cashCosts: number; // ground + balls + other (pool pays these)
+  totals: PreviewTotals; // engine output — nothing is recomputed here
   carAllowancePerCar?: number; // informational — drivers keep it
-  guestRows: GuestPreviewRow[];
-  captainCharge: number; // canonical — computed by the engine
-  captainName: string | null;
   fundLabel?: string; // "pool" (SG) or "fund" (tournaments)
 };
 
 export function StepFeePreview({
   rows,
   players,
-  totalCost,
-  cashCosts,
+  totals,
   carAllowancePerCar = 0,
-  guestRows,
-  captainCharge,
-  captainName,
   fundLabel = "pool",
 }: Props) {
   const nameOf = (id: string) =>
     players.find((p) => p.id === id)?.name ?? "Unknown";
-  const collected = rows.reduce((sum, r) => sum + r.fee, 0) + captainCharge;
-  const surplus = collected - cashCosts;
-  const carCount =
-    rows.filter((r) => r.brought_car).length +
-    guestRows.filter((g) => g.brought_car).length;
+  const perHead = totals.per_player_fee + totals.car_share_per_sharer;
 
   return (
     <div className="flex flex-col gap-3">
@@ -63,7 +52,7 @@ export function StepFeePreview({
                 {row.brought_car && (
                   <Car size={14} className="shrink-0 text-accent" />
                 )}
-                {row.shared_car && (
+                {row.shared_car && !row.brought_car && (
                   <Users
                     size={13}
                     aria-label="Shared a car"
@@ -79,11 +68,7 @@ export function StepFeePreview({
                     : "border-border",
                 )}
               >
-                <Money
-                  amount={row.fee}
-                  variant={isRebate ? "signed" : "neutral"}
-                  className="text-sm font-semibold"
-                />
+                <FeeAmount fee={row.fee} className="text-sm font-semibold" />
               </span>
             </div>
           );
@@ -91,10 +76,10 @@ export function StepFeePreview({
         </div>
       </div>
 
-      {guestRows.length > 0 && (
+      {totals.guest_rows.length > 0 && (
         <div className="rounded-lg border border-low-light bg-surface">
           <div className="divide-y divide-border">
-            {guestRows.map((guest, i) => (
+            {totals.guest_rows.map((guest, i) => (
               <div
                 key={`${guest.name}-${i}`}
                 className="flex min-h-10 items-center justify-between gap-2 px-4 py-2"
@@ -104,7 +89,7 @@ export function StepFeePreview({
                   {guest.brought_car && (
                     <Car size={14} className="shrink-0 text-accent" />
                   )}
-                  {guest.shared_car && (
+                  {guest.shared_car && !guest.brought_car && (
                     <Users
                       size={13}
                       aria-label="Shared a car"
@@ -112,20 +97,16 @@ export function StepFeePreview({
                     />
                   )}
                 </span>
-                <Money
-                  amount={guest.fee}
-                  variant={guest.fee < 0 ? "signed" : "neutral"}
-                  className="text-sm font-semibold"
-                />
+                <FeeAmount fee={guest.fee} className="text-sm font-semibold" />
               </div>
             ))}
           </div>
-          {captainName && (
+          {totals.captain_name && (
             <p className="border-t border-border px-4 py-2 text-xs text-text-secondary">
-              ₹{formatRupees(Math.abs(captainCharge))} will be{" "}
-              {captainCharge >= 0 ? "deducted from" : "credited to"}{" "}
+              ₹{formatRupees(Math.abs(totals.captain_charge))} will be{" "}
+              {totals.captain_charge >= 0 ? "deducted from" : "credited to"}{" "}
               <span className="font-semibold text-text-primary">
-                {captainName}
+                {totals.captain_name}
               </span>{" "}
               — guests hand their fee to the captain in cash.
             </p>
@@ -134,42 +115,46 @@ export function StepFeePreview({
       )}
 
       <div className="rounded-md bg-surface-secondary p-3 text-sm">
-        {carCount > 0 && carAllowancePerCar > 0 && (
+        {totals.car_count > 0 && carAllowancePerCar > 0 && (
           <div className="mb-0.5 flex justify-between">
             <span className="text-text-secondary">
-              Cars {carCount} × ₹{formatRupees(carAllowancePerCar)}
+              Cars {totals.car_count} × ₹{formatRupees(carAllowancePerCar)}
             </span>
-            <Money amount={carCount * carAllowancePerCar} className="font-semibold" />
+            <Money
+              amount={totals.car_count * carAllowancePerCar}
+              className="font-semibold"
+            />
           </div>
         )}
         <div className="flex justify-between">
           <span className="text-text-secondary">Total match cost</span>
-          <Money amount={totalCost} className="font-semibold" />
+          <Money amount={totals.total_cost} className="font-semibold" />
         </div>
+        <div className="mt-0.5 flex justify-between">
+          <span className="text-text-secondary">Per head</span>
+          <Money amount={perHead} className="font-semibold" />
+        </div>
+        {totals.own_way_count > 0 && (
+          <div className="mt-0.5 flex justify-between">
+            <span className="text-text-secondary">
+              Own way ({totals.own_way_count})
+            </span>
+            <Money amount={totals.per_player_fee} className="font-semibold" />
+          </div>
+        )}
         <div className="mt-0.5 flex justify-between">
           <span className="text-text-secondary">Collected</span>
-          <Money amount={collected} className="font-semibold" />
+          <Money amount={totals.collected_total} className="font-semibold" />
         </div>
         <div className="mt-0.5 flex justify-between">
-          {surplus >= 0 ? (
-            <>
-              <span className="font-semibold text-credit">
-                Rounding surplus credited to {fundLabel}
-              </span>
-              <Money amount={surplus} variant="signed" className="font-bold" />
-            </>
-          ) : (
-            <>
-              <span className="font-semibold text-low">
-                Below cost — no {fundLabel} credit
-              </span>
-              <Money
-                amount={surplus}
-                variant="balance"
-                className="font-bold text-low"
-              />
-            </>
-          )}
+          <span className="font-semibold text-credit">
+            Rounding surplus credited to {fundLabel}
+          </span>
+          <Money
+            amount={totals.surplus_to_pool}
+            variant="signed"
+            className="font-bold"
+          />
         </div>
       </div>
     </div>

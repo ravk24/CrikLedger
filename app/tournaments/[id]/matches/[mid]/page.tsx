@@ -84,7 +84,7 @@ async function buildAdminProps(
     for (const row of rowsRes.rows) {
       selected.push(row.player_id);
       if (row.brought_car) cars.push(row.player_id);
-      else if (row.shared_car) shared.push(row.player_id);
+      if (row.shared_car) shared.push(row.player_id);
     }
     initial = {
       result: match.result ?? "won",
@@ -235,7 +235,8 @@ async function TournamentMatchData({
           <p className="text-xs text-text-muted">
             Fees settle for the whole tournament when it is marked completed —
             this match&apos;s slice of the joining fee splits across the players
-            who played it, and its car money across the ones who shared a ride.
+            who played it, and its car money across everyone who shared a
+            ride — drivers included.
           </p>
           {match.updated_by_name && (
             <p className="text-center text-xs text-text-muted">

@@ -1,5 +1,5 @@
 import { Car } from "lucide-react";
-import { Money } from "@/components/shared/Money";
+import { FeeAmount } from "@/components/shared/FeeAmount";
 import { CaptainMark } from "@/components/shared/CaptainMark";
 import { formatRupees } from "@/lib/format";
 import type { MatchParticipantPublic } from "@/types";
@@ -11,9 +11,10 @@ type Props = {
   guests: Guest[];
 };
 
-// One fee row per playing participant, driver credits green. Guests
-// (v2 rule) count in the split; their charges sit on the captain —
-// merged into his row when he played, else a charge-only row below.
+// One fee row per playing participant; a driver the team owes reads
+// "gets ₹x". Guests (v2 rule) count in the split; their charges sit on
+// the captain — merged into his row when he played, else a charge-only
+// row below.
 export function FeeTable({ participants, guests }: Props) {
   const playing = participants.filter((row) => row.is_playing);
   const captainCharge = participants.find(
@@ -38,7 +39,6 @@ export function FeeTable({ participants, guests }: Props) {
       </div>
       <div className="divide-y divide-border">
         {playing.map((row, i) => {
-          const isRebate = row.fee_amount < 0;
           const share = Number(row.guest_fee_share);
           return (
             <div
@@ -66,9 +66,8 @@ export function FeeTable({ participants, guests }: Props) {
                   </span>
                 )}
               </span>
-              <Money
-                amount={row.fee_amount}
-                variant={isRebate ? "signed" : "neutral"}
+              <FeeAmount
+                fee={Number(row.fee_amount)}
                 className="text-sm font-semibold"
               />
             </div>
@@ -105,9 +104,8 @@ export function FeeTable({ participants, guests }: Props) {
                 GUEST FEES
               </span>
             </span>
-            <Money
-              amount={captainCharge.fee_amount}
-              variant={captainCharge.fee_amount < 0 ? "signed" : "neutral"}
+            <FeeAmount
+              fee={Number(captainCharge.fee_amount)}
               className="text-sm font-semibold"
             />
           </div>

@@ -17,7 +17,11 @@ export type MatchSheetPayload = {
   otherFee: number;
   carAllowancePerCar?: number;
   carCount?: number;
-  totalCost: number;
+  totalCost: number; // cash + cars
+  perPlayerFee?: number; // base share
+  carSharePerSharer?: number;
+  sharerCount?: number;
+  ownWayCount?: number;
   surplus: number;
   rows: { name: string; fee: number; broughtCar: boolean; isCaptain?: boolean }[];
   captainNote?: string;

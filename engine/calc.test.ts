@@ -1,286 +1,342 @@
 import { describe, expect, it } from "vitest";
-import { calculateMatchFees, type Attendee } from "./calc";
+import { calculateMatchFees, type Attendee, type Guest } from "./calc";
 import { carFee } from "./carFee";
 import { ceilSplit } from "./split";
 
-function selfRows(count: number, drivers = 0): Attendee[] {
+// `drivers` bring a car (always sharers); `shared` is the set of
+// non-driver indices who rode along; everyone else made their own way.
+function people(
+  count: number,
+  drivers = 0,
+  shared: "all" | "none" | number[] = "all",
+): Attendee[] {
   return Array.from({ length: count }, (_, i) => ({
     playerId: `p${i + 1}`,
     broughtCar: i < drivers,
+    sharedCar:
+      shared === "all" ? true : shared === "none" ? false : shared.includes(i),
   }));
 }
 
-describe("calculateMatchFees", () => {
-  it("canonical: 2560/12 with 2 cars @250 — fee 214, driver -36, collected 2068, surplus 8", () => {
-    const result = calculateMatchFees({
+const sample = {
+  groundFee: 2500,
+  ballFee: 60,
+  otherFee: 0,
+  carAllowancePerCar: 250,
+};
+
+const fees = (r: { rows: { playerId: string; fee: number }[] }, id: string) =>
+  r.rows.find((x) => x.playerId === id)!.fee;
+
+describe("calculateMatchFees — THE rule (drivers always share the car pot)", () => {
+  it("canonical 1: 2560 + 3 cars, 13 heads all shared → base 197, car 58, riders 255, drivers 5, surplus 5", () => {
+    const guests: Guest[] = [
+      { name: "Abc", broughtCar: false, sharedCar: true },
+      { name: "def", broughtCar: false, sharedCar: true },
+    ];
+    const r = calculateMatchFees({ ...sample, attendees: people(11, 3), guests });
+    expect(r.totalCost).toBe(3310);
+    expect(r.cashCosts).toBe(2560);
+    expect(r.headCount).toBe(13);
+    expect(r.carCount).toBe(3);
+    expect(r.sharerCount).toBe(13);
+    expect(r.ownWayCount).toBe(0);
+    expect(r.perPlayerFee).toBe(197); // CEIL(2560 / 13)
+    expect(r.carSharePerSharer).toBe(58); // CEIL(750 / 13)
+    expect(r.rows.filter((x) => x.broughtCar).map((x) => x.fee)).toEqual([5, 5, 5]);
+    expect(r.rows.filter((x) => !x.broughtCar).every((x) => x.fee === 255)).toBe(true);
+    expect(r.rows.every((x) => x.sharedCar)).toBe(true);
+    expect(r.guestRows.map((g) => g.fee)).toEqual([255, 255]);
+    expect(r.captainCharge).toBe(510);
+    expect(r.collectedTotal).toBe(2565); // 8×255 + 3×5 + 510
+    expect(r.surplusToPool).toBe(5);
+  });
+
+  it("canonical 2: same match, the 2 guests came on their own → car 69, riders 266, drivers 16, guests 197, surplus 10", () => {
+    const guests: Guest[] = [
+      { name: "Abc", broughtCar: false, sharedCar: false },
+      { name: "def", broughtCar: false, sharedCar: false },
+    ];
+    const r = calculateMatchFees({ ...sample, attendees: people(11, 3), guests });
+    expect(r.totalCost).toBe(3310);
+    expect(r.sharerCount).toBe(11);
+    expect(r.ownWayCount).toBe(2);
+    expect(r.perPlayerFee).toBe(197);
+    expect(r.carSharePerSharer).toBe(69); // CEIL(750 / 11)
+    expect(r.rows.filter((x) => x.broughtCar).map((x) => x.fee)).toEqual([16, 16, 16]);
+    expect(r.rows.filter((x) => !x.broughtCar).every((x) => x.fee === 266)).toBe(true);
+    expect(r.guestRows.map((g) => g.fee)).toEqual([197, 197]);
+    expect(r.guestRows.every((g) => !g.sharedCar)).toBe(true);
+    expect(r.captainCharge).toBe(394);
+    expect(r.collectedTotal).toBe(2570); // 8×266 + 3×16 + 2×197
+    expect(r.surplusToPool).toBe(10);
+  });
+
+  it("canonical 3: one pooled pot, never per car — 2 cars, 9 sharers → 500/9 = 56 each", () => {
+    // 11 players: p1, p2 drive; p3–p9 rode (7); p10, p11 own way.
+    // Which car anyone sat in is irrelevant: 500 across 9, not 250/5 + 250/4.
+    const r = calculateMatchFees({
+      ...sample,
+      attendees: people(11, 2, [2, 3, 4, 5, 6, 7, 8]),
+    });
+    expect(r.sharerCount).toBe(9);
+    expect(r.ownWayCount).toBe(2);
+    expect(r.perPlayerFee).toBe(233); // CEIL(2560 / 11)
+    expect(r.carSharePerSharer).toBe(56); // CEIL(500 / 9)
+    expect(fees(r, "p1")).toBe(233 + 56 - 250); // 39
+    expect(fees(r, "p3")).toBe(289);
+    expect(fees(r, "p10")).toBe(233);
+    expect(r.collectedTotal).toBe(7 * 289 + 2 * 39 + 2 * 233); // 2567
+    expect(r.surplusToPool).toBe(7);
+  });
+
+  it("canonical 4: a driver who carried nobody is the sole sharer — pays the pot, gets it back, nets the base share", () => {
+    const r = calculateMatchFees({ ...sample, attendees: people(11, 1, "none") });
+    expect(r.sharerCount).toBe(1);
+    expect(r.carSharePerSharer).toBe(250);
+    expect(r.totalCost).toBe(2810);
+    expect(r.rows.every((x) => x.fee === 233)).toBe(true);
+    expect(r.collectedTotal).toBe(2563);
+    expect(r.surplusToPool).toBe(3);
+  });
+
+  it("three drivers, nobody else ticked: the three split their own 750 and net the base share", () => {
+    const r = calculateMatchFees({ ...sample, attendees: people(11, 3, "none") });
+    expect(r.sharerCount).toBe(3);
+    expect(r.carSharePerSharer).toBe(250);
+    expect(r.totalCost).toBe(3310);
+    expect(r.rows.every((x) => x.fee === 233)).toBe(true);
+    expect(r.surplusToPool).toBe(3);
+  });
+
+  it("canonical 5 (dev seed): 2060 + 2 cars @250, 12 heads all shared → 214, drivers gets ₹36, collected 2068, surplus 8", () => {
+    const r = calculateMatchFees({
       groundFee: 2000,
       ballFee: 60,
       otherFee: 0,
       carAllowancePerCar: 250,
-      attendees: selfRows(12, 2),
+      attendees: people(12, 2),
     });
-    expect(result.totalCost).toBe(2560);
-    expect(result.perPlayerFee).toBe(214);
-    expect(result.rows.filter((r) => r.broughtCar).map((r) => r.fee)).toEqual([
-      -36, -36,
-    ]);
-    expect(result.rows.filter((r) => !r.broughtCar).every((r) => r.fee === 214)).toBe(true);
-    expect(result.collectedTotal).toBe(2068);
-    expect(result.surplusToPool).toBe(8);
+    expect(r.totalCost).toBe(2560);
+    expect(r.perPlayerFee).toBe(172); // CEIL(2060 / 12)
+    expect(r.carSharePerSharer).toBe(42); // CEIL(500 / 12)
+    expect(r.rows.filter((x) => x.broughtCar).map((x) => x.fee)).toEqual([-36, -36]);
+    expect(r.rows.filter((x) => !x.broughtCar).every((x) => x.fee === 214)).toBe(true);
+    expect(r.collectedTotal).toBe(2068);
+    expect(r.surplusToPool).toBe(8);
   });
 
-  it("exact division: 2400/12, 0 cars — fee 200, surplus 0", () => {
-    const result = calculateMatchFees({
+  it("canonical 6 (demo sample): 2560 + 3 cars, 11 players all shared → 233 + 69, riders 302, drivers 52, surplus 12", () => {
+    const r = calculateMatchFees({ ...sample, attendees: people(11, 3) });
+    expect(r.perPlayerFee).toBe(233);
+    expect(r.carSharePerSharer).toBe(69); // CEIL(750 / 11)
+    expect(fees(r, "p1")).toBe(52);
+    expect(fees(r, "p4")).toBe(302);
+    expect(r.collectedTotal).toBe(2572); // 8×302 + 3×52
+    expect(r.surplusToPool).toBe(12);
+  });
+
+  it("ticking a driver as shared changes nothing — they are a sharer either way", () => {
+    const ticked = calculateMatchFees({ ...sample, attendees: people(11, 3, [0, 1, 2, 3, 4, 5, 6, 7, 8]) });
+    const unticked = calculateMatchFees({ ...sample, attendees: people(11, 3, [3, 4, 5, 6, 7, 8]) });
+    expect(ticked).toEqual(unticked);
+    expect(ticked.rows[0].sharedCar).toBe(true);
+    expect(unticked.rows[0].sharedCar).toBe(true);
+  });
+
+  it("mixed: 3 drivers, 6 riders, 2 own way → base 233, car 84, rider 317, own way 233, driver 67, surplus 9", () => {
+    const r = calculateMatchFees({ ...sample, attendees: people(11, 3, [3, 4, 5, 6, 7, 8]) });
+    expect(r.sharerCount).toBe(9);
+    expect(r.ownWayCount).toBe(2);
+    expect(r.perPlayerFee).toBe(233);
+    expect(r.carSharePerSharer).toBe(84); // CEIL(750 / 9)
+    expect(fees(r, "p4")).toBe(317);
+    expect(fees(r, "p10")).toBe(233);
+    expect(fees(r, "p1")).toBe(67);
+    expect(r.collectedTotal).toBe(2569); // 6×317 + 2×233 + 3×67
+    expect(r.surplusToPool).toBe(9);
+  });
+
+  it("exact division: 2400/12, no cars — 200 each, no sharers, surplus 0", () => {
+    const r = calculateMatchFees({
       groundFee: 2400,
       ballFee: 0,
       otherFee: 0,
-      carAllowancePerCar: 0,
-      attendees: selfRows(12),
+      carAllowancePerCar: 250,
+      attendees: people(12, 0, "none"),
     });
-    expect(result.perPlayerFee).toBe(200);
-    expect(result.collectedTotal).toBe(2400);
-    expect(result.surplusToPool).toBe(0);
+    expect(r.perPlayerFee).toBe(200);
+    expect(r.carCount).toBe(0);
+    expect(r.sharerCount).toBe(0);
+    expect(r.carSharePerSharer).toBe(0);
+    expect(r.totalCost).toBe(2400);
+    expect(r.collectedTotal).toBe(2400);
+    expect(r.surplusToPool).toBe(0);
   });
 
-  it("allowance > fee: negative driver fee handled and preserved", () => {
-    // Small match, far ground: 500 ground, 1 car @300, 5 attendees
-    // total 800, share 160, driver 160 - 300 = -140
-    const result = calculateMatchFees({
+  it("allowance > share: 500 ground, 1 car @300, 5 all shared → 100 + 60, driver −140 (a credit, preserved)", () => {
+    const r = calculateMatchFees({
       groundFee: 500,
       ballFee: 0,
       otherFee: 0,
       carAllowancePerCar: 300,
-      attendees: selfRows(5, 1),
+      attendees: people(5, 1),
     });
-    expect(result.perPlayerFee).toBe(160);
-    expect(result.rows[0].fee).toBe(-140);
-    expect(result.collectedTotal).toBe(4 * 160 - 140);
-    expect(result.surplusToPool).toBe(0);
+    expect(r.perPlayerFee).toBe(100);
+    expect(r.carSharePerSharer).toBe(60);
+    expect(r.rows[0].fee).toBe(-140);
+    expect(r.rows.slice(1).every((x) => x.fee === 160)).toBe(true);
+    expect(r.collectedTotal).toBe(500);
+    expect(r.surplusToPool).toBe(0);
   });
 
-  it("guests join the split (product example): 3600/12 heads — 300 each, captain owes 600", () => {
-    // 10 players + 2 guests, pot 3600, no cars. Everyone owes 300;
-    // the two guest shares land on the captain.
-    const result = calculateMatchFees({
+  it("guests join the split: 3600 over 10 players + 2 guests, no cars → 300 each, captain owes 600", () => {
+    const r = calculateMatchFees({
       groundFee: 3600,
       ballFee: 0,
       otherFee: 0,
       carAllowancePerCar: 250,
-      attendees: selfRows(10),
+      attendees: people(10, 0, "none"),
       guests: [
         { name: "Guest A", broughtCar: false },
         { name: "Guest B", broughtCar: false },
       ],
     });
-    expect(result.totalCost).toBe(3600);
-    expect(result.perPlayerFee).toBe(300); // ceil(3600 / 12)
-    expect(result.rows.every((r) => r.fee === 300)).toBe(true);
-    expect(result.guestRows.map((g) => g.fee)).toEqual([300, 300]);
-    expect(result.captainCharge).toBe(600);
-    expect(result.collectedTotal).toBe(3600);
-    expect(result.surplusToPool).toBe(0);
+    expect(r.totalCost).toBe(3600);
+    expect(r.perPlayerFee).toBe(300);
+    expect(r.rows.every((x) => x.fee === 300)).toBe(true);
+    expect(r.guestRows.map((g) => g.fee)).toEqual([300, 300]);
+    expect(r.captainCharge).toBe(600);
+    expect(r.collectedTotal).toBe(3600);
+    expect(r.surplusToPool).toBe(0);
   });
 
-  it("guest with car: allowance joins the pot and rebates that guest's charge", () => {
-    // Pot 3350 + 250 guest car = 3600 across 12 heads -> 300 each;
-    // the driving guest owes 300 - 250 = 50, captain owes 350.
-    const result = calculateMatchFees({
+  it("a guest who drove is a sharer and gets the rebate, reducing the captain charge", () => {
+    // 3350 cash + guest car 250 = 3600; 12 heads all shared:
+    // base CEIL(3350/12) = 280, car CEIL(250/12) = 21.
+    const r = calculateMatchFees({
       groundFee: 3350,
       ballFee: 0,
       otherFee: 0,
       carAllowancePerCar: 250,
-      attendees: selfRows(10),
+      attendees: people(10),
       guests: [
         { name: "Guest A", broughtCar: true },
-        { name: "Guest B", broughtCar: false },
+        { name: "Guest B", broughtCar: false, sharedCar: true },
       ],
     });
-    expect(result.totalCost).toBe(3600);
-    expect(result.perPlayerFee).toBe(300);
-    expect(result.guestRows.map((g) => g.fee)).toEqual([50, 300]);
-    expect(result.captainCharge).toBe(350);
-    expect(result.collectedTotal).toBe(10 * 300 + 350);
-    expect(result.surplusToPool).toBe(0);
+    expect(r.totalCost).toBe(3600);
+    expect(r.carCount).toBe(1);
+    expect(r.sharerCount).toBe(12);
+    expect(r.perPlayerFee).toBe(280);
+    expect(r.carSharePerSharer).toBe(21);
+    expect(r.rows.every((x) => x.fee === 301)).toBe(true);
+    expect(r.guestRows.map((g) => g.fee)).toEqual([51, 301]);
+    expect(r.guestRows[0].sharedCar).toBe(true);
+    expect(r.captainCharge).toBe(352);
+    expect(r.collectedTotal).toBe(3362);
+    expect(r.surplusToPool).toBe(12);
   });
 
-  it("guest driver can go net-negative, reducing the captain charge", () => {
-    // 500 ground + 300 guest car = 800 over 5 heads -> 160 each;
-    // the driving guest is -140, so captain owes 160 - 140 = 20.
-    const result = calculateMatchFees({
+  it("a guest driver can go net-negative, and that reduces the captain charge", () => {
+    // 500 cash, guest car @300, 5 heads all shared → 100 + 60.
+    const r = calculateMatchFees({
       groundFee: 500,
       ballFee: 0,
       otherFee: 0,
       carAllowancePerCar: 300,
-      attendees: selfRows(3),
+      attendees: people(3),
       guests: [
         { name: "Guest A", broughtCar: true },
-        { name: "Guest B", broughtCar: false },
+        { name: "Guest B", broughtCar: false, sharedCar: true },
       ],
     });
-    expect(result.perPlayerFee).toBe(160);
-    expect(result.guestRows.map((g) => g.fee)).toEqual([-140, 160]);
-    expect(result.captainCharge).toBe(20);
+    expect(r.perPlayerFee).toBe(100);
+    expect(r.carSharePerSharer).toBe(60);
+    expect(r.rows.every((x) => x.fee === 160)).toBe(true);
+    expect(r.guestRows.map((g) => g.fee)).toEqual([-140, 160]);
+    expect(r.captainCharge).toBe(20);
+    expect(r.surplusToPool).toBe(0);
   });
 
-  it("no guests: guestRows empty, captainCharge 0, math unchanged", () => {
-    const result = calculateMatchFees({
-      groundFee: 2400,
-      ballFee: 0,
-      otherFee: 0,
-      carAllowancePerCar: 0,
-      attendees: selfRows(12),
-    });
-    expect(result.guestRows).toEqual([]);
-    expect(result.captainCharge).toBe(0);
-    expect(result.collectedTotal).toBe(2400);
+  it("no guests: guestRows empty, captainCharge 0", () => {
+    const r = calculateMatchFees({ ...sample, attendees: people(11, 3) });
+    expect(r.guestRows).toEqual([]);
+    expect(r.captainCharge).toBe(0);
   });
 
-  it("1 attendee who is also the only driver: fee = ceil(cost) - allowance, no divide-by-zero", () => {
-    const result = calculateMatchFees({
+  it("1 attendee who is the only driver: pays the pot, gets it back, no divide-by-zero", () => {
+    const r = calculateMatchFees({
       groundFee: 1000,
       ballFee: 0,
       otherFee: 0,
       carAllowancePerCar: 250,
-      attendees: selfRows(1, 1),
+      attendees: people(1, 1),
     });
-    expect(result.totalCost).toBe(1250);
-    expect(result.perPlayerFee).toBe(1250);
-    expect(result.rows[0].fee).toBe(1000);
-    expect(result.collectedTotal).toBe(1000);
-    expect(result.surplusToPool).toBe(0);
+    expect(r.totalCost).toBe(1250);
+    expect(r.perPlayerFee).toBe(1000);
+    expect(r.carSharePerSharer).toBe(250);
+    expect(r.rows[0].fee).toBe(1000);
+    expect(r.collectedTotal).toBe(1000);
+    expect(r.surplusToPool).toBe(0);
   });
 
-  it("all fees 0: every fee 0, surplus 0", () => {
-    const result = calculateMatchFees({
+  it("all fees 0 with drivers: every fee 0, surplus 0", () => {
+    const r = calculateMatchFees({
       groundFee: 0,
       ballFee: 0,
       otherFee: 0,
       carAllowancePerCar: 0,
-      attendees: selfRows(11, 2),
+      attendees: people(11, 2),
     });
-    expect(result.rows.every((r) => r.fee === 0)).toBe(true);
-    expect(result.collectedTotal).toBe(0);
-    expect(result.surplusToPool).toBe(0);
+    expect(r.rows.every((x) => x.fee === 0)).toBe(true);
+    expect(r.collectedTotal).toBe(0);
+    expect(r.surplusToPool).toBe(0);
+  });
+
+  it("car fee ignored (allowance 0) with drivers: no car money, everyone pays the base share", () => {
+    const r = calculateMatchFees({ ...sample, carAllowancePerCar: 0, attendees: people(11, 2) });
+    expect(r.carCount).toBe(2);
+    expect(r.carSharePerSharer).toBe(0);
+    expect(r.totalCost).toBe(2560);
+    expect(r.rows.every((x) => x.fee === 233)).toBe(true);
+  });
+
+  it("invariants hold across drivers × riders × guests: surplus ≥ 0 and is exactly the two ceil remainders", () => {
+    for (const drivers of [0, 1, 3, 5]) {
+      for (const riders of [0, 1, 4, 6]) {
+        for (const guestCount of [0, 2]) {
+          const shared = Array.from({ length: riders }, (_, i) => drivers + i);
+          const guests: Guest[] = Array.from({ length: guestCount }, (_, i) => ({
+            name: `g${i}`,
+            broughtCar: false,
+            sharedCar: i === 0,
+          }));
+          const r = calculateMatchFees({ ...sample, attendees: people(11, drivers, shared), guests });
+          const cars = r.carCount * sample.carAllowancePerCar;
+          expect(r.carCount).toBe(drivers);
+          expect(r.sharerCount).toBeGreaterThanOrEqual(r.carCount);
+          expect(r.totalCost).toBe(r.cashCosts + cars);
+          expect(r.collectedTotal).toBe(
+            r.rows.reduce((s, x) => s + x.fee, 0) + r.captainCharge,
+          );
+          expect(r.surplusToPool).toBeGreaterThanOrEqual(0);
+          expect(r.surplusToPool).toBe(
+            r.headCount * r.perPlayerFee -
+              r.cashCosts +
+              (r.sharerCount * r.carSharePerSharer - cars),
+          );
+        }
+      }
+    }
   });
 
   it("zero attendees is rejected", () => {
     expect(() =>
-      calculateMatchFees({
-        groundFee: 1000,
-        ballFee: 0,
-        otherFee: 0,
-        carAllowancePerCar: 0,
-        attendees: [],
-      }),
+      calculateMatchFees({ ...sample, attendees: [] }),
     ).toThrowError("NO_PLAYERS");
   });
 });
-
-// The sharing rule: only people who rode with someone fund the cars.
-// Every test above this point runs on the default "everyone" mode and
-// must keep passing untouched — that is the back-compat proof.
-describe("calculateMatchFees — carSplit: sharers", () => {
-  const base = {
-    groundFee: 2500,
-    ballFee: 60,
-    otherFee: 0,
-    carAllowancePerCar: 250,
-    carSplit: "sharers" as const,
-  };
-
-  // 11 players, base 2560, 3 drivers, 6 of the other 8 rode along.
-  // base  2560 / 11 = 232.7 -> 233 a head
-  // cars  3 * 250 = 750, / 6 sharers = 125
-  const sharedRun = () =>
-    calculateMatchFees({
-      ...base,
-      attendees: Array.from({ length: 11 }, (_, i) => ({
-        playerId: `p${i + 1}`,
-        broughtCar: i < 3,
-        sharedCar: i >= 3 && i < 9,
-      })),
-    });
-
-  it("splits the base across every head and the cars across sharers only", () => {
-    const r = sharedRun();
-    expect(r.perPlayerFee).toBe(233);
-    expect(r.carSharePerSharer).toBe(125);
-    expect(r.sharerCount).toBe(6);
-  });
-
-  it("charges a sharer base + car share, and someone who made their own way only the base", () => {
-    const r = sharedRun();
-    expect(r.rows.find((x) => x.playerId === "p4")!.fee).toBe(233 + 125);
-    expect(r.rows.find((x) => x.playerId === "p10")!.fee).toBe(233);
-  });
-
-  it("never charges a driver toward the cars, and rebates them", () => {
-    const r = sharedRun();
-    const driver = r.rows.find((x) => x.playerId === "p1")!;
-    expect(driver.fee).toBe(233 - 250);
-    expect(driver.sharedCar).toBe(false);
-  });
-
-  it("ticking a driver as a sharer changes nothing — they provided the car", () => {
-    const withDriverTicked = calculateMatchFees({
-      ...base,
-      attendees: Array.from({ length: 11 }, (_, i) => ({
-        playerId: `p${i + 1}`,
-        broughtCar: i < 3,
-        sharedCar: i < 9,
-      })),
-    });
-    expect(withDriverTicked.sharerCount).toBe(6);
-    expect(withDriverTicked.rows[0].fee).toBe(233 - 250);
-  });
-
-  it("collects no car money and pays no rebate when nobody shared", () => {
-    const r = calculateMatchFees({
-      ...base,
-      attendees: Array.from({ length: 11 }, (_, i) => ({
-        playerId: `p${i + 1}`,
-        broughtCar: i < 3,
-        sharedCar: false,
-      })),
-    });
-    expect(r.totalCost).toBe(2560);
-    expect(r.carSharePerSharer).toBe(0);
-    expect(r.rows.every((x) => x.fee === 233)).toBe(true);
-  });
-
-  it("lets a guest share, and charges the captain for it", () => {
-    const r = calculateMatchFees({
-      ...base,
-      attendees: [
-        { playerId: "p1", broughtCar: true },
-        { playerId: "p2", broughtCar: false, sharedCar: true },
-      ],
-      guests: [{ name: "Ravi", broughtCar: false, sharedCar: true }],
-    });
-    // base 2560 / 3 heads = 853.3 -> 854; cars 250 / 2 sharers = 125
-    expect(r.perPlayerFee).toBe(854);
-    expect(r.sharerCount).toBe(2);
-    expect(r.carSharePerSharer).toBe(125);
-    expect(r.captainCharge).toBe(854 + 125);
-  });
-
-  it("keeps the pool whole — surplus is never negative", () => {
-    for (const drivers of [0, 1, 3, 5]) {
-      for (const sharers of [0, 1, 4, 6]) {
-        const r = calculateMatchFees({
-          ...base,
-          attendees: Array.from({ length: 11 }, (_, i) => ({
-            playerId: `p${i + 1}`,
-            broughtCar: i < drivers,
-            sharedCar: i >= drivers && i < drivers + sharers,
-          })),
-        });
-        expect(r.surplusToPool).toBeGreaterThanOrEqual(0);
-      }
-    }
-  });
-});
-
 
 describe("ceilSplit", () => {
   it("common-debit split 3000/14: share 215, recovered 3010, surplus 10", () => {

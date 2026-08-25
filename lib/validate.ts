@@ -231,9 +231,10 @@ export const clearPendingSchema = z.object({
   expected_pending: z.number().int().positive(),
 });
 
-// shared_car defaults to false so the tournament routes — which never
-// ask the question — keep validating unchanged, and so an older client
-// posting without the field is accepted rather than 400ing.
+// shared_car = rode in a car (a driver is a sharer regardless, so the
+// flag only matters for non-drivers). Defaults to false — "made their
+// own way" — so an older client posting without the field is accepted
+// rather than 400ing.
 const attendeeSchema = z.object({
   player_id: z.string().uuid(),
   brought_car: z.boolean(),
@@ -242,7 +243,8 @@ const attendeeSchema = z.object({
 
 // v2 guest rule: guests count in the fee split and their charges are
 // deducted from the standing captain's balance (guests hand the
-// captain cash offline). Guest cars join the pot like player cars.
+// captain cash offline). Guest cars and guest sharing count exactly
+// like a player's.
 const guestSchema = z.object({
   name: z.string().trim().min(1).max(80),
   brought_car: z.boolean(),

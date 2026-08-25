@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Car, ChevronLeft, Download, Share2, Users } from "lucide-react";
+import { FeeAmount } from "@/components/shared/FeeAmount";
 import { formatRupees } from "@/lib/format";
 import {
   DEMO_CAPTAIN_PHONE,
@@ -9,26 +10,25 @@ import {
   DEMO_TEAM,
 } from "@/lib/demo/fixtures";
 import { buildGuestFeeMessage } from "@/lib/feeMessage";
-import type { FeeRow, MatchFeeResult } from "@/engine/calc";
+import type { MatchFeeResult } from "@/engine/calc";
 import type { WizardCosts } from "@/components/wizard/wizardTypes";
 import { CaptainMark } from "@/components/shared/CaptainMark";
 
 const NAME_BY_ID = new Map(DEMO_PLAYERS.map((p) => [p.id, p.name]));
 
 // The end of the sample: the finished match sheet, and the share that
-// makes it worth finishing. The PNG is rendered by a route handler that
-// touches no database and no cookies, so "no writes" holds by
-// construction rather than by discipline.
+// makes it worth finishing. Every number is the engine's — nothing is
+// recomputed here. The PNG is rendered by a route handler that touches
+// no database and no cookies, so "no writes" holds by construction
+// rather than by discipline.
 export function GuestMatchSheet({
   result,
-  rows,
   costs,
   captainName,
   captainId,
   onBack,
 }: {
   result: MatchFeeResult;
-  rows: FeeRow[]; // engine rows with any manual fee edit applied
   costs: WizardCosts;
   captainName: string | null;
   captainId: string | null;
@@ -38,18 +38,8 @@ export function GuestMatchSheet({
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Totals follow the rows on screen, so an edited fee is reflected here
-  // rather than quietly showing the pre-edit engine numbers.
-  const cashCosts =
-    (Number(costs.ground) || 0) +
-    (Number(costs.ball) || 0) +
-    (Number(costs.other) || 0);
-  const collected =
-    rows.reduce((sum, r) => sum + r.fee, 0) + result.captainCharge;
-  const surplus = Math.max(0, collected - cashCosts);
-  const carCount =
-    rows.filter((r) => r.broughtCar).length +
-    result.guestRows.filter((g) => g.broughtCar).length;
+  const allowance = Number(costs.allowance) || 0;
+  const perHead = result.perPlayerFee + result.carSharePerSharer;
 
   const payload = {
     team: DEMO_TEAM.name,
@@ -59,12 +49,16 @@ export function GuestMatchSheet({
     groundFee: Number(costs.ground) || 0,
     ballFee: Number(costs.ball) || 0,
     otherFee: Number(costs.other) || 0,
-    carAllowancePerCar: Number(costs.allowance) || 0,
-    carCount,
+    carAllowancePerCar: allowance,
+    carCount: result.carCount,
     totalCost: result.totalCost,
-    surplus,
+    perPlayerFee: result.perPlayerFee,
+    carSharePerSharer: result.carSharePerSharer,
+    sharerCount: result.sharerCount,
+    ownWayCount: result.ownWayCount,
+    surplus: result.surplusToPool,
     rows: [
-      ...rows.map((r) => ({
+      ...result.rows.map((r) => ({
         name: NAME_BY_ID.get(r.playerId) ?? r.playerId,
         fee: r.fee,
         broughtCar: r.broughtCar,
@@ -77,7 +71,7 @@ export function GuestMatchSheet({
       })),
     ],
     captainNote:
-      result.captainCharge > 0 && captainName
+      result.guestRows.length > 0 && captainName
         ? `Guest fees charged to ${captainName}`
         : undefined,
   };
@@ -181,7 +175,7 @@ export function GuestMatchSheet({
         </p>
 
         <ul className="mt-4 divide-y divide-border">
-          {rows.map((r) => (
+          {result.rows.map((r) => (
             <li
               key={r.playerId}
               className="flex items-center justify-between py-2 text-sm"
@@ -198,7 +192,7 @@ export function GuestMatchSheet({
                     className="ml-1.5 inline shrink-0 align-text-bottom text-accent"
                   />
                 )}
-                {r.sharedCar && (
+                {r.sharedCar && !r.broughtCar && (
                   <Users
                     size={13}
                     aria-label="Shared a car"
@@ -206,15 +200,7 @@ export function GuestMatchSheet({
                   />
                 )}
               </span>
-              <span
-                className={
-                  r.fee < 0
-                    ? "font-medium text-credit"
-                    : "font-medium text-text-primary"
-                }
-              >
-                {r.fee < 0 ? "+" : ""}₹{formatRupees(r.fee)}
-              </span>
+              <FeeAmount fee={r.fee} className="font-medium" />
             </li>
           ))}
         </ul>
@@ -235,16 +221,15 @@ export function GuestMatchSheet({
                       className="ml-1.5 inline shrink-0 align-text-bottom text-accent"
                     />
                   )}
+                  {g.sharedCar && !g.broughtCar && (
+                    <Users
+                      size={13}
+                      aria-label="Shared a car"
+                      className="ml-1.5 inline shrink-0 align-text-bottom text-text-muted"
+                    />
+                  )}
                 </span>
-                <span
-                  className={
-                    g.fee < 0
-                      ? "font-medium text-credit"
-                      : "font-medium text-text-primary"
-                  }
-                >
-                  {g.fee < 0 ? "+" : ""}₹{formatRupees(g.fee)}
-                </span>
+                <FeeAmount fee={g.fee} className="font-medium" />
               </li>
             ))}
           </ul>
@@ -256,20 +241,29 @@ export function GuestMatchSheet({
           {Number(costs.other) > 0 && (
             <Line label="Other" value={Number(costs.other)} />
           )}
-          {carCount > 0 && Number(costs.allowance) > 0 && (
+          {result.carCount > 0 && allowance > 0 && (
             <Line
-              label={`Cars ${carCount} × ₹${formatRupees(Number(costs.allowance))}`}
-              value={carCount * Number(costs.allowance)}
+              label={`Cars ${result.carCount} × ₹${formatRupees(allowance)}`}
+              value={result.carCount * allowance}
             />
           )}
           <Line label="Total cost" value={result.totalCost} strong />
-          {result.captainCharge > 0 && (
+          <Line label="Per head" value={perHead} />
+          {result.ownWayCount > 0 && (
+            <Line
+              label={`Own way (${result.ownWayCount})`}
+              value={result.perPlayerFee}
+            />
+          )}
+          {result.captainCharge !== 0 && (
             <Line
               label={`Guests · charged to ${captainName ?? "the captain"}`}
               value={result.captainCharge}
             />
           )}
-          {surplus > 0 && <Line label="Surplus to pool" value={surplus} />}
+          {result.surplusToPool > 0 && (
+            <Line label="Surplus to pool" value={result.surplusToPool} />
+          )}
         </dl>
       </section>
 
@@ -300,8 +294,8 @@ export function GuestMatchSheet({
       {error && <p className="text-sm text-debit">{error}</p>}
 
       <p className="text-center text-xs text-text-muted">
-        {carCount} car{carCount === 1 ? "" : "s"} · this was a sample —
-        nothing was saved.
+        {result.carCount} car{result.carCount === 1 ? "" : "s"} · this was a
+        sample — nothing was saved.
       </p>
     </>
   );
@@ -324,7 +318,7 @@ function Line({
           strong ? "font-semibold text-text-primary" : "text-text-primary"
         }
       >
-        ₹{formatRupees(value)}
+        {value < 0 ? "gets " : ""}₹{formatRupees(value)}
       </dd>
     </div>
   );

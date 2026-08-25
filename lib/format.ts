@@ -5,6 +5,14 @@ export function formatRupees(amount: number): string {
   return Math.abs(Math.round(amount)).toLocaleString("en-IN");
 }
 
+// A per-person match fee, in the words the team reads it: "₹5" is what
+// they pay; a negative fee is money the team owes them and reads
+// "gets ₹53". Never a bare "+" or "−" — "+₹53" was read as "pays 53
+// more", which is the opposite of what it meant.
+export function formatFee(fee: number): string {
+  return fee < 0 ? `gets ₹${formatRupees(-fee)}` : `₹${formatRupees(fee)}`;
+}
+
 // Pinned to IST — server rendering happens in UTC (Vercel), which would
 // otherwise show the previous day for anything after 18:30 IST.
 const TZ = "Asia/Kolkata";

@@ -11,7 +11,7 @@ import { StepCarAllowance } from "@/components/wizard/StepCarAllowance";
 import { StepCars } from "@/components/wizard/StepCars";
 import { StepSharedCar } from "@/components/wizard/StepSharedCar";
 import { StepFeePreview } from "@/components/wizard/StepFeePreview";
-import { calculateMatchFees } from "@/engine/calc";
+import { calculateMatchFees, type MatchFeeResult } from "@/engine/calc";
 import { formatRupees } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
@@ -48,7 +48,7 @@ type Props = {
   hasGuests?: boolean; // false drops the Guests step (tournaments: no guests)
   hasCosts?: boolean; // false drops the Costs step (participation-fee model)
   hasPreview?: boolean; // false drops the Fee preview; Cars submits directly
-  hasSharing?: boolean; // false drops "Who shared the car" (tournaments)
+  hasSharing?: boolean; // false drops "Who shared the car"
   fundLabel?: string; // "pool" (SG) or "fund" (tournaments) in success copy
 };
 
@@ -85,9 +85,9 @@ function buildSteps(
   if (!hasGuests) dropped.add("guests");
   if (!hasCosts) dropped.add("costs");
   if (!hasPreview) dropped.add("preview");
-  // No sharing step for callers that do not ask the question
-  // (tournaments). And ignoring the car fee drops BOTH car questions:
-  // with no rebate to hand out, neither decides anything.
+  // No sharing step for callers that do not ask the question. And
+  // ignoring the car fee drops BOTH car questions: with no rebate to
+  // hand out, neither decides anything.
   if (!hasSharing) dropped.add("shared");
   if (ignoreAllowance) {
     dropped.add("cars");
@@ -102,6 +102,19 @@ function buildSteps(
         ? `Next — ${steps[i + 1].title === "Who played?" ? "players" : steps[i + 1].title.toLowerCase()}`
         : "",
   }));
+}
+
+// Everyone shares a car unless unticked, so the wizard tracks the
+// EXCEPTIONS: the people who made their own way. Edit mode rebuilds that
+// set from what was stored (drivers are stored as sharers, so they never
+// land in it).
+function initialOwnWay(initial: WizardInitial | undefined): Set<string> {
+  if (!initial) return new Set();
+  const cars = new Set(initial.cars);
+  const shared = new Set(initial.shared);
+  return new Set(
+    initial.selected.filter((id) => !cars.has(id) && !shared.has(id)),
+  );
 }
 
 export function MatchWizard({
@@ -148,8 +161,8 @@ export function MatchWizard({
     new Set(initial?.selected ?? []),
   );
   const [cars, setCars] = useState<Set<string>>(new Set(initial?.cars ?? []));
-  const [shared, setShared] = useState<Set<string>>(
-    new Set(initial?.shared ?? []),
+  const [ownWay, setOwnWay] = useState<Set<string>>(() =>
+    initialOwnWay(initial),
   );
   const [guests, setGuests] = useState<WizardGuest[]>(initial?.guests ?? []);
   const [baseRows, setBaseRows] = useState<PreviewRow[] | null>(null);
@@ -173,11 +186,12 @@ export function MatchWizard({
   const stepKey = steps[stepIndex].key;
 
   // Guests count in the split too; their charges land on the captain.
-  // A driver is never a sharer — they provided the car.
+  // shared_car = rode in a car: a driver always did, everyone else did
+  // unless they were unticked on the sharing step.
   const attendees = [...selected].map((id) => ({
     player_id: id,
     brought_car: cars.has(id),
-    shared_car: shared.has(id) && !cars.has(id),
+    shared_car: cars.has(id) || !ownWay.has(id),
   }));
 
   const numericCosts = {
@@ -189,6 +203,36 @@ export function MatchWizard({
   const cashCosts =
     numericCosts.ground_fee + numericCosts.ball_fee + numericCosts.other_fee;
 
+  // The fee split is the pure engine (engine/calc.ts) run right here —
+  // the same module the guest sample uses — so stepping through the
+  // wizard costs no round-trip. Submit still recomputes on the server,
+  // which stays the authority for what is written.
+  function runEngine(): MatchFeeResult {
+    return calculateMatchFees({
+      groundFee: numericCosts.ground_fee,
+      ballFee: numericCosts.ball_fee,
+      otherFee: numericCosts.other_fee,
+      carAllowancePerCar: numericCosts.car_allowance_per_car,
+      attendees: attendees.map((a) => ({
+        playerId: a.player_id,
+        broughtCar: a.brought_car,
+        sharedCar: a.shared_car,
+      })),
+      guests: guests.map((g) => ({
+        name: g.name,
+        broughtCar: g.brought_car,
+        sharedCar: g.shared_car,
+      })),
+    });
+  }
+  // Live figures for the sharing step's caption (NO_PLAYERS → null).
+  let live: MatchFeeResult | null = null;
+  try {
+    live = selected.size > 0 ? runEngine() : null;
+  } catch {
+    live = null;
+  }
+
   // Edit mode opens directly on the preview step — load the engine baseline once.
   useEffect(() => {
     if (hasPreview && open && step === LAST_STEP && baseRows === null && !pending) {
@@ -197,11 +241,7 @@ export function MatchWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, step, baseRows]);
 
-  // The fee split is the pure engine (engine/calc.ts) run right here —
-  // the same module the guest sample uses — so stepping through the
-  // wizard costs no round-trip. Submit still recomputes on the server,
-  // which stays the authority for what is written. Kept async/boolean so
-  // the callers' shape did not change.
+  // Kept async/boolean so the callers' shape did not change.
   async function loadPreview() {
     setError(null);
     const captain = players.find((p) => p.is_captain) ?? null;
@@ -212,23 +252,7 @@ export function MatchWizard({
       return false;
     }
     try {
-      const result = calculateMatchFees({
-        groundFee: numericCosts.ground_fee,
-        ballFee: numericCosts.ball_fee,
-        otherFee: numericCosts.other_fee,
-        carAllowancePerCar: numericCosts.car_allowance_per_car,
-        attendees: attendees.map((a) => ({
-          playerId: a.player_id,
-          broughtCar: a.brought_car,
-          sharedCar: a.shared_car,
-        })),
-        guests: guests.map((g) => ({
-          name: g.name,
-          broughtCar: g.brought_car,
-          sharedCar: g.shared_car,
-        })),
-        carSplit: "sharers",
-      });
+      const result = runEngine();
       setBaseRows(
         result.rows.map((r) => ({
           player_id: r.playerId,
@@ -241,7 +265,10 @@ export function MatchWizard({
         per_player_fee: result.perPlayerFee,
         car_share_per_sharer: result.carSharePerSharer,
         sharer_count: result.sharerCount,
+        own_way_count: result.ownWayCount,
+        car_count: result.carCount,
         total_cost: result.totalCost,
+        cash_costs: result.cashCosts,
         collected_total: result.collectedTotal,
         surplus_to_pool: result.surplusToPool,
         guest_rows: result.guestRows.map((g) => ({
@@ -403,6 +430,11 @@ export function MatchWizard({
   }
 
   const selectedPlayers = players.filter((p) => selected.has(p.id));
+  const sharedPlayers = new Set(
+    selectedPlayers
+      .filter((p) => !cars.has(p.id) && !ownWay.has(p.id))
+      .map((p) => p.id),
+  );
 
   const wizardFooter = (
     <>
@@ -500,9 +532,9 @@ export function MatchWizard({
                     const nextCars = new Set(cars);
                     nextCars.delete(id);
                     setCars(nextCars);
-                    const nextShared = new Set(shared);
-                    nextShared.delete(id);
-                    setShared(nextShared);
+                    const nextOwnWay = new Set(ownWay);
+                    nextOwnWay.delete(id);
+                    setOwnWay(nextOwnWay);
                   } else {
                     next.add(id);
                   }
@@ -516,7 +548,8 @@ export function MatchWizard({
                 onAddGuest={(name) =>
                   setGuests([
                     ...guests,
-                    { name, brought_car: false, shared_car: false },
+                    // Shares by default, like everyone else.
+                    { name, brought_car: false, shared_car: true },
                   ])
                 }
                 onRemoveGuest={(i) => setGuests(guests.filter((_, x) => x !== i))}
@@ -556,22 +589,22 @@ export function MatchWizard({
               <StepSharedCar
                 players={selectedPlayers}
                 cars={cars}
-                shared={shared}
+                shared={sharedPlayers}
                 onToggleShared={(id) => {
-                  const next = new Set(shared);
+                  const next = new Set(ownWay);
                   if (next.has(id)) next.delete(id);
                   else next.add(id);
-                  setShared(next);
+                  setOwnWay(next);
                 }}
                 onSetAllShared={(on) => {
-                  setShared(
+                  setOwnWay(
                     on
-                      ? new Set(
+                      ? new Set()
+                      : new Set(
                           selectedPlayers
                             .filter((p) => !cars.has(p.id))
                             .map((p) => p.id),
-                        )
-                      : new Set(),
+                        ),
                   );
                   setGuests(
                     guests.map((g) =>
@@ -588,22 +621,17 @@ export function MatchWizard({
                   )
                 }
                 allowance={numericCosts.car_allowance_per_car}
-                carCount={
-                  [...selected].filter((id) => cars.has(id)).length +
-                  guests.filter((g) => g.brought_car).length
-                }
+                carCount={live?.carCount ?? 0}
+                carSharePerSharer={live?.carSharePerSharer ?? 0}
+                sharerCount={live?.sharerCount ?? 0}
               />
             )}
             {stepKey === "preview" && totals && (
               <StepFeePreview
                 rows={baseRows ?? []}
                 players={players}
-                totalCost={totals.total_cost}
-                cashCosts={cashCosts}
-                carAllowancePerCar={ignoreAllowance ? 0 : Number(costs.allowance) || 0}
-                guestRows={totals.guest_rows}
-                captainCharge={totals.captain_charge}
-                captainName={totals.captain_name}
+                totals={totals}
+                carAllowancePerCar={numericCosts.car_allowance_per_car}
                 fundLabel={fundLabel}
               />
             )}
