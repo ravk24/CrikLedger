@@ -1,5 +1,3 @@
-"use client";
-
 import { Car, Users } from "lucide-react";
 import { FeeAmount } from "@/components/shared/FeeAmount";
 import { Money } from "@/components/shared/Money";

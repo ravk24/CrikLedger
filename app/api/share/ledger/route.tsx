@@ -53,7 +53,8 @@ export async function GET() {
     const entries = (entriesRes.data ?? []) as PoolLedgerRow[];
     const balance = Number(balanceRes.data?.balance ?? 0);
 
-    const height = Math.max(900, 420 + Math.max(entries.length, 1) * 64);
+    // 720-space (lib/share-image.tsx): the old 1080 formula × ⅔.
+    const height = Math.max(600, 280 + Math.max(entries.length, 1) * 43);
 
     return new ImageResponse(
       (
@@ -62,9 +63,9 @@ export async function GET() {
           subtitle={`Last ${entries.length} entries · ${shareDate()}`}
           footer={`Pool balance ${balanceRupees(balance)}`}
         >
-          <div style={{ display: "flex", flexDirection: "column", marginTop: 32 }}>
+          <div style={{ display: "flex", flexDirection: "column", marginTop: 21 }}>
             {entries.length === 0 ? (
-              <div style={{ display: "flex", fontSize: 28, color: "#94a3b8" }}>
+              <div style={{ display: "flex", fontSize: 19, color: "#94a3b8" }}>
                 The ledger is empty.
               </div>
             ) : null}
@@ -75,13 +76,13 @@ export async function GET() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  gap: 24,
-                  fontSize: 26,
-                  padding: "14px 0",
+                  gap: 16,
+                  fontSize: 17,
+                  padding: "9px 0",
                   borderBottom: "1px solid #1e293b",
                 }}
               >
-                <div style={{ display: "flex", width: 120, flexShrink: 0, color: "#94a3b8" }}>
+                <div style={{ display: "flex", width: 80, flexShrink: 0, color: "#94a3b8" }}>
                   {formatDateShort(e.entry_date)}
                 </div>
                 <div

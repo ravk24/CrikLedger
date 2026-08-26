@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { X } from "lucide-react";
 
-const LEGACY_DISMISS_KEY = "cl-install-nudge-dismissed"; // v0 flag, cleared
 const SESSION_DISMISS_KEY = "cl-install-nudge-hidden";
 
 type BeforeInstallPromptEvent = Event & {
@@ -25,7 +24,6 @@ export function InstallNudge() {
   const [isIos, setIsIos] = useState(false);
 
   useEffect(() => {
-    localStorage.removeItem(LEGACY_DISMISS_KEY);
     if (sessionStorage.getItem(SESSION_DISMISS_KEY)) return;
 
     const isStandalone =

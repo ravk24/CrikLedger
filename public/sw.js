@@ -1,15 +1,22 @@
 // CrikLedger service worker — the entire caching policy.
 // This is a LIVE MONEY LEDGER: a cached balance is a wrong balance.
 // Network-first for every page and API; cache ONLY truly static assets.
-// Bump STATIC_CACHE when the precache list changes.
+// Bump STATIC_CACHE when the precache list or the runtime rule changes.
 // v3: the CricLedger -> CrikLedger rename replaced every icon and the
 // app title, so installed clients must drop the old shell.
-// v4: the splash screen is gone, so /splash.png left this list.
 // v5: only offline.html is precached (the icons are fetched by the
 // browser on install, never by pages), and navigations use navigation
 // preload so the network request starts before this worker has booted.
-const STATIC_CACHE = "crikledger-static-v6";
+// v7: /_next/static/* is cached on first use. Those URLs are
+// content-hashed and served immutable, so a cached one can never be a
+// stale VALUE — a new build is a new URL. Without it a PWA cold start
+// re-downloaded ~190 KB of JS and fonts whenever the browser's disk
+// cache had evicted them. Nothing else is cached: not /_next/image
+// (query-keyed), not RSC payloads (?_rsc=), not /api, not HTML.
+const STATIC_CACHE = "crikledger-static-v7";
+const RUNTIME_CACHE = "crikledger-runtime-v7";
 const STATIC_ASSETS = ["/offline.html"];
+const IMMUTABLE_PREFIX = "/_next/static/";
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(STATIC_CACHE).then((c) => c.addAll(STATIC_ASSETS)));
@@ -23,7 +30,9 @@ self.addEventListener("activate", (e) => {
         .keys()
         .then((keys) =>
           Promise.all(
-            keys.filter((k) => k !== STATIC_CACHE).map((k) => caches.delete(k)),
+            keys
+              .filter((k) => k !== STATIC_CACHE && k !== RUNTIME_CACHE)
+              .map((k) => caches.delete(k)),
           ),
         ),
       self.registration.navigationPreload
@@ -54,6 +63,26 @@ self.addEventListener("fetch", (e) => {
         }
       })(),
     );
+    return;
   }
-  // Non-navigation requests fall through to the network untouched.
+  if (
+    e.request.method === "GET" &&
+    url.origin === self.location.origin &&
+    url.pathname.startsWith(IMMUTABLE_PREFIX) &&
+    !url.search
+  ) {
+    // cache-first for content-hashed build assets only (see v7 note).
+    e.respondWith(
+      (async () => {
+        const cache = await caches.open(RUNTIME_CACHE);
+        const hit = await cache.match(e.request);
+        if (hit) return hit;
+        const res = await fetch(e.request);
+        if (res.ok) cache.put(e.request, res.clone());
+        return res;
+      })(),
+    );
+    return;
+  }
+  // Everything else falls through to the network untouched.
 });

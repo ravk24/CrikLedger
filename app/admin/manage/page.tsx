@@ -10,7 +10,7 @@ import { CHROME_HEADER, CHROME_BACK_LINK } from "@/lib/ui";
 
 async function ManageData() {
   const admin = await getSessionAdmin();
-  if (!admin) redirect("/admin/login");
+  if (!admin) redirect("/login");
   if (admin.mustChangePassword) redirect("/admin/password");
   // Superadmin OF THE ACTIVE TEAM — not an account-level role any more.
   if (admin.activeTeamRole !== "superadmin" || !admin.activeTeamId) {

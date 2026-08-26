@@ -11,13 +11,13 @@ import { CHROME_HEADER, CHROME_BACK_LINK } from "@/lib/ui";
 
 async function PlayersData() {
   const admin = await getSessionAdmin();
-  if (!admin) redirect("/admin/login");
+  if (!admin) redirect("/login");
   if (admin.mustChangePassword) redirect("/admin/password");
 
   const teamId = await getCurrentTeamId(pool);
   const res = await pool.query(
     `SELECT p.id, p.name, p.is_active, p.is_captain, p.is_vice_captain, b.balance
-     FROM players p JOIN player_balances b ON b.id = p.id
+     FROM players p JOIN player_balances b ON b.id = p.id AND b.team_id = p.team_id
      WHERE p.team_id = $1
      ORDER BY p.is_active DESC, p.name ASC`,
     [teamId],

@@ -69,12 +69,12 @@ const PASSWORD_TILE: Tile = {
 
 async function ConsoleData() {
   const admin = await getSessionAdmin();
-  if (!admin) redirect("/admin/login");
+  if (!admin) redirect("/login");
   if (admin.mustChangePassword) redirect("/admin/password");
 
   const isSuperadmin = admin.activeTeamRole === "superadmin";
   const team = await getCurrentTeam();
-  const [playersRes, adminCountRes, captainPhoneRes] = await Promise.all([
+  const [playersRes, superRes] = await Promise.all([
     isSuperadmin
       ? supabaseServer
           .from("players_public")
@@ -83,25 +83,23 @@ async function ConsoleData() {
           .eq("is_active", true)
           .order("name")
       : Promise.resolve({ data: null }),
+    // Two team-scoped scalars in one statement (they used to be two
+    // queries on two pooled connections). phone is deliberately absent
+    // from players_public (migration 43), so the captain's number comes
+    // straight off the base table.
     isSuperadmin
-      ? pool.query<{ n: string }>(
-          `SELECT count(*) AS n FROM team_memberships
-            WHERE team_id = $1 AND team_role = 'admin' AND is_active`,
+      ? pool.query<{ n: string; phone: string | null }>(
+          `SELECT
+             (SELECT count(*) FROM team_memberships
+               WHERE team_id = $1 AND team_role = 'admin' AND is_active) AS n,
+             (SELECT phone FROM players
+               WHERE team_id = $1 AND is_captain LIMIT 1) AS phone`,
           [team.id],
         )
-      : Promise.resolve({ rows: [{ n: "0" }] }),
-    // phone is deliberately absent from players_public (migration 43),
-    // so the captain's number comes straight off the base table.
-    isSuperadmin
-      ? pool.query<{ phone: string | null }>(
-          `SELECT phone FROM players
-            WHERE team_id = $1 AND is_captain LIMIT 1`,
-          [team.id],
-        )
-      : Promise.resolve({ rows: [] as { phone: string | null }[] }),
+      : Promise.resolve({ rows: [{ n: "0", phone: null as string | null }] }),
   ]);
-  const adminCount = Number(adminCountRes.rows[0]?.n ?? 0);
-  const captainPhone = captainPhoneRes.rows[0]?.phone ?? null;
+  const adminCount = Number(superRes.rows[0]?.n ?? 0);
+  const captainPhone = superRes.rows[0]?.phone ?? null;
   const captainPlayers = (playersRes.data ?? []) as {
     id: string;
     name: string;

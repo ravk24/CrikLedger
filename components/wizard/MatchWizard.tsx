@@ -40,8 +40,6 @@ type Props = {
   // Migration-36 matches: the opponent's full fee — settled entry +
   // still-pending + cleared-pending entry (migration 41 link).
   // Editable: the recoup reads the debit row, so edits can't double-count.
-  // Home booking matches: this match's slot share of what the opponent
-  // paid to book (paid + pending + cleared-pending).
   initialGroundFee?: number;
   // Tournament reuse (defaults preserve SG behavior exactly):
   apiBase?: string; // endpoint root; preview/abandon/submit derive from it

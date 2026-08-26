@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useDeferredValue, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { PlayerCard } from "@/components/shared/PlayerCard";
 import type { PlayerPublic } from "@/types";
+
+// Rows are pure functions of their player; memoised so a keystroke in
+// the search box re-renders only the rows whose membership changed.
+const Row = memo(PlayerCard);
 
 type Props = {
   players: PlayerPublic[];
@@ -23,11 +27,20 @@ export function PlayerGrid({
   downloadSlot,
 }: Props) {
   const [query, setQuery] = useState("");
+  // The input stays responsive; the list follows a beat later on a slow
+  // phone instead of blocking each keystroke.
+  const deferredQuery = useDeferredValue(query);
 
-  const filtered = players.filter((p) =>
-    p.name.toLowerCase().includes(query.trim().toLowerCase()),
+  const filtered = useMemo(() => {
+    const needle = deferredQuery.trim().toLowerCase();
+    return needle
+      ? players.filter((p) => p.name.toLowerCase().includes(needle))
+      : players;
+  }, [players, deferredQuery]);
+  const activeCount = useMemo(
+    () => players.filter((p) => p.is_active).length,
+    [players],
   );
-  const activeCount = players.filter((p) => p.is_active).length;
 
   return (
     <section className="flex flex-col gap-3">
@@ -68,7 +81,7 @@ export function PlayerGrid({
       ) : (
         <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
           {filtered.map((player) => (
-            <PlayerCard key={player.id} player={player} hrefBase={hrefBase} />
+            <Row key={player.id} player={player} hrefBase={hrefBase} />
           ))}
         </div>
       )}

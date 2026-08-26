@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, cache } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
@@ -15,7 +15,6 @@ import { MatchFeeCard } from "@/components/matches/MatchFeeCard";
 import { DeleteScheduledMatch } from "@/components/matches/DeleteScheduledMatch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { calculateMatchFees } from "@/engine/calc";
-import { computeSlotShare } from "@/lib/bookings";
 import { pool } from "@/lib/db";
 import {
   formatDate,
@@ -31,8 +30,14 @@ import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getTeamById } from "@/lib/team";
 import type { WizardInitial } from "@/components/wizard/wizardTypes";
-import type { GroundBookingPublic, Match, MatchParticipantPublic } from "@/types";
+import type { Match, MatchParticipantPublic } from "@/types";
 import { CHROME_HEADER, CHROME_BACK_LINK } from "@/lib/ui";
+
+// One matches_public read per request, shared by the back link and the
+// body (React.cache dedupes within the render).
+const loadMatchRow = cache((id: string) =>
+  supabaseServer.from("matches_public").select("*").eq("id", id).maybeSingle(),
+);
 
 type MatchPublicRow = Match & { updated_by_name: string | null };
 
@@ -46,11 +51,11 @@ async function buildAdminProps(match: MatchPublicRow) {
   if (!canWrite(admin, "team", match.team_id)) return null;
   const isSuperadmin = isScopeSuperadmin(admin, "team", match.team_id);
 
-  // The four admin reads are independent, so they run together: players
+  // The three admin reads are independent, so they run together: players
   // (recently-played first — kickoff §6 step 3 — then alphabetical), the
-  // completed match's participants, and the match's other-fee and booking
-  // money in one row. The last-played derivation is scoped to the team so
-  // it never aggregates another tenant's participants.
+  // completed match's participants, and the match's fee money in one
+  // row. The last-played derivation is scoped to the team so it never
+  // aggregates another tenant's participants.
   const [playersRes, rowsRes, moneyRes] = await Promise.all([
     pool.query(
       `SELECT p.id, p.name, p.is_captain, p.phone
@@ -76,14 +81,10 @@ async function buildAdminProps(match: MatchPublicRow) {
       : Promise.resolve({ rows: [] as never[] }),
     pool.query(
       `SELECT ofe.amount AS other_fee_amount,
-              gb.amount_paid, gb.slots, gb.amount_pending,
-              pe.amount AS cleared_amount,
               mpc.amount AS match_cleared_amount
        FROM matches m
        LEFT JOIN pool_entries ofe ON ofe.id = m.other_fee_entry_id
        LEFT JOIN pool_entries mpc ON mpc.id = m.pending_cleared_entry_id
-       LEFT JOIN ground_bookings gb ON gb.id = m.ground_booking_id
-       LEFT JOIN pool_entries pe ON pe.id = gb.pending_cleared_entry_id
        WHERE m.id = $1`,
       [match.id],
     ),
@@ -146,10 +147,6 @@ async function buildAdminProps(match: MatchPublicRow) {
   const money = moneyRes.rows[0] as
     | {
         other_fee_amount: string | null;
-        amount_paid: string | null;
-        slots: number | null;
-        amount_pending: string | null;
-        cleared_amount: string | null;
         match_cleared_amount: string | null;
       }
     | undefined;
@@ -158,7 +155,7 @@ async function buildAdminProps(match: MatchPublicRow) {
   }
   // Completion prefill: everything the opponent's fee covers — settled
   // entry + still-pending + cleared-pending entry (abs: debit entries
-  // are negative). Mirrors bookingFee below for migration-36 matches.
+  // are negative).
   const matchFeeTotal =
     otherFee +
     Number(match.fee_pending) +
@@ -166,54 +163,18 @@ async function buildAdminProps(match: MatchPublicRow) {
       ? Math.abs(Number(money.match_cleared_amount))
       : 0);
 
-  // Booking money is admin-only, so this stays in the pg code path:
-  // the fee switch needs the pending amount (any admin), and the
-  // cancel flow needs this match's per-slot share of the booking
-  // credit, computed exactly as the server will deduct it on delete.
-  let bookingShare = 0;
-  let bookingFee = 0;
-  let matchFee: { amountPending: number } | null = null;
-  // A booking row exists only when the LEFT JOIN matched (slots is NOT
-  // NULL on ground_bookings).
-  const booking = money && money.slots != null ? money : undefined;
-  // A match carries its own pending fee since migration 36; a legacy
-  // booking-linked one still reports through the booking. Either way the
-  // card and the completion gate read one number.
-  if (Number(match.fee_pending) > 0) {
-    matchFee = { amountPending: Number(match.fee_pending) };
-  }
-  if (booking) {
-    matchFee = { amountPending: Number(booking.amount_pending) };
-    // Completion prefill: this match's slot share of everything the
-    // opponent paid to book — paid + still-pending + cleared-pending
-    // covers every clearing state (per-component shares, same rounding
-    // convention as the delete quote below).
-    const feeSlots = Number(booking.slots);
-    bookingFee =
-      computeSlotShare(Number(booking.amount_paid), feeSlots) +
-      computeSlotShare(Number(booking.amount_pending), feeSlots) +
-      (booking.cleared_amount
-        ? computeSlotShare(Number(booking.cleared_amount), feeSlots)
-        : 0);
-    if (match.status === "scheduled" && isSuperadmin) {
-      // Deleting also reverts the cleared-pending credit's slot share,
-      // so the confirm dialog quotes the full pool deduction.
-      const slots = Number(booking.slots);
-      bookingShare =
-        computeSlotShare(Number(booking.amount_paid), slots) +
-        (booking.cleared_amount
-          ? computeSlotShare(Number(booking.cleared_amount), slots)
-          : 0);
-    }
-  }
+  // The match carries its own pending fee (migration 36); the card and
+  // the completion gate read this one number.
+  const matchFee =
+    Number(match.fee_pending) > 0
+      ? { amountPending: Number(match.fee_pending) }
+      : null;
 
   return {
     players,
     captainPhone,
     isSuperadmin,
     initial,
-    bookingShare,
-    bookingFee,
     otherFee,
     matchFeeTotal,
     matchFee,
@@ -226,16 +187,13 @@ async function MatchDetailData({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [matchRes, participantsRes] = await Promise.all([
-    supabaseServer
-      .from("matches_public")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle(),
+  const [matchRes, participantsRes, admin] = await Promise.all([
+    loadMatchRow(id),
     supabaseServer
       .from("match_participants_public")
       .select("*")
       .eq("match_id", id),
+    getSessionAdmin(),
   ]);
 
   const match = matchRes.data as MatchPublicRow | null;
@@ -243,35 +201,25 @@ async function MatchDetailData({
 
   // The team comes from the MATCH, never from the session — this page is
   // publicly link-readable (the WhatsApp sharing loop), so it must render
-  // for a visitor who has no active team at all.
-  // Captain and booking are scoped by the match's own team; the
-  // booking resolves by id (matches.ground_booking_id) — the old
-  // opponent-name heuristic is gone. The admin props depend on nothing
-  // below, so they load in the same round.
-  const [team, captainRes, bookingRes, adminProps] = await Promise.all([
-    getTeamById(match.team_id),
+  // for a visitor who has no active team at all. The captain is scoped by
+  // the match's own team. The admin props depend on nothing below, so
+  // they load in the same round.
+  const [team, captainRes, adminProps] = await Promise.all([
+    // A member's own team row already arrived with the session; only a
+    // visitor (or a megaadmin on a foreign team) pays the lookup.
+    admin?.activeTeam?.id === match.team_id
+      ? Promise.resolve(admin.activeTeam)
+      : getTeamById(match.team_id),
     supabaseServer
       .from("players_public")
       .select("name")
       .eq("team_id", match.team_id)
       .eq("is_captain", true)
       .maybeSingle(),
-    match.ground_booking_id
-      ? supabaseServer
-          .from("ground_bookings_public")
-          .select("team_name, captain, amount_pending, created_at")
-          .eq("id", match.ground_booking_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
     buildAdminProps(match),
   ]);
 
   const teamCaptain = (captainRes.data as { name: string } | null)?.name ?? null;
-
-  const rawBooking = bookingRes.data as GroundBookingPublic | null;
-  const booking: GroundBookingPublic | null = rawBooking
-    ? { ...rawBooking, amount_pending: Number(rawBooking.amount_pending) }
-    : null;
 
   const participants = (participantsRes.data ?? []) as MatchParticipantPublic[];
   participants.sort((a, b) => a.player_name.localeCompare(b.player_name));
@@ -397,27 +345,13 @@ async function MatchDetailData({
             </p>
           )
         )}
-        {(teamCaptain || booking) && (
+        {teamCaptain && (
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-text-secondary">
             {teamCaptain && (
               <span className="inline-flex items-center gap-1">
                 Captain: {teamCaptain}
                 <CaptainMark />
               </span>
-            )}
-            {booking && (
-              <>
-                <span>Opponent Captain: {booking.captain}</span>
-                {booking.amount_pending > 0 ? (
-                  <span className="rounded-full bg-debit-light px-2 py-0.5 text-xs font-medium text-debit-foreground">
-                    ₹{formatRupees(booking.amount_pending)} pending
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-credit-light px-2 py-0.5 text-xs font-medium text-credit-foreground">
-                    Paid
-                  </span>
-                )}
-              </>
             )}
           </div>
         )}
@@ -446,7 +380,6 @@ async function MatchDetailData({
           matchDateLabel={formatDateShort(match.match_date)}
           status={match.status}
           venue={match.venue ?? null}
-          opponentCaptain={booking?.captain ?? null}
           feePending={adminProps.matchFee?.amountPending ?? 0}
           feeAmount={adminProps.otherFee + Number(match.fee_pending)}
           feeDirection={match.fee_direction}
@@ -454,7 +387,7 @@ async function MatchDetailData({
           isSuperadmin={adminProps.isSuperadmin}
           initial={adminProps.initial}
           initialGroundFee={
-            adminProps.matchFeeTotal || adminProps.bookingFee || undefined
+            adminProps.matchFeeTotal || undefined
           }
         />
       )}
@@ -464,7 +397,6 @@ async function MatchDetailData({
           matchId={match.id}
           opponent={opponentLabel(match.opponent)}
           matchDateLabel={formatDateShort(match.match_date)}
-          bookingShare={adminProps.bookingShare}
           otherFee={adminProps.otherFee}
         />
       )}
@@ -545,16 +477,13 @@ async function MatchDetailData({
 const backLinkClass = CHROME_BACK_LINK;
 
 // Back goes to the list this match lives in: Schedule › Upcoming for a
-// scheduled match, Schedule › Completed once played or abandoned. Only
-// the status is needed, so it streams ahead of the full detail load;
-// the fallback is the Schedule hub.
+// scheduled match, Schedule › Completed once played or abandoned. It
+// shares loadMatchRow with the body, so the two boundaries cost ONE
+// read instead of a second status-only round trip; the fallback is the
+// Schedule hub.
 async function BackLink({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { data } = await supabaseServer
-    .from("matches_public")
-    .select("status")
-    .eq("id", id)
-    .maybeSingle();
+  const { data } = await loadMatchRow(id);
   const scheduled = data?.status === "scheduled";
   return (
     <Link

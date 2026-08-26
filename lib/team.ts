@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { cacheLife, cacheTag } from "next/cache";
 import { supabaseServer } from "@/lib/supabase-server";
 import { ApiError } from "@/lib/validate";
 import { getSessionAdmin } from "@/lib/session";
@@ -14,43 +15,43 @@ import { getSessionAdmin } from "@/lib/session";
 // instead, via getTeamById(), which is what lets those pages stay public
 // without a session.
 
+// The columns the app reads. teams_public also carries meeting_point,
+// status_threshold (read by the players_public CASE in SQL, never here),
+// brand_*, logo_ref and is_sandbox — declared nowhere in TS because no
+// component reads them.
 export type TeamPublic = {
   id: string;
   slug: string;
   display_name: string;
-  meeting_point: string | null;
-  status_threshold: number;
   car_rate_per_km: number;
-  brand_primary_color: string | null;
-  brand_secondary_color: string | null;
-  logo_ref: string | null;
-  is_sandbox: boolean;
   created_at: string;
 };
 
-export const getTeamById = cache(async (teamId: string): Promise<TeamPublic> => {
+const TEAM_COLUMNS = "id, slug, display_name, car_rate_per_km, created_at";
+
+// Team config is near-immutable and carries no money, so it is the one
+// row this app caches: the anonymous /matches/[id] share link (the only
+// caller left after the member's row started riding the session query)
+// no longer pays a PostgREST hop for it. PATCH /api/sa/team revalidates
+// the tag, so a rename shows on the next request.
+async function loadTeamRow(teamId: string): Promise<TeamPublic | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(`team:${teamId}`);
   const { data, error } = await supabaseServer
     .from("teams_public")
-    .select("*")
+    .select(TEAM_COLUMNS)
     .eq("id", teamId)
-    .single();
-  if (error || !data) {
-    throw new Error(`Team '${teamId}' not found: ${error?.message ?? ""}`);
-  }
-  return data as TeamPublic;
-});
+    .maybeSingle();
+  if (error) throw new Error(`Team '${teamId}' lookup failed: ${error.message}`);
+  return (data as TeamPublic | null) ?? null;
+}
 
-export const getTeamBySlug = cache(
-  async (slug: string): Promise<TeamPublic | null> => {
-    const { data, error } = await supabaseServer
-      .from("teams_public")
-      .select("*")
-      .eq("slug", slug)
-      .maybeSingle();
-    if (error) throw new Error(`Could not load team '${slug}': ${error.message}`);
-    return (data as TeamPublic) ?? null;
-  },
-);
+export const getTeamById = cache(async (teamId: string): Promise<TeamPublic> => {
+  const team = await loadTeamRow(teamId);
+  if (!team) throw new Error(`Team '${teamId}' not found`);
+  return team;
+});
 
 /**
  * The signed-in user's active team, or null for a guest / an account with

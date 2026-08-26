@@ -36,14 +36,16 @@ async function PoolLedgerData({ page }: { page: number }) {
   const from = (page - 1) * PAGE_SIZE;
   // The players list only matters to a signed-in admin, but it costs
   // nothing to fetch alongside the ledger instead of after it.
+  // One row past the page answers "is there more?" — no COUNT(*) over
+  // the whole ledger on every visit.
   const [entriesRes, admin, playersRes] = await Promise.all([
     supabaseServer
       .from("pool_ledger_public")
-      .select("*", { count: "exact" })
+      .select("*")
       .eq("team_id", team.id)
       .order("entry_date", { ascending: false })
       .order("created_at", { ascending: false })
-      .range(from, from + PAGE_SIZE - 1),
+      .range(from, from + PAGE_SIZE),
     getSessionAdmin(),
     supabaseServer
       .from("players_public")
@@ -52,17 +54,17 @@ async function PoolLedgerData({ page }: { page: number }) {
       .eq("is_active", true)
       .order("name"),
   ]);
-  const entries = (entriesRes.data ?? []) as PoolLedgerRow[];
-  const total = entriesRes.count ?? entries.length;
-  const olderLink =
-    from + entries.length < total ? (
-      <Link
-        href={`/pool?page=${page + 1}`}
-        className="flex h-11 items-center justify-center rounded-md border border-border bg-surface shadow-card text-sm font-medium text-text-primary"
-      >
-        Show older entries ({total - from - entries.length} more)
-      </Link>
-    ) : null;
+  const fetched = (entriesRes.data ?? []) as PoolLedgerRow[];
+  const hasMore = fetched.length > PAGE_SIZE;
+  const entries = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
+  const olderLink = hasMore ? (
+    <Link
+      href={`/pool?page=${page + 1}`}
+      className="flex h-11 items-center justify-center rounded-md border border-border bg-surface shadow-card text-sm font-medium text-text-primary"
+    >
+      Show older entries
+    </Link>
+  ) : null;
 
   if (entries.length === 0 && !admin) {
     return (

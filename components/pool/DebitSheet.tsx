@@ -6,15 +6,24 @@ import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { Switch } from "@/components/ui/switch";
 import { ceilSplit } from "@/engine/split";
-import { formatRupees } from "@/lib/format";
+import { formatRupees, todayIST } from "@/lib/format";
+import type { PoolLedgerRow } from "@/types";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   activePlayerCount: number;
+  // Lets the ledger list show the row the moment it is sent (the owner's
+  // useOptimistic reconciles it on refresh). Mirrors CreditSheet.
+  onOptimisticAdd?: (row: PoolLedgerRow) => void;
 };
 
-export function DebitSheet({ open, onOpenChange, activePlayerCount }: Props) {
+export function DebitSheet({
+  open,
+  onOpenChange,
+  activePlayerCount,
+  onOptimisticAdd,
+}: Props) {
   const router = useRouter();
   const [amount, setAmount] = useState("");
   const [message, setMessage] = useState("");
@@ -38,33 +47,50 @@ export function DebitSheet({ open, onOpenChange, activePlayerCount }: Props) {
     }
     setError(null);
     setPending(true);
-    try {
-      const res = await fetch("/api/pool/debit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          common,
-          amount: value,
-          message: message.trim(),
-          entry_date: date || undefined,
-        }),
-      });
-      const body = await res.json();
-      if (!body.success) {
-        setError(body.error?.message ?? "Could not save — try again.");
-        return;
+    const payload = {
+      common,
+      amount: value,
+      message: message.trim(),
+      entry_date: date || undefined,
+    };
+    // The row the ledger will show once the write lands: debits are
+    // stored negative; the server's own id/created_at replace these on
+    // refresh. The amount shown is exactly what the admin typed.
+    const optimisticRow: PoolLedgerRow = {
+      id: `optimistic-${Date.now()}`,
+      entry_date: payload.entry_date ?? todayIST(),
+      kind: common ? "common_debit" : "plain_debit",
+      message: payload.message,
+      amount: -value,
+      edited_by: null,
+      player_name: null,
+      created_at: new Date().toISOString(),
+    };
+    startTransition(async () => {
+      if (onOptimisticAdd) onOptimisticAdd(optimisticRow);
+      try {
+        const res = await fetch("/api/pool/debit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const body = await res.json();
+        if (!body.success) {
+          setError(body.error?.message ?? "Could not save — try again.");
+          return;
+        }
+        onOpenChange(false);
+        setAmount("");
+        setMessage("");
+        setDate("");
+        setCommon(false);
+        router.refresh();
+      } catch {
+        setError("Could not reach the server — check your connection.");
+      } finally {
+        setPending(false);
       }
-      onOpenChange(false);
-      setAmount("");
-      setMessage("");
-      setDate("");
-      setCommon(false);
-      startTransition(() => router.refresh());
-    } catch {
-      setError("Could not reach the server — check your connection.");
-    } finally {
-      setPending(false);
-    }
+    });
   }
 
   const inputClass =

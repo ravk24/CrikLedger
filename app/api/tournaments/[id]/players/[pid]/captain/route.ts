@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/session";
+import { requireTournamentWrite } from "@/lib/session";
 import { captainPhoneSchema, handleRouteError } from "@/lib/validate";
 import { clearCaptain, setCaptain } from "@/lib/tournaments";
 
@@ -12,8 +12,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string; pid: string }> },
 ) {
   try {
-    await requireAdmin();
     const { id, pid } = await params;
+    await requireTournamentWrite(id);
     const body = captainPhoneSchema.parse(await req.json().catch(() => ({})));
     const result = await setCaptain(id, pid, body.phone);
     return NextResponse.json({ success: true, data: result });
@@ -27,8 +27,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; pid: string }> },
 ) {
   try {
-    await requireAdmin();
     const { id, pid } = await params;
+    await requireTournamentWrite(id);
     const result = await clearCaptain(id, pid);
     return NextResponse.json({ success: true, data: result });
   } catch (error) {

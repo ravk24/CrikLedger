@@ -1,3 +1,6 @@
+// NOTE: reads the master artwork from "Project Details/cric_ledger/Support_imgs/",
+// a git-ignored folder — this script runs only on a machine that has it.
+// sharp is a devDependency (package.json) since 2026-08-26.
 // Generates every app icon + the splash from the brand masters.
 //
 // Committed and repeatable on purpose: the masters are flat PNGs with no

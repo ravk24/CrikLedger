@@ -24,7 +24,7 @@ export async function PATCH(
 
     const result = await withTransaction(async (client) => {
       const cur = await client.query(
-        `SELECT opponent, venue, ground_booking_id, other_fee_entry_id, fee_direction
+        `SELECT opponent, venue, other_fee_entry_id, fee_direction
          FROM matches
          WHERE id = $1 AND status = 'scheduled'
          FOR UPDATE`,
@@ -100,16 +100,6 @@ export async function PATCH(
           id,
         ],
       );
-
-      // The booking resolves through the match's own link (the old
-      // team_name = opponent heuristic died with tenancy); an unlinked
-      // match simply has no booking captain to update.
-      if (body.opponent_captain && match.ground_booking_id) {
-        await client.query(
-          `UPDATE ground_bookings SET captain = $1 WHERE id = $2`,
-          [body.opponent_captain, match.ground_booking_id],
-        );
-      }
 
       return res.rows[0];
     });

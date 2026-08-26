@@ -9,22 +9,17 @@ type Props = {
   matchId: string;
   opponent: string;
   matchDateLabel: string;
-  // This match's per-slot share of the booking credit; 0 = no booking.
-  bookingShare: number;
   // The pool-fronted ground fee that returns on delete.
   otherFee: number;
 };
 
 // Superadmin only — red button at the bottom of a scheduled match page.
 // Deleting removes the pool-fronted ground fee debit, so the fee returns
-// to the pool. Legacy booking-linked matches instead give back the
-// slot's share of the booking credit, and the captain settles the
-// opponent's cash offline.
+// to the pool.
 export function DeleteScheduledMatch({
   matchId,
   opponent,
   matchDateLabel,
-  bookingShare,
   otherFee,
 }: Props) {
   const router = useRouter();
@@ -72,9 +67,7 @@ export function DeleteScheduledMatch({
         <p className="text-sm text-text-secondary">
           {otherFee > 0
             ? `₹${formatRupees(otherFee)} — the ground fee paid for this match — will be returned to the pool ledger automatically.`
-            : bookingShare > 0
-              ? `₹${formatRupees(bookingShare)} — this match's share of the booking credit — will be deducted from the pool ledger automatically. The captain settles the opponent's cash offline.`
-              : "No pool entry is affected."}
+            : "No pool entry is affected."}
         </p>
         {error && <p className="text-sm text-debit">{error}</p>}
         <button

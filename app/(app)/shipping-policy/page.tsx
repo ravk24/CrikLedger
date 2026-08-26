@@ -1,4 +1,5 @@
 import { PolicyPage } from "@/components/legal/PolicyPage";
+import Link from "next/link";
 
 export const metadata = { title: "Shipping & delivery policy · CrikLedger" };
 
@@ -28,7 +29,7 @@ export default function ShippingPolicy() {
       <h2>Payment confirmation</h2>
       <p>
         CrikLedger currently uses a{" "}
-        <a href="/how-to-buy">manual payment process</a>. After making payment,
+        <Link href="/how-to-buy">manual payment process</Link>. After making payment,
         customers may be required to provide payment confirmation to CrikLedger.
         Once the payment is verified, CrikLedger activates the purchased feature
         associated with the user&apos;s account.

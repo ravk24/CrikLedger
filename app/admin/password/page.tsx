@@ -6,7 +6,7 @@ import { getSessionAdmin } from "@/lib/session";
 
 async function PasswordGate() {
   const admin = await getSessionAdmin();
-  if (!admin) redirect("/admin/login");
+  if (!admin) redirect("/login");
 
   return (
     <>

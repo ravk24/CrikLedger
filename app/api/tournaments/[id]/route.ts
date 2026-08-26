@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin, requireSuperadmin } from "@/lib/session";
+import { revalidateTag } from "next/cache";
+import { requireTournamentWrite } from "@/lib/session";
 import {
   ApiError,
   editTournamentSchema,
@@ -13,8 +14,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const admin = await requireAdmin();
     const { id } = await params;
+    const admin = await requireTournamentWrite(id);
     const body = editTournamentSchema.parse(await req.json());
     // The joining fee drives the whole settlement, so only a superadmin
     // may change it after creation; everything else stays admin-editable.
@@ -26,6 +27,8 @@ export async function PATCH(
       );
     }
     const result = await updateTournament(admin.id, id, body);
+    // The public directory (name + status) is cached — see app/(app)/tournaments.
+    revalidateTag("tournament-directory", "max");
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
     return handleRouteError("[tournaments/edit]", error);
@@ -38,9 +41,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireSuperadmin();
     const { id } = await params;
+    await requireTournamentWrite(id, { superadmin: true });
     const result = await deleteTournament(id);
+    revalidateTag("tournament-directory", "max");
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
     return handleRouteError("[tournaments/delete]", error);

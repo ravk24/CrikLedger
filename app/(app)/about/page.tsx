@@ -1,4 +1,5 @@
 import { PolicyPage } from "@/components/legal/PolicyPage";
+import Link from "next/link";
 
 export const metadata = { title: "About · CrikLedger" };
 
@@ -61,7 +62,7 @@ export default function About() {
       <p>
         The Ledger is <strong>refundable within 30 days</strong> of purchase,
         subject to the{" "}
-        <a href="/refund-policy">cancellation &amp; refund policy</a>.
+        <Link href="/refund-policy">cancellation &amp; refund policy</Link>.
       </p>
 
       <h3>Tournament — ₹29</h3>
@@ -109,7 +110,7 @@ export default function About() {
       <h2>Contact</h2>
       <p>
         Email <a href="mailto:crikledger@gmail.com">crikledger@gmail.com</a> — see
-        our <a href="/contact">Contact us</a> page for full details.
+        our <Link href="/contact">Contact us</Link> page for full details.
       </p>
     </PolicyPage>
   );

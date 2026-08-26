@@ -38,7 +38,7 @@ export type NavState = {
   activeTeamName: string | null;
 };
 
-export const GUEST_NAV: NavState = {
+const GUEST_NAV: NavState = {
   signedIn: false,
   accountId: null,
   accountName: null,

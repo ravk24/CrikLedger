@@ -22,7 +22,6 @@ type Props = {
 // UI, no edit affordance ever (ui-rules).
 const AUTO_CHIPS: Record<string, string> = {
   match_collection: "AUTO · MATCH",
-  expense_recovery: "AUTO · RECOVERY",
   joining_fee: "AUTO · FEE",
   tournament_collection: "AUTO · SURPLUS",
 };

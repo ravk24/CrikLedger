@@ -12,20 +12,12 @@ export type PlayerPublic = {
   is_vice_captain: boolean;
 };
 
-export type GroundBookingPublic = {
-  team_name: string;
-  captain: string;
-  amount_pending: number;
-  created_at: string;
-};
-
 export type PoolEntryKind =
   | "deposit"
   | "other_income"
   | "ground_booking"
   | "equipment"
   | "match_collection"
-  | "expense_recovery" // legacy v0 — no longer written
   | "plain_debit"
   | "common_debit"
   | "opening_due"; // season carryforward — player debt, not pool money
@@ -59,7 +51,6 @@ export type Match = {
   guest_names: string[];
   guest_cars: boolean[]; // index-aligned with guest_names; legacy = []
   guest_shared_cars: boolean[]; // same alignment; funded the car pot (drivers always true)
-  ground_booking_id: string | null; // legacy link; bookings no longer create matches
   venue: string | null; // free-text ground name, typed when scheduling
   fee_paid_to: "opponent" | "owner" | null; // legacy; nothing new writes it
   // Which way the match fee moved. NULL = no fee recorded. Only a
@@ -90,7 +81,6 @@ export type TournamentStatus = "active" | "completed";
 export type TournamentPublic = {
   id: string;
   name: string;
-  season_label: string | null; // retired from the UI (migration-21); column remains
   start_date: string | null;
   end_date: string | null;
   status: TournamentStatus;

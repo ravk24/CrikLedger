@@ -1,4 +1,5 @@
 import { PolicyPage } from "@/components/legal/PolicyPage";
+import Link from "next/link";
 
 export const metadata = { title: "Privacy policy · CrikLedger" };
 
@@ -71,7 +72,7 @@ export default function Privacy() {
       <p>
         CrikLedger does not currently use an online payment gateway. Paid
         feature purchases are handled through a{" "}
-        <a href="/how-to-buy">manual payment process</a>: CrikLedger provides
+        <Link href="/how-to-buy">manual payment process</Link>: CrikLedger provides
         payment instructions, you pay directly using the method provided, and
         you send us confirmation of the payment. CrikLedger has no access to
         your payment-instrument credentials at any point.

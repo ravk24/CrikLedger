@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 import { z } from "zod";
+import { SHARE_WIDTH } from "@/lib/share-image";
 import { SITE_HOST } from "@/lib/site";
 
 // Renders a match sheet as a PNG for the share sheet / WhatsApp.
@@ -43,15 +44,15 @@ const payloadSchema = z.object({
 function CarMark() {
   return (
     <svg
-      width="26"
-      height="26"
+      width="17"
+      height="17"
       viewBox="0 0 24 24"
       fill="none"
       stroke="#38bdf8"
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ marginLeft: 8 }}
+      style={{ marginLeft: 5 }}
     >
       <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
       <circle cx="7" cy="17" r="2" />
@@ -65,10 +66,10 @@ function CarMark() {
 // on screen (lucide <Crown> path, app/globals.css gold tokens).
 function CaptainMark() {
   return (
-    <div style={{ display: "flex", alignItems: "center", marginLeft: 8 }}>
+    <div style={{ display: "flex", alignItems: "center", marginLeft: 5 }}>
       <svg
-        width="24"
-        height="24"
+        width="16"
+        height="16"
         viewBox="0 0 24 24"
         fill="none"
         stroke="#ca8a04"
@@ -84,13 +85,13 @@ function CaptainMark() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          width: 24,
-          height: 24,
-          borderRadius: 12,
-          marginLeft: 4,
+          width: 16,
+          height: 16,
+          borderRadius: 8,
+          marginLeft: 3,
           backgroundColor: "#fef08a",
           color: "#713f12",
-          fontSize: 14,
+          fontSize: 9,
           fontWeight: 700,
         }}
       >
@@ -146,8 +147,9 @@ export async function POST(req: NextRequest) {
   const columns = [data.rows.slice(0, half), data.rows.slice(half)];
 
   // Height follows the roster: a fixed canvas leaves a two-player match
-  // as mostly empty space, and crops a large squad.
-  const height = Math.min(1600, Math.max(760, 380 + half * 56));
+  // as mostly empty space, and crops a large squad. 720-space, like
+  // lib/share-image.tsx (the old 1080 formula × ⅔).
+  const height = Math.min(1067, Math.max(507, 253 + half * 37));
 
   return new ImageResponse(
     (
@@ -159,22 +161,22 @@ export async function POST(req: NextRequest) {
           flexDirection: "column",
           backgroundColor: "#0f172a",
           color: "#f8fafc",
-          padding: 56,
+          padding: 37,
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ display: "flex", fontSize: 26, color: "#38bdf8", letterSpacing: 2 }}>
+        <div style={{ display: "flex", fontSize: 17, color: "#38bdf8", letterSpacing: 1 }}>
           CRIKLEDGER
         </div>
 
-        <div style={{ display: "flex", fontSize: 56, fontWeight: 700, marginTop: 12 }}>
+        <div style={{ display: "flex", fontSize: 37, fontWeight: 700, marginTop: 8 }}>
           {data.team} vs {data.opponent}
         </div>
-        <div style={{ display: "flex", fontSize: 26, color: "#94a3b8", marginTop: 8 }}>
+        <div style={{ display: "flex", fontSize: 17, color: "#94a3b8", marginTop: 5 }}>
           {[data.venue, data.date].filter(Boolean).join(" · ")}
         </div>
 
-        <div style={{ display: "flex", gap: 40, marginTop: 32 }}>
+        <div style={{ display: "flex", gap: 27, marginTop: 21 }}>
           {columns.map((col, ci) => (
             <div key={ci} style={{ display: "flex", flexDirection: "column", flex: 1 }}>
               {col.map((r, i) => (
@@ -183,8 +185,8 @@ export async function POST(req: NextRequest) {
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
-                    fontSize: 26,
-                    padding: "10px 0",
+                    fontSize: 17,
+                    padding: "7px 0",
                     borderBottom: "1px solid #1e293b",
                   }}
                 >
@@ -213,7 +215,7 @@ export async function POST(req: NextRequest) {
           ))}
         </div>
 
-        <div style={{ display: "flex", marginTop: "auto", fontSize: 24, color: "#94a3b8" }}>
+        <div style={{ display: "flex", marginTop: "auto", fontSize: 16, color: "#94a3b8" }}>
           Ground ₹{rupees(data.groundFee)} · Balls ₹{rupees(data.ballFee)}
           {data.otherFee > 0 ? ` · Other ₹${rupees(data.otherFee)}` : ""}
           {data.carCount > 0 && data.carAllowancePerCar > 0
@@ -231,8 +233,8 @@ export async function POST(req: NextRequest) {
         <div
           style={{
             display: "flex",
-            marginTop: 16,
-            fontSize: 26,
+            marginTop: 11,
+            fontSize: 17,
             color: "#38bdf8",
           }}
         >
@@ -240,6 +242,6 @@ export async function POST(req: NextRequest) {
         </div>
       </div>
     ),
-    { width: 1080, height },
+    { width: SHARE_WIDTH, height },
   );
 }

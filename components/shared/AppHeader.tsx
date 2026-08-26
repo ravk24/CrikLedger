@@ -6,10 +6,14 @@ import { AccountMenu } from "./AccountMenu";
 import { CHROME_HEADER } from "@/lib/ui";
 
 // Brand block: fully static, so it paints in the prerendered shell.
+// The mark is served as-is from /logo.png (10 KB, already 64×64): with
+// the optimizer on, `priority` put a High-priority preload of
+// /_next/image?url=… — a function round-trip on a cold cache — into
+// every page's <head> for a 32 px decoration that is never the LCP.
 function Brand() {
   return (
     <Link href="/" className="flex items-center gap-2">
-      <Image src="/logo.png" alt="" width={32} height={32} priority />
+      <Image src="/logo.png" alt="" width={32} height={32} unoptimized />
       <span className="text-[17px] font-semibold tracking-tight text-chrome-foreground">
         Crik<span className="text-chrome-accent">Ledger</span>
       </span>

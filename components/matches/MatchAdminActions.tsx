@@ -16,10 +16,8 @@ type Props = {
   matchDateLabel: string;
   status: "scheduled" | "completed" | "abandoned";
   venue: string | null; // free-text ground name; null = none recorded
-  // Linked ground booking's captain; null = no booking for this opponent.
-  opponentCaptain: string | null;
-  // Still-outstanding fee, from the match itself or a legacy booking.
-  // Non-zero blocks completion until it is cleared.
+  // Still-outstanding fee on the match itself. Non-zero blocks
+  // completion until it is cleared.
   feePending: number;
   // Whole agreed fee (settled + pending) and its direction, for the
   // edit sheet's fee block.
@@ -39,7 +37,6 @@ export function MatchAdminActions({
   matchDateLabel,
   status,
   venue,
-  opponentCaptain,
   feePending,
   feeAmount,
   feeDirection,
@@ -154,7 +151,6 @@ export function MatchAdminActions({
             matchId,
             date: matchDate,
             opponent,
-            opponentCaptain,
             venue,
             feeAmount,
             feeDirection,

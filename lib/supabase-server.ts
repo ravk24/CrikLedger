@@ -26,8 +26,21 @@ if (typeof window !== "undefined") {
   );
 }
 
+// Module singleton: one client per server instance, not per request.
+//
+// `cache: "no-store"` is pinned on every PostgREST call. Under
+// cacheComponents an un-annotated fetch inside a dynamic scope is already
+// uncached, but only implicitly — a future Next default or a stray
+// "use cache" scope would otherwise be able to cache a balance. This is
+// a live money ledger; the guarantee has to be load-bearing, not
+// incidental.
 export const supabaseServer = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } },
+  {
+    auth: { persistSession: false },
+    global: {
+      fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+    },
+  },
 );

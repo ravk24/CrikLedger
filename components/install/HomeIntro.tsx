@@ -3,7 +3,7 @@ import { ChevronRight, PlayCircle, Receipt } from "lucide-react";
 import type { NavState } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 import { InstallCard } from "./InstallCard";
-import { renderInstallDiagrams } from "./installDiagrams";
+import { HOME_DIAGRAM_STEPS, renderInstallDiagrams } from "./installDiagrams";
 
 // Home's three choices: get the app, try it, see what it costs. Rows
 // rather than a catalogue — /pricing holds the actual product cards, so
@@ -49,7 +49,7 @@ export function HomeIntro({ nav }: { nav: NavState }) {
         </p>
       </div>
 
-      <InstallCard diagrams={renderInstallDiagrams()} />
+      <InstallCard diagrams={renderInstallDiagrams(HOME_DIAGRAM_STEPS)} />
 
       {LINK_CARDS.map(({ href, icon: Icon, chip, title, subtitle }) => (
         <Link

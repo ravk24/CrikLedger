@@ -1,5 +1,3 @@
-"use client";
-
 import { Switch } from "@/components/ui/switch";
 import { CaptainMark } from "@/components/shared/CaptainMark";
 import { formatRupees } from "@/lib/format";

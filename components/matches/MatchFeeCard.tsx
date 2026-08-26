@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useState } from "react";
+import { startTransition, useOptimistic, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { formatRupees } from "@/lib/format";
@@ -30,31 +30,38 @@ export function MatchFeeCard({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const cleared = amountPending === 0;
+  // The "Fully paid" chip appears the moment the admin confirms; the
+  // refresh after the write reconciles it (and reverts it if the write
+  // failed — the transition ends without a server update). A state
+  // flag only: no rupee figure is ever shown optimistically.
+  const [cleared, setCleared] = useOptimistic(amountPending === 0);
   const movement =
     feeDirection === "debit" ? "debited from" : "credited to";
 
-  async function handleConfirm() {
+  function handleConfirm() {
     setPending(true);
     setError(null);
-    try {
-      const res = await fetch(`/api/matches/${matchId}/clear-pending`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expected_pending: amountPending }),
-      });
-      const body = await res.json();
-      if (!body.success) {
-        setError(body.error?.message ?? "Could not clear the pending fee.");
-        return;
+    setConfirmOpen(false);
+    startTransition(async () => {
+      setCleared(true);
+      try {
+        const res = await fetch(`/api/matches/${matchId}/clear-pending`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ expected_pending: amountPending }),
+        });
+        const body = await res.json();
+        if (!body.success) {
+          setError(body.error?.message ?? "Could not clear the pending fee.");
+          return;
+        }
+        router.refresh();
+      } catch {
+        setError("Could not reach the server — check your connection.");
+      } finally {
+        setPending(false);
       }
-      setConfirmOpen(false);
-      startTransition(() => router.refresh());
-    } catch {
-      setError("Could not reach the server — check your connection.");
-    } finally {
-      setPending(false);
-    }
+    });
   }
 
   if (cleared) {

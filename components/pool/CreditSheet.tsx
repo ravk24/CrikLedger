@@ -173,7 +173,7 @@ export function CreditSheet({
       title={title}
       description={
         kind === "ground_booking"
-          ? "Records the booking, credits what was paid, and schedules a match per booked date."
+          ? "Records the booking and credits what was paid to the pool."
           : kind === "opening_due"
             ? "Season-1 carryforward: deducted from the player's balance (shows red until they pay). Not added to the pool."
             : "Deposits raise the player's balance too — other credits only raise the pool."

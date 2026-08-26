@@ -3,8 +3,15 @@ import { SITE_HOST } from "@/lib/site";
 // Shared frame for every PNG the app hands to the share sheet (match
 // sheet, ledger, player balances). Rendered by satori via next/og, which
 // ignores CSS classes — every style in here must stay inline.
+//
+// 720 px wide since 2026-08-26 (performance plan v2, D9): WhatsApp
+// downscales anything wider, and satori + resvg cost scales with pixel
+// count (720² is 44 % of 1080²). Every size below is the old 1080-space
+// value × ⅔ — the picture is the same, just not rendered oversize.
+// (A transform: scale() wrapper was tried first; satori drops nested
+// <svg> and <img> under a transformed parent, so the constants moved.)
 
-export const SHARE_WIDTH = 1080;
+export const SHARE_WIDTH = 720;
 
 export const rupees = (n: number) =>
   Math.abs(Math.round(n)).toLocaleString("en-IN");
@@ -36,18 +43,18 @@ export function ShareFrame({ title, subtitle, children, footer }: FrameProps) {
         flexDirection: "column",
         backgroundColor: "#0f172a",
         color: "#f8fafc",
-        padding: 56,
+        padding: 37,
         fontFamily: "sans-serif",
       }}
     >
-      <div style={{ display: "flex", fontSize: 26, color: "#38bdf8", letterSpacing: 2 }}>
+      <div style={{ display: "flex", fontSize: 17, color: "#38bdf8", letterSpacing: 1 }}>
         CRIKLEDGER
       </div>
-      <div style={{ display: "flex", fontSize: 52, fontWeight: 700, marginTop: 12 }}>
+      <div style={{ display: "flex", fontSize: 35, fontWeight: 700, marginTop: 8 }}>
         {title}
       </div>
       {subtitle ? (
-        <div style={{ display: "flex", fontSize: 26, color: "#94a3b8", marginTop: 8 }}>
+        <div style={{ display: "flex", fontSize: 17, color: "#94a3b8", marginTop: 5 }}>
           {subtitle}
         </div>
       ) : null}
@@ -55,13 +62,13 @@ export function ShareFrame({ title, subtitle, children, footer }: FrameProps) {
       {children}
 
       {footer ? (
-        <div style={{ display: "flex", marginTop: "auto", fontSize: 24, color: "#94a3b8" }}>
+        <div style={{ display: "flex", marginTop: "auto", fontSize: 16, color: "#94a3b8" }}>
           {footer}
         </div>
       ) : null}
       {/* The image gets forwarded far past the team group — this is how
           someone who receives it can find the app. */}
-      <div style={{ display: "flex", marginTop: 16, fontSize: 26, color: "#38bdf8" }}>
+      <div style={{ display: "flex", marginTop: 11, fontSize: 17, color: "#38bdf8" }}>
         {SITE_HOST}
       </div>
     </div>
@@ -84,7 +91,7 @@ type BalanceRow = { id: string; name: string; is_active: boolean; balance: numbe
 // images: one column up to 15 rows, two beyond. Rows arrive pre-sorted.
 export function balanceImageHeight(rows: number): number {
   const half = rows > 15 ? Math.ceil(rows / 2) : rows;
-  return Math.min(2200, Math.max(900, 420 + Math.max(half, 1) * 60));
+  return Math.min(1467, Math.max(600, 280 + Math.max(half, 1) * 40));
 }
 
 export function BalanceRows({ players }: { players: BalanceRow[] }) {
@@ -94,9 +101,9 @@ export function BalanceRows({ players }: { players: BalanceRow[] }) {
     ? [players.slice(0, half), players.slice(half)]
     : [players];
   return (
-    <div style={{ display: "flex", gap: 40, marginTop: 32 }}>
+    <div style={{ display: "flex", gap: 27, marginTop: 21 }}>
       {players.length === 0 ? (
-        <div style={{ display: "flex", fontSize: 28, color: "#94a3b8" }}>
+        <div style={{ display: "flex", fontSize: 19, color: "#94a3b8" }}>
           No players yet.
         </div>
       ) : null}
@@ -108,9 +115,9 @@ export function BalanceRows({ players }: { players: BalanceRow[] }) {
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                gap: 16,
-                fontSize: twoColumns ? 24 : 28,
-                padding: "12px 0",
+                gap: 11,
+                fontSize: twoColumns ? 16 : 19,
+                padding: "8px 0",
                 borderBottom: "1px solid #1e293b",
                 color: p.is_active ? "#e2e8f0" : "#64748b",
               }}

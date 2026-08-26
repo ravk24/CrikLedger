@@ -6,6 +6,7 @@ import { LedgerHowTo } from "@/components/dashboard/LedgerHowTo";
 import { DownloadImageButton } from "@/components/shared/DownloadImageButton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeIntro } from "@/components/install/HomeIntro";
+import { pool } from "@/lib/db";
 import { getNavState } from "@/lib/nav";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
@@ -24,17 +25,31 @@ async function HomeData() {
 }
 
 async function DashboardData() {
-  const team = await getCurrentTeam();
-  const [poolRes, playersRes, countRes, lastMatchRes, admin] = await Promise.all([
+  // getSessionAdmin is React-cached and getCurrentTeam already ran it,
+  // so this pair is one query, not two.
+  const [team, admin] = await Promise.all([getCurrentTeam(), getSessionAdmin()]);
+  // The captain-phone read used to run inside LedgerHowTo as a third
+  // serial stage; it needs only team.id, so it rides this Promise.all.
+  // Still superadmin-gated: phone is view-absent by design (migration 43).
+  const wantsHowTo =
+    !!admin && !admin.mustChangePassword && admin.activeTeamRole === "superadmin";
+  const [poolRes, playersRes, countRes, lastMatchRes, phoneRes] = await Promise.all([
     supabaseServer
       .from("pool_balance")
       .select("balance")
       .eq("team_id", team.id)
       .single(),
-    supabaseServer.from("players_public").select("*").eq("team_id", team.id),
+    // Exactly the PlayerPublic columns — team_id would ride along ×30
+    // rows into the RSC payload otherwise.
     supabaseServer
-      .from("pool_ledger_public")
-      .select("*", { count: "exact", head: true })
+      .from("players_public")
+      .select("id, name, is_active, balance, status, is_captain, is_vice_captain")
+      .eq("team_id", team.id),
+    // Count the base table, not the ledger view — the view's two LEFT
+    // JOINs (admins, players) buy nothing for a COUNT.
+    supabaseServer
+      .from("pool_entries")
+      .select("id", { count: "exact", head: true })
       .eq("team_id", team.id),
     supabaseServer
       .from("pool_ledger_public")
@@ -48,10 +63,16 @@ async function DashboardData() {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    getSessionAdmin(),
+    wantsHowTo
+      ? pool.query<{ phone: string | null }>(
+          `SELECT phone FROM players WHERE team_id = $1 AND is_captain LIMIT 1`,
+          [team.id],
+        )
+      : null,
   ]);
 
   const balance = Number(poolRes.data?.balance ?? 0);
+  const captainPhone = phoneRes?.rows[0]?.phone ?? null;
   const players = (playersRes.data ?? []) as PlayerPublic[];
   // Lowest balance first (biggest debtors on top), inactive at the end;
   // names only break ties.
@@ -78,7 +99,9 @@ async function DashboardData() {
       {/* Post-purchase checklist — computes its ✓s live and returns
           null once done (or for anyone who can't act on it). The
           tournament checklist lives on each tournament's Home tab. */}
-      <LedgerHowTo teamId={team.id} players={players} admin={admin} />
+      {wantsHowTo && (
+        <LedgerHowTo players={players} captainPhone={captainPhone} />
+      )}
       <PoolSummaryCard
         balance={balance}
         entryCount={countRes.count ?? 0}

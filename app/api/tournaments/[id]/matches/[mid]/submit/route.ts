@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/session";
+import { requireTournamentWrite } from "@/lib/session";
 import {
   handleRouteError,
   tournamentMatchSubmitSchema,
@@ -11,8 +11,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string; mid: string }> },
 ) {
   try {
-    const admin = await requireAdmin();
     const { id, mid } = await params;
+    const admin = await requireTournamentWrite(id);
     const body = tournamentMatchSubmitSchema.parse(await req.json());
     const result = await completeTournamentMatch(id, mid, admin.id, body);
     return NextResponse.json({ success: true, data: result }, { status: 201 });

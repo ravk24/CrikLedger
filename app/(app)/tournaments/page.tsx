@@ -7,6 +7,7 @@ import { HowPaymentWorks } from "@/components/shared/HowPaymentWorks";
 import { ProductCard } from "@/components/shared/ProductCard";
 import { TOURNAMENT } from "@/lib/products";
 import Link from "next/link";
+import { cacheLife, cacheTag } from "next/cache";
 import { getNavState, type NavState } from "@/lib/nav";
 import { canWrite } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
@@ -29,7 +30,21 @@ function CardList({ tournaments }: { tournaments: TournamentPublic[] }) {
 // always-clickable CTA that sells hosting. The TAB is navigable in every
 // state — a visitor has to be able to see what is on offer; what a
 // purchase unlocks is hosting, inside.
-async function TournamentDirectory({ hosted }: { hosted: boolean }) {
+type DirectoryRow = {
+  id: string;
+  name: string;
+  status: string;
+  host_name: string | null;
+};
+
+// Names and statuses only — no money — so this is one of the two reads
+// the app caches. The tournament create / edit / delete routes
+// revalidate the tag, so a new tournament shows on the next request;
+// the lifetime is just a backstop.
+async function loadDirectory(): Promise<DirectoryRow[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("tournament-directory");
   // The host's name rides along so other users see who is running
   // each tournament ("Ravi — LRPL"). admins.name is the same display
   // name already stamped on "edited by" rows, so nothing new is exposed.
@@ -40,13 +55,16 @@ async function TournamentDirectory({ hosted }: { hosted: boolean }) {
      ORDER BY t.created_at DESC
      LIMIT 50`,
   );
-  const all = rows as {
-    id: string;
-    name: string;
-    status: string;
-    host_name: string | null;
-  }[];
+  return rows as DirectoryRow[];
+}
 
+function TournamentDirectory({
+  hosted,
+  all,
+}: {
+  hosted: boolean;
+  all: DirectoryRow[];
+}) {
   return (
     <>
       <Link
@@ -94,9 +112,12 @@ async function TournamentDirectory({ hosted }: { hosted: boolean }) {
 }
 
 async function TournamentsData() {
-  const nav = await getNavState();
+  // The directory needs nothing from the session, so the two reads run
+  // together instead of session-then-directory; a credit holder simply
+  // discards the (cached) directory.
+  const [nav, directory] = await Promise.all([getNavState(), loadDirectory()]);
   if (!nav.hasTournamentCredit) {
-    return <TournamentDirectory hosted={false} />;
+    return <TournamentDirectory hosted={false} all={directory} />;
   }
   return <HostedTournaments nav={nav} />;
 }

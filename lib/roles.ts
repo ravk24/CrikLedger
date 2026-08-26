@@ -126,10 +126,6 @@ export function teamMemberships(p: Principal | null): Membership[] {
   return (p?.memberships ?? []).filter((m) => m.kind === "team");
 }
 
-export function tournamentMemberships(p: Principal | null): Membership[] {
-  return (p?.memberships ?? []).filter((m) => m.kind === "tournament");
-}
-
 /**
  * Resolve the active team for a request from the `cl_team` cookie.
  *
@@ -176,14 +172,4 @@ export function isEpochValid(tokenEpoch: unknown, rowEpoch: number): boolean {
     return false;
   }
   return tokenEpoch === rowEpoch;
-}
-
-/**
- * Invariant check surfaced in the /ops console: a megaadmin holding a
- * membership row is a bug in the membership routes. Enforced in the app
- * rather than the database because a CHECK cannot span tables and this
- * repo deliberately has no triggers.
- */
-export function violatesMegaadminIsolation(p: Principal | null): boolean {
-  return isMegaadmin(p) && (p?.memberships.length ?? 0) > 0;
 }

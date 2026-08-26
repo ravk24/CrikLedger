@@ -25,19 +25,25 @@ async function TournamentCompletedData({
       .select("*")
       .eq("tournament_id", id)
       .neq("status", "scheduled"),
+    // One int row per played match (migration 45) instead of every
+    // participant row counted here.
     supabaseServer
-      .from("tournament_match_participants_public")
-      .select("match_id")
+      .from("tournament_match_attendee_counts")
+      .select("match_id, attendee_count")
       .eq("tournament_id", id),
   ]);
 
   const tournament = tRes.data as TournamentPublic | null;
   if (!tournament) notFound();
 
-  const counts = new Map<string, number>();
-  for (const row of (participantsRes.data ?? []) as { match_id: string }[]) {
-    counts.set(row.match_id, (counts.get(row.match_id) ?? 0) + 1);
-  }
+  const counts = new Map(
+    (
+      (participantsRes.data ?? []) as {
+        match_id: string;
+        attendee_count: number;
+      }[]
+    ).map((r) => [r.match_id, r.attendee_count]),
+  );
 
   const key = (m: TournamentMatch) => `${m.match_date} ${m.match_time}`;
   const played = ((matchesRes.data ?? []) as TournamentMatch[]).sort((a, b) =>

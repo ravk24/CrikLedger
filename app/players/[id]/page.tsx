@@ -35,13 +35,15 @@ async function StatementData({
   const from = (page - 1) * PAGE_SIZE;
   const [playerRes, statementRes, admin] = await Promise.all([
     supabaseServer.from("players_public").select("*").eq("id", id).maybeSingle(),
+    // One row past the page answers "is there more?" — an exact count
+    // would re-derive the whole windowed statement a second time.
     supabaseServer
       .from("player_statement")
-      .select("*", { count: "exact" })
+      .select("*")
       .eq("player_id", id)
       .order("entry_date", { ascending: false })
       .order("created_at", { ascending: false })
-      .range(from, from + PAGE_SIZE - 1),
+      .range(from, from + PAGE_SIZE),
     getSessionAdmin(),
   ]);
 
@@ -66,9 +68,11 @@ async function StatementData({
     );
   }
 
-  const rows = (statementRes.data ?? []) as StatementRow[];
-  const total = statementRes.count ?? rows.length;
-  const remaining = total - from - rows.length;
+  const fetched = (statementRes.data ?? []) as StatementRow[];
+  const hasMore = fetched.length > PAGE_SIZE;
+  const rows = hasMore ? fetched.slice(0, PAGE_SIZE) : fetched;
+  // Exact only on the last page — the earlier pages just say "more".
+  const shown = from + rows.length;
   // Editing is a write on that player's team, not "am I an admin anywhere".
   const canEdit =
     !!admin && !admin.mustChangePassword && canWrite(admin, "team", player.team_id);
@@ -116,18 +120,20 @@ async function StatementData({
         <StatementList rows={rows} canEdit={canEdit} />
       )}
 
-      {remaining > 0 && (
+      {hasMore && (
         <Link
           href={`/players/${id}?page=${page + 1}`}
           className="flex h-11 items-center justify-center rounded-md border border-border bg-surface shadow-card text-sm font-medium text-text-primary"
         >
-          Show older entries ({remaining} more)
+          Show older entries
         </Link>
       )}
 
       <p className="text-center text-xs text-text-muted">
-        {total} {total === 1 ? "entry" : "entries"} · balances are
-        derived live from the ledger
+        {hasMore
+          ? `Showing the latest ${shown} entries`
+          : `${shown} ${shown === 1 ? "entry" : "entries"}`}{" "}
+        · balances are derived live from the ledger
       </p>
     </>
   );

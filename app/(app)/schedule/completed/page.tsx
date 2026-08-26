@@ -6,6 +6,10 @@ import { AccessGate } from "@/components/shared/AccessGate";
 import { checkActiveTeamRead } from "@/lib/access";
 import type { Match } from "@/types";
 
+// A season is ~60 matches; a hundred covers well over a year and the
+// list is skimmed, not searched.
+const PAGE_SIZE = 100;
+
 // Played-only view of the matches list (upcoming ones live on
 // /schedule/upcoming) — same data pattern as its sibling. Abandoned
 // matches ride along with completed ones: both are done, and
@@ -26,12 +30,17 @@ async function CompletedMatchesData() {
   }
   // The verdict already carries the team id; no team config is needed here.
   const team = { id: verdict.teamId };
+  // Bounded: the most recent PAGE_SIZE played matches, ordered in SQL
+  // (matches_team_status_date_idx, migration 45). The counts view is one
+  // int row per played match, so it stays a single cheap read.
   const [matchesRes, participantsRes] = await Promise.all([
     supabaseServer
       .from("matches_public")
       .select("*")
       .eq("team_id", team.id)
-      .neq("status", "scheduled"),
+      .neq("status", "scheduled")
+      .order("match_date", { ascending: false })
+      .limit(PAGE_SIZE),
     supabaseServer
       .from("match_attendee_counts")
       .select("match_id, attendee_count")
@@ -47,10 +56,7 @@ async function CompletedMatchesData() {
     ).map((r) => [r.match_id, r.attendee_count]),
   );
 
-  // Most recent first.
-  const played = ((matchesRes.data ?? []) as Match[]).sort((a, b) =>
-    a.match_date < b.match_date ? 1 : -1,
-  );
+  const played = (matchesRes.data ?? []) as Match[];
 
   if (played.length === 0) {
     return (
@@ -72,6 +78,11 @@ async function CompletedMatchesData() {
           }
         />
       ))}
+      {played.length === PAGE_SIZE && (
+        <p className="py-2 text-center text-xs text-text-muted">
+          Showing the latest {PAGE_SIZE} matches.
+        </p>
+      )}
     </section>
   );
 }

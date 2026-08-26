@@ -148,8 +148,16 @@ const loadSessionAdmin = cache(async (): Promise<SessionAdmin | null> => {
   const payload = await verifySessionToken(token);
   if (!payload) return null;
 
+  // my_teams is the caller's active team memberships, computed once and
+  // read by two of the three aggregates below (it used to be spelled
+  // out three times). This statement is on the critical path of every
+  // dynamic render in the app.
   const res = await pool.query<AdminRow>(
-    `SELECT a.id, a.username, a.name, a.email, a.platform_role,
+    `WITH my_teams AS MATERIALIZED (
+       SELECT tm.team_id FROM team_memberships tm
+        WHERE tm.admin_id = $1 AND tm.is_active
+     )
+     SELECT a.id, a.username, a.name, a.email, a.platform_role,
             a.must_change_password, a.is_active, a.session_epoch,
             COALESCE((
               SELECT json_agg(m ORDER BY m.name)
@@ -174,18 +182,14 @@ const loadSessionAdmin = cache(async (): Promise<SessionAdmin | null> => {
                        count(*)::int AS total,
                        count(*) FILTER (WHERE en.consumed_at IS NULL)::int AS unused
                   FROM entitlements en
-                 WHERE en.team_id IN (
-                   SELECT tm.team_id FROM team_memberships tm
-                    WHERE tm.admin_id = a.id AND tm.is_active)
+                 WHERE en.team_id IN (SELECT team_id FROM my_teams)
                  GROUP BY en.team_id, en.product
               ) e
             ), '[]'::json) AS entitlements,
             COALESCE((
               SELECT json_agg(tp)
                 FROM teams_public tp
-               WHERE tp.id IN (
-                 SELECT tm.team_id FROM team_memberships tm
-                  WHERE tm.admin_id = a.id AND tm.is_active)
+               WHERE tp.id IN (SELECT team_id FROM my_teams)
             ), '[]'::json) AS teams
        FROM admins a
       WHERE a.id = $1`,
@@ -331,6 +335,52 @@ export function requireTournamentSuperadmin(
   tournamentId: string,
 ): Promise<ScopedAdmin> {
   return requireScope("tournament", tournamentId, true);
+}
+
+/**
+ * Write guard for a tournament named in the URL. Resolves the
+ * tournament's OWN scope — its hosting team, or the tournament itself
+ * when a Tournament-Credit buyer owns no team — and checks the caller can
+ * write that scope. This is the rule the tournament Admin tab applies on
+ * the read side; the API routes used to call requireAdmin(), which only
+ * proved the caller could write their own active team and never tied the
+ * URL's tournament to it.
+ *
+ * scopeId / scopeRole describe the tournament's scope (team id for a
+ * hosted tournament), so `admin.scopeRole === "superadmin"` keeps meaning
+ * "purchaser of this tournament".
+ */
+export async function requireTournamentWrite(
+  tournamentId: string,
+  { superadmin = false, ...options }: RequireOptions & { superadmin?: boolean } = {},
+): Promise<ScopedAdmin> {
+  const admin = await requireAccount(options);
+  if (isMegaadmin(admin)) {
+    throw new ApiError(
+      403,
+      "MEGAADMIN_READ_ONLY",
+      "The platform account cannot modify team data",
+    );
+  }
+  const res = await pool.query<{ id: string; team_id: string | null }>(
+    `SELECT id, team_id FROM tournaments WHERE id = $1`,
+    [tournamentId],
+  );
+  const row = res.rows[0];
+  if (!row) throw new ApiError(404, "NOT_FOUND", "Tournament not found");
+  const kind: ScopeKind = row.team_id ? "team" : "tournament";
+  const scopeId = row.team_id ?? row.id;
+  if (!canWrite(admin, kind, scopeId)) {
+    throw new ApiError(
+      403,
+      "NOT_A_MEMBER",
+      "You do not have access to this tournament",
+    );
+  }
+  if (superadmin && !canAdminister(admin, kind, scopeId)) {
+    throw new ApiError(403, "SCOPE_FORBIDDEN", "Superadmin only");
+  }
+  return { ...admin, scopeId, scopeRole: scopeRoleFor(admin, kind, scopeId)! };
 }
 
 export async function requireMegaadmin(): Promise<SessionAdmin> {

@@ -216,7 +216,6 @@ export const editMatchSchema = FEE_RULES.reduce(
     match_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "yyyy-mm-dd"),
     venue: z.string().trim().min(1).max(80).optional(),
     // Renames the linked ground booking's captain, when there is one.
-    opponent_captain: z.string().trim().min(1).max(80).optional(),
     ...feeFields,
   }),
 );
@@ -260,7 +259,7 @@ export const matchSubmitSchema = z.object({
   // No fee field: per-player fees are computed by the server from the
   // costs and attendance, never accepted from the client. Manual fee
   // editing was removed, and with it the reason to trust these numbers.
-  rows: z.array(attendeeSchema).min(1),
+  rows: z.array(attendeeSchema).min(1).max(60),
   guests: z.array(guestSchema).max(30).default([]),
 });
 

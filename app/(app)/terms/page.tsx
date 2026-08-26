@@ -1,4 +1,5 @@
 import { PolicyPage } from "@/components/legal/PolicyPage";
+import Link from "next/link";
 
 export const metadata = { title: "Terms & conditions · CrikLedger" };
 
@@ -64,7 +65,7 @@ export default function Terms() {
       <h2>5. Payments</h2>
       <p>
         Payments for CrikLedger features are currently handled through a{" "}
-        <a href="/how-to-buy">manual payment process</a>. CrikLedger provides
+        <Link href="/how-to-buy">manual payment process</Link>. CrikLedger provides
         payment instructions to customers. Customers make payment directly using
         the payment method specified by CrikLedger and then provide payment
         confirmation as requested. After the payment is verified, CrikLedger
@@ -134,7 +135,7 @@ export default function Terms() {
       <p>
         The <strong>Tournament</strong> feature is{" "}
         <strong>not refundable</strong>. See the{" "}
-        <a href="/refund-policy">Cancellation &amp; refund policy</a> for the
+        <Link href="/refund-policy">Cancellation &amp; refund policy</Link> for the
         complete procedure.
       </p>
 

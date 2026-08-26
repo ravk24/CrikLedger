@@ -21,15 +21,13 @@ export async function POST(req: NextRequest) {
       const body = groundBookingSchema.parse(raw);
 
       // One transaction: credit -> booking. Since migration-35 a booking
-      // no longer creates matches, and amount_pending is always 0 —
-      // clearing a pending fee was match-scoped, so the split went with
-      // the matches (see dropped-home_match-feature.md).
+      // no longer creates matches; since migration 46 it records only
+      // what was actually paid (see dropped-home_match-feature.md).
       const result = await withTransaction(async (client) => {
         const message = buildBookingMessage(
           body.team_name,
           body.captain,
           body.slots,
-          0,
         );
 
         const entryRes = await client.query(
@@ -42,8 +40,8 @@ export async function POST(req: NextRequest) {
 
         const bookingRes = await client.query(
           `INSERT INTO ground_bookings
-             (pool_entry_id, team_name, captain, slots, amount_paid, amount_pending, created_by, team_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             (pool_entry_id, team_name, captain, slots, amount_paid, created_by, team_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
            RETURNING id`,
           [
             entryId,
@@ -51,7 +49,6 @@ export async function POST(req: NextRequest) {
             body.captain,
             body.slots,
             body.amount_paid,
-            0,
             admin.id,
             teamId,
           ],

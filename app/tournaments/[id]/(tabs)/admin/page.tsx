@@ -16,8 +16,13 @@ async function TournamentAdminData({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const [tRes, playersRes, admin] = await Promise.all([
+  // The session is React-cached (the tab bar in the layout resolves the
+  // same promise), so reading it first costs nothing and lets the
+  // captain-phone read ride the Promise.all for a signed-in caller
+  // instead of running as a second serial stage after the gate below.
+  const [{ id }, admin] = await Promise.all([params, getSessionAdmin()]);
+  const signedIn = !!admin && !admin.mustChangePassword;
+  const [tRes, playersRes, phoneRes] = await Promise.all([
     supabaseServer
       .from("tournaments_public")
       .select("*")
@@ -27,7 +32,17 @@ async function TournamentAdminData({
       .from("tournament_players_public")
       .select("*")
       .eq("tournament_id", id),
-    getSessionAdmin(),
+    // phone is deliberately absent from tournament_players_public
+    // (migration 44) — read off the base table. Only a signed-in
+    // account triggers the read; the value is USED only past the
+    // canEdit gate, so a bounced visitor never sees it.
+    signedIn
+      ? pool.query<{ phone: string | null }>(
+          `SELECT phone FROM tournament_players
+            WHERE tournament_id = $1 AND is_captain LIMIT 1`,
+          [id],
+        )
+      : null,
   ]);
 
   const tournament = tRes.data as TournamentPublic | null;
@@ -46,15 +61,7 @@ async function TournamentAdminData({
 
   const players = (playersRes.data ?? []) as TournamentPlayerPublic[];
 
-  // phone is deliberately absent from tournament_players_public
-  // (migration 44) — read off the base table, after the canEdit gate
-  // above so the query never runs for a bounced visitor.
-  const phoneRes = await pool.query<{ phone: string | null }>(
-    `SELECT phone FROM tournament_players
-      WHERE tournament_id = $1 AND is_captain LIMIT 1`,
-    [id],
-  );
-  const captainPhone = phoneRes.rows[0]?.phone ?? null;
+  const captainPhone = phoneRes?.rows[0]?.phone ?? null;
 
   return (
     <>

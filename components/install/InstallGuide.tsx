@@ -1,14 +1,11 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  INSTALL_STEPS,
-  PLATFORM_LABELS,
-  type InstallStepId,
-  type Platform,
-} from "./steps";
+import type { InstallDiagrams } from "./installDiagrams";
+import { INSTALL_STEPS, PLATFORM_LABELS, type Platform } from "./steps";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -32,9 +29,14 @@ const PLATFORMS: Platform[] = ["android", "ios"];
  */
 export function InstallGuide({
   diagrams,
+  compact = false,
 }: {
   // Pre-rendered on the server (components/install/installDiagrams.tsx).
-  diagrams: Record<InstallStepId, ReactNode>;
+  // May be partial: steps without a picture render text only.
+  diagrams: InstallDiagrams;
+  // Home's in-place card: pictures only where supplied, plus a link to
+  // the full illustrated walkthrough on /install.
+  compact?: boolean;
 }) {
   // "android" on the server AND on the first client render — the sniff
   // lands in the effect below, so there is nothing to mismatch.
@@ -173,6 +175,15 @@ export function InstallGuide({
           </li>
         ))}
       </ol>
+
+      {compact && (
+        <Link
+          href="/install"
+          className="flex h-11 items-center justify-center rounded-md border border-border bg-surface text-sm font-medium text-text-primary"
+        >
+          See every step illustrated
+        </Link>
+      )}
 
       <p className="text-xs text-text-muted">
         Installing costs nothing and uses no extra storage worth speaking of —

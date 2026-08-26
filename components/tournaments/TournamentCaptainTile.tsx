@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useOptimistic, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Crown } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
@@ -33,7 +33,12 @@ export function TournamentCaptainTile({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  const captain = players.find((p) => p.is_captain) ?? null;
+  // Optimistic name on the tile; the refresh reconciles, a failed write
+  // reverts. See components/admin/CaptainTile.tsx.
+  const [captainId, setCaptainId] = useOptimistic<string | null>(
+    players.find((p) => p.is_captain)?.id ?? null,
+  );
+  const captain = players.find((p) => p.id === captainId) ?? null;
 
   useEffect(() => {
     if (open) {
@@ -43,37 +48,40 @@ export function TournamentCaptainTile({
     }
   }, [open, captain?.id, captainPhone]);
 
-  async function callApi(playerId: string, method: "POST" | "DELETE") {
+  function callApi(playerId: string, method: "POST" | "DELETE") {
     setPending(true);
     setError(null);
-    try {
-      const res = await fetch(
-        `/api/tournaments/${tournamentId}/players/${playerId}/captain`,
-        {
-          method,
-          ...(method === "POST"
-            ? {
-                headers: { "Content-Type": "application/json" },
-                // Empty input = explicit clear.
-                body: JSON.stringify({
-                  phone: phone.trim() === "" ? null : phone.trim(),
-                }),
-              }
-            : {}),
-        },
-      );
-      const body = await res.json();
-      if (!body.success) {
-        setError(body.error?.message ?? "Could not update the captain.");
-        return;
+    startTransition(async () => {
+      setCaptainId(method === "POST" ? playerId : null);
+      try {
+        const res = await fetch(
+          `/api/tournaments/${tournamentId}/players/${playerId}/captain`,
+          {
+            method,
+            ...(method === "POST"
+              ? {
+                  headers: { "Content-Type": "application/json" },
+                  // Empty input = explicit clear.
+                  body: JSON.stringify({
+                    phone: phone.trim() === "" ? null : phone.trim(),
+                  }),
+                }
+              : {}),
+          },
+        );
+        const body = await res.json();
+        if (!body.success) {
+          setError(body.error?.message ?? "Could not update the captain.");
+          return;
+        }
+        setOpen(false);
+        router.refresh();
+      } catch {
+        setError("Could not reach the server — check your connection.");
+      } finally {
+        setPending(false);
       }
-      setOpen(false);
-      startTransition(() => router.refresh());
-    } catch {
-      setError("Could not reach the server — check your connection.");
-    } finally {
-      setPending(false);
-    }
+    });
   }
 
   return (

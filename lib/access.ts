@@ -1,4 +1,4 @@
-import { canRead, canWrite } from "@/lib/roles";
+import { canRead } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 
 // Page-level read/write verdicts, for server components that render an
@@ -33,14 +33,4 @@ export async function checkActiveTeamRead(): Promise<Verdict> {
   const admin = await getSessionAdmin();
   if (!admin) return { ok: false, reason: "anonymous" };
   return checkTeamRead(admin.activeTeamId);
-}
-
-export async function checkActiveTeamWrite(): Promise<Verdict> {
-  const admin = await getSessionAdmin();
-  if (!admin) return { ok: false, reason: "anonymous" };
-  if (!admin.activeTeamId) return { ok: false, reason: "no-team" };
-  if (!canWrite(admin, "team", admin.activeTeamId)) {
-    return { ok: false, reason: "forbidden" };
-  }
-  return { ok: true, teamId: admin.activeTeamId, via: "member" };
 }

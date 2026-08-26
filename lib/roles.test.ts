@@ -8,7 +8,6 @@ import {
   isScopeSuperadmin,
   resolveActiveTeamId,
   scopeRoleFor,
-  violatesMegaadminIsolation,
   type Membership,
   type Principal,
 } from "./roles";
@@ -183,18 +182,12 @@ describe("isEpochValid", () => {
   });
 });
 
-describe("megaadmin isolation", () => {
-  it("flags a megaadmin that holds a membership row", () => {
-    const contaminated = principal(
-      [teamMembership(TEAM_A, "alpha", "admin")],
-      "megaadmin",
-    );
-    expect(violatesMegaadminIsolation(contaminated)).toBe(true);
-  });
-
-  it("passes a clean megaadmin and any ordinary account", () => {
-    expect(violatesMegaadminIsolation(megaadmin)).toBe(false);
-    expect(violatesMegaadminIsolation(owner)).toBe(false);
+describe("megaadmin vs ordinary account", () => {
+  // A megaadmin holding a membership row is refused by the membership
+  // routes themselves and surfaced by the /ops "stray" counter; there is
+  // no separate predicate to test any more.
+  it("tells the platform account from an ordinary owner", () => {
+    expect(isMegaadmin(megaadmin)).toBe(true);
     expect(isMegaadmin(owner)).toBe(false);
     expect(isScopeSuperadmin(owner, "team", TEAM_A)).toBe(true);
   });

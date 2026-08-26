@@ -1,8 +1,50 @@
 // Display formatting helpers. Money rendering goes through <Money> —
 // these are the primitives it (and date displays) build on.
+//
+// One Intl formatter per shape, built once per module load. The
+// toLocaleString() / toLocaleDateString() forms construct a fresh
+// Intl.NumberFormat / Intl.DateTimeFormat on EVERY call (plus an ICU
+// timezone lookup for the IST pin); a 60-row ledger page did that
+// 100–180 times, on the server render and again at hydration. The
+// output is byte-identical — lib/format.test.ts pins it against strings
+// captured from the old implementation.
+
+// Pinned to IST — server rendering happens in UTC (Vercel), which would
+// otherwise show the previous day for anything after 18:30 IST.
+const TZ = "Asia/Kolkata";
+
+const rupeesFormat = new Intl.NumberFormat("en-IN");
+const dateFormat = new Intl.DateTimeFormat("en-IN", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  timeZone: TZ,
+});
+const weekdayFormat = new Intl.DateTimeFormat("en-IN", {
+  weekday: "long",
+  timeZone: TZ,
+});
+const dateWithWeekdayFormat = new Intl.DateTimeFormat("en-IN", {
+  weekday: "short",
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  timeZone: TZ,
+});
+const dateShortFormat = new Intl.DateTimeFormat("en-IN", {
+  day: "2-digit",
+  month: "short",
+  timeZone: TZ,
+});
+const monthFormat = new Intl.DateTimeFormat("en-IN", {
+  month: "long",
+  year: "numeric",
+  timeZone: TZ,
+});
+const isoDayFormat = new Intl.DateTimeFormat("en-CA", { timeZone: TZ });
 
 export function formatRupees(amount: number): string {
-  return Math.abs(Math.round(amount)).toLocaleString("en-IN");
+  return rupeesFormat.format(Math.abs(Math.round(amount)));
 }
 
 // A per-person match fee, in the words the team reads it: "₹5" is what
@@ -13,57 +55,31 @@ export function formatFee(fee: number): string {
   return fee < 0 ? `gets ₹${formatRupees(-fee)}` : `₹${formatRupees(fee)}`;
 }
 
-// Pinned to IST — server rendering happens in UTC (Vercel), which would
-// otherwise show the previous day for anything after 18:30 IST.
-const TZ = "Asia/Kolkata";
-
 export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: TZ,
-  });
+  return dateFormat.format(new Date(iso));
 }
 
 export function formatWeekday(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-IN", {
-    weekday: "long",
-    timeZone: TZ,
-  });
+  return weekdayFormat.format(new Date(iso));
 }
 
 // "Sat, 28 Aug 2026" — the shared match sheet.
 export function formatDateWithWeekday(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-IN", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: TZ,
-  });
+  return dateWithWeekdayFormat.format(new Date(iso));
 }
 
 export function formatDateShort(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    timeZone: TZ,
-  });
+  return dateShortFormat.format(new Date(iso));
 }
 
 // "August 2026" — month separators in the scheduled list.
 export function formatMonth(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-IN", {
-    month: "long",
-    year: "numeric",
-    timeZone: TZ,
-  });
+  return monthFormat.format(new Date(iso));
 }
 
 // Today's date (yyyy-mm-dd) in IST regardless of the server timezone.
 export function todayIST(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: TZ });
+  return isoDayFormat.format(new Date());
 }
 
 // "17:30" or Postgres "17:30:00" -> "5:30 pm" (tournament match slots).

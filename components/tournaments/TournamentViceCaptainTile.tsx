@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useOptimistic, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Award } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
@@ -24,7 +24,12 @@ export function TournamentViceCaptainTile({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  const vice = players.find((p) => p.is_vice_captain) ?? null;
+  // Optimistic name on the tile; the refresh reconciles, a failed write
+  // reverts. See components/admin/CaptainTile.tsx.
+  const [viceId, setViceId] = useOptimistic<string | null>(
+    players.find((p) => p.is_vice_captain)?.id ?? null,
+  );
+  const vice = players.find((p) => p.id === viceId) ?? null;
 
   useEffect(() => {
     if (open) {
@@ -33,26 +38,29 @@ export function TournamentViceCaptainTile({
     }
   }, [open, vice?.id]);
 
-  async function callApi(playerId: string, method: "POST" | "DELETE") {
+  function callApi(playerId: string, method: "POST" | "DELETE") {
     setPending(true);
     setError(null);
-    try {
-      const res = await fetch(
-        `/api/tournaments/${tournamentId}/players/${playerId}/vice-captain`,
-        { method },
-      );
-      const body = await res.json();
-      if (!body.success) {
-        setError(body.error?.message ?? "Could not update the vice-captain.");
-        return;
+    startTransition(async () => {
+      setViceId(method === "POST" ? playerId : null);
+      try {
+        const res = await fetch(
+          `/api/tournaments/${tournamentId}/players/${playerId}/vice-captain`,
+          { method },
+        );
+        const body = await res.json();
+        if (!body.success) {
+          setError(body.error?.message ?? "Could not update the vice-captain.");
+          return;
+        }
+        setOpen(false);
+        router.refresh();
+      } catch {
+        setError("Could not reach the server — check your connection.");
+      } finally {
+        setPending(false);
       }
-      setOpen(false);
-      startTransition(() => router.refresh());
-    } catch {
-      setError("Could not reach the server — check your connection.");
-    } finally {
-      setPending(false);
-    }
+    });
   }
 
   return (

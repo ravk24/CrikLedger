@@ -1,4 +1,5 @@
 import { PolicyPage } from "@/components/legal/PolicyPage";
+import Link from "next/link";
 
 export const metadata = {
   title: "How payments work · CrikLedger",
@@ -39,7 +40,7 @@ export default function HowToBuy() {
         </dd>
       </dl>
       <p>
-        See the <a href="/pricing">pricing page</a> for what each feature
+        See the <Link href="/pricing">pricing page</Link> for what each feature
         includes.
       </p>
 
@@ -92,7 +93,7 @@ export default function HowToBuy() {
       <p>
         <strong>Ledger</strong> purchases are eligible for a refund if
         requested within 30 days of purchase, subject to the{" "}
-        <a href="/refund-policy">cancellation &amp; refund policy</a>.
+        <Link href="/refund-policy">cancellation &amp; refund policy</Link>.
       </p>
       <p>
         The <strong>Tournament</strong> feature is{" "}

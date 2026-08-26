@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { pool } from "@/lib/db";
 import { requireTeamSuperadmin } from "@/lib/session";
 import { ApiError, handleRouteError, teamNameSchema } from "@/lib/validate";
@@ -18,6 +19,9 @@ export async function PATCH(req: NextRequest) {
     if (!res.rows[0]) {
       throw new ApiError(404, "NOT_FOUND", "Team not found");
     }
+    // lib/team.ts caches the team row (the anonymous match page reads
+    // it); the rename must show on the next request.
+    revalidateTag(`team:${superadmin.scopeId}`, "max");
     return NextResponse.json({ success: true, data: res.rows[0] });
   } catch (error) {
     return handleRouteError("[sa/team]", error);

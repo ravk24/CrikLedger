@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/session";
+import { requireTournamentWrite } from "@/lib/session";
 import { handleRouteError } from "@/lib/validate";
 import { removePlayer } from "@/lib/tournaments";
 
@@ -10,8 +10,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; pid: string }> },
 ) {
   try {
-    await requireAdmin();
     const { id, pid } = await params;
+    await requireTournamentWrite(id);
     const result = await removePlayer(id, pid);
     return NextResponse.json({ success: true, data: result });
   } catch (error) {

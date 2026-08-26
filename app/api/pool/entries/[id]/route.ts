@@ -15,11 +15,13 @@ const MANUAL_KINDS = [
   "opening_due",
 ];
 
-async function loadManualEntry(client: PoolClient, id: string) {
+// Scoped to the caller's team: an entry id from another team reads as
+// "not found", never as editable.
+async function loadManualEntry(client: PoolClient, id: string, teamId: string) {
   const res = await client.query(
     `SELECT id, kind, message, amount, entry_date, team_id
-     FROM pool_entries WHERE id = $1`,
-    [id],
+     FROM pool_entries WHERE id = $1 AND team_id = $2`,
+    [id, teamId],
   );
   const row = res.rows[0];
   if (!row) {
@@ -45,7 +47,7 @@ export async function PATCH(
     const body = poolEntryEditSchema.parse(await req.json());
 
     const result = await withTransaction(async (client) => {
-      const entry = await loadManualEntry(client, id);
+      const entry = await loadManualEntry(client, id, admin.scopeId);
       // Player-linked rows derive their ledger title from the player, so
       // an empty message is fine there; every other kind titles from it.
       const playerLinked =
@@ -89,8 +91,8 @@ export async function PATCH(
              entry_date = COALESCE($4::date, entry_date),
              updated_by = $5,
              updated_at = NOW()
-         WHERE id = $1`,
-        [id, newAmount, body.message ?? null, body.entry_date ?? null, admin.id],
+         WHERE id = $1 AND team_id = $6`,
+        [id, newAmount, body.message ?? null, body.entry_date ?? null, admin.id, admin.scopeId],
       );
 
       // Editing a common debit re-runs its split in the same transaction
@@ -131,13 +133,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireAdmin();
+    const admin = await requireAdmin();
     const { id } = await params;
 
     await withTransaction(async (client) => {
-      await loadManualEntry(client, id);
+      await loadManualEntry(client, id, admin.scopeId);
       // Common-debit deletes cascade their shares and recovery row via FKs.
-      await client.query(`DELETE FROM pool_entries WHERE id = $1`, [id]);
+      await client.query(
+        `DELETE FROM pool_entries WHERE id = $1 AND team_id = $2`,
+        [id, admin.scopeId],
+      );
     });
 
     return NextResponse.json({ success: true, data: null });

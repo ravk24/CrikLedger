@@ -10,15 +10,13 @@ import { cn } from "@/lib/utils";
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  // The match being fixed. opponentCaptain comes from a linked ground
-  // booking; null = no booking, so there is no captain record to edit.
-  // feeAmount is the whole fee (settled + pending), which is what the
-  // form edits — the server splits it again on save.
+  // The match being fixed. feeAmount is the whole fee (settled +
+  // pending), which is what the form edits — the server splits it again
+  // on save.
   editing: {
     matchId: string;
     date: string;
     opponent: string | null;
-    opponentCaptain: string | null;
     venue: string | null;
     feeAmount: number;
     feeDirection: "credit" | "debit" | null;
@@ -36,7 +34,6 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
   const [date, setDate] = useState(editing.date);
   const [venue, setVenue] = useState(editing.venue ?? "");
   const [opponent, setOpponent] = useState(editing.opponent ?? "");
-  const [captain, setCaptain] = useState(editing.opponentCaptain ?? "");
   const [detailsOn, setDetailsOn] = useState(editing.feeDirection !== null);
   const [fee, setFee] = useState(
     editing.feeAmount ? String(Math.round(editing.feeAmount)) : "",
@@ -52,13 +49,9 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
 
-  // Only booking matches carry an opponent captain to edit.
-  const hasCaptainField = editing.opponentCaptain != null;
-
   const {
     date: editDate,
     opponent: editOpponent,
-    opponentCaptain: editCaptain,
     venue: editVenue,
     feeAmount: editFee,
     feeDirection: editDirection,
@@ -71,7 +64,6 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
     setDate(editDate);
     setVenue(editVenue ?? "");
     setOpponent(editOpponent ?? "");
-    setCaptain(editCaptain ?? "");
     setDetailsOn(editDirection !== null);
     setFee(editFee ? String(Math.round(editFee)) : "");
     setCredit(editDirection === "credit");
@@ -83,7 +75,6 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
     open,
     editDate,
     editOpponent,
-    editCaptain,
     editVenue,
     editFee,
     editDirection,
@@ -171,9 +162,6 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
                 fee_direction: credit ? "credit" : "debit",
                 fee_pending: pendingValue,
               }
-            : {}),
-          ...(hasCaptainField && captain.trim()
-            ? { opponent_captain: captain.trim() }
             : {}),
         }),
       });
@@ -312,21 +300,6 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
               </p>
             )}
           </div>
-        )}
-
-        {hasCaptainField && (
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-text-secondary">
-              Opponent Captain
-            </span>
-            <input
-              type="text"
-              value={captain}
-              onChange={(e) => setCaptain(e.target.value)}
-              required
-              className={inputClass}
-            />
-          </label>
         )}
 
         {error && <p className="text-sm text-debit">{error}</p>}

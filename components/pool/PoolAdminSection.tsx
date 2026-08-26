@@ -196,6 +196,7 @@ export function PoolAdminSection({
         open={debitOpen}
         onOpenChange={setDebitOpen}
         activePlayerCount={activePlayerCount}
+        onOptimisticAdd={(row) => changeLedger({ type: "add", row })}
       />
 
       <SheetShell

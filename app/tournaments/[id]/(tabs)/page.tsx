@@ -54,7 +54,7 @@ async function TournamentHomeData({
 }) {
   const [{ id }, admin] = await Promise.all([params, getSessionAdmin()]);
   const signedInAdmin = !!admin && !admin.mustChangePassword;
-  const [tRes, playersRes, countRes] = await Promise.all([
+  const [tRes, playersRes, countRes, phoneRes] = await Promise.all([
     supabaseServer
       .from("tournaments_public")
       .select("*")
@@ -64,10 +64,23 @@ async function TournamentHomeData({
       .from("tournament_players_public")
       .select("*")
       .eq("tournament_id", id),
+    // Count the base table — the ledger view's joins buy nothing here.
     supabaseServer
-      .from("tournament_ledger_public")
+      .from("tournament_entries")
       .select("id", { count: "exact", head: true })
       .eq("tournament_id", id),
+    // phone is deliberately absent from tournament_players_public
+    // (migration 44) — read off the base table. Fetched here, in
+    // parallel, only for a signed-in admin; whether it is USED is
+    // decided below once the tournament's scope is known. It never
+    // reaches a non-admin render.
+    signedInAdmin
+      ? pool.query<{ phone: string | null }>(
+          `SELECT phone FROM tournament_players
+            WHERE tournament_id = $1 AND is_captain LIMIT 1`,
+          [id],
+        )
+      : null,
   ]);
 
   const tournament = tRes.data as TournamentPublic | null;
@@ -108,20 +121,10 @@ async function TournamentHomeData({
     .sort((a, b) => Number(a.balance) - Number(b.balance))
     .map((p) => p.name);
 
-  // phone is deliberately absent from tournament_players_public
-  // (migration 44) — read off the base table, only for admins, so
-  // anonymous renders never touch it. One read feeds both the dues
-  // message and the onboarding checklist's captain-phone tick.
+  // One value feeds both the dues message and the onboarding
+  // checklist's captain-phone tick.
   const captainPhone =
-    isAdmin && captainRow
-      ? ((
-          await pool.query<{ phone: string | null }>(
-            `SELECT phone FROM tournament_players
-              WHERE tournament_id = $1 AND is_captain LIMIT 1`,
-            [id],
-          )
-        ).rows[0]?.phone ?? null)
-      : null;
+    isAdmin && captainRow ? (phoneRes?.rows[0]?.phone ?? null) : null;
 
   const shareText =
     captainRow && captainPhone && owing.length > 0

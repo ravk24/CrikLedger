@@ -10,24 +10,27 @@ import { requireMegaadminPage } from "@/components/ops/guard";
 // users, Tournament users, Statistics), each a sheet. Holder lists are
 // grouped per purchaser + team, newest first; rows deep-link to the
 // account page, which keeps reset-password / suspend / restore.
+// Both products in one pass, split in JS (it used to run twice).
 const HOLDERS_SQL = `
-  SELECT a.id AS account_id, a.username, a.name, t.display_name AS team_name,
+  SELECT e.product,
+         a.id AS account_id, a.username, a.name, t.display_name AS team_name,
          min(e.created_at) AS first_at,
          count(*)::int AS total,
          count(e.consumed_at)::int AS used
     FROM entitlements e
     JOIN admins a ON a.id = e.admin_id
     JOIN teams  t ON t.id = e.team_id
-   WHERE e.product = $1
-   GROUP BY a.id, a.username, a.name, t.display_name
+   WHERE e.product IN ('team_ledger', 'tournament_credit')
+   GROUP BY e.product, a.id, a.username, a.name, t.display_name
    ORDER BY min(e.created_at) DESC`;
 
 async function ConsoleData() {
   await requireMegaadminPage("/ops");
 
-  const [ledgerRes, tournamentRes, statsRes] = await Promise.all([
-    pool.query<GrantRow>(HOLDERS_SQL, ["team_ledger"]),
-    pool.query<GrantRow>(HOLDERS_SQL, ["tournament_credit"]),
+  const [holdersRes, statsRes] = await Promise.all([
+    pool.query<GrantRow & { product: "team_ledger" | "tournament_credit" }>(
+      HOLDERS_SQL,
+    ),
     pool.query<{
       credits: string;
       ledger_users: string;
@@ -49,6 +52,10 @@ async function ConsoleData() {
              JOIN admins a ON a.id = m.admin_id
             WHERE a.platform_role = 'megaadmin')                                  AS stray`),
   ]);
+  const ledgerRows = holdersRes.rows.filter((r) => r.product === "team_ledger");
+  const tournamentRows = holdersRes.rows.filter(
+    (r) => r.product === "tournament_credit",
+  );
   const c = statsRes.rows[0];
   const stats: OpsStats = {
     credits: Number(c.credits),
@@ -61,8 +68,8 @@ async function ConsoleData() {
   return (
     <OpsChrome>
       <OpsConsole
-        ledger={ledgerRes.rows}
-        tournament={tournamentRes.rows}
+        ledger={ledgerRows}
+        tournament={tournamentRows}
         stats={stats}
         prices={{
           team_ledger: LEDGER.priceInr,

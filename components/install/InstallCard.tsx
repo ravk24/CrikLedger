@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { ChevronDown, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InstallGuide } from "./InstallGuide";
-import type { InstallStepId } from "./steps";
+import type { InstallDiagrams } from "./installDiagrams";
 
 // Home's "How to install" row. Collapsed by default so Home reads as the
 // three-choice landing screen; tapping it unfolds the InstallGuide in
@@ -13,8 +13,9 @@ import type { InstallStepId } from "./steps";
 export function InstallCard({
   diagrams,
 }: {
-  // Pre-rendered on the server (components/install/installDiagrams.tsx).
-  diagrams: Record<InstallStepId, ReactNode>;
+  // Pre-rendered on the server (components/install/installDiagrams.tsx) —
+  // Home passes the first step of each platform only.
+  diagrams: InstallDiagrams;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -48,7 +49,7 @@ export function InstallCard({
       </button>
       {expanded && (
         <div id="install-guide">
-          <InstallGuide diagrams={diagrams} />
+          <InstallGuide diagrams={diagrams} compact />
         </div>
       )}
     </>

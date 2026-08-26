@@ -18,12 +18,6 @@ import { SESSION_COOKIE } from "@/lib/cookies";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // /admin/login is now just a redirect to /login; let it through so it
-  // can do its job instead of bouncing signed-out visitors in a loop.
-  if (pathname === "/admin/login") {
-    return NextResponse.next();
-  }
-
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   if (token) {
     try {

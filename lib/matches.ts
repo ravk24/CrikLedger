@@ -66,7 +66,7 @@ export async function completeMatch(
 
   return withTransaction(async (client) => {
     const matchRes = await client.query(
-      `SELECT id, status, opponent, match_date, ground_booking_id,
+      `SELECT id, status, opponent, match_date,
               other_fee_entry_id, fee_direction, fee_pending, team_id
        FROM matches WHERE id = $1`,
       [matchId],
@@ -87,27 +87,13 @@ export async function completeMatch(
         "Set the opponent before completing this match",
       );
     }
-    // Same gate for both sources — a legacy booking's amount_pending and
-    // a match's own fee_pending (migration 36).
+    // The match carries its own pending fee (migration 36).
     if (match.status === "scheduled" && Number(match.fee_pending) > 0) {
       throw new ApiError(
         409,
         "PENDING_FEE",
         "Clear the pending match fee before completing this match",
       );
-    }
-    if (match.status === "scheduled" && match.ground_booking_id) {
-      const feeRes = await client.query(
-        `SELECT amount_pending FROM ground_bookings WHERE id = $1 FOR UPDATE`,
-        [match.ground_booking_id],
-      );
-      if (Number(feeRes.rows[0]?.amount_pending ?? 0) > 0) {
-        throw new ApiError(
-          409,
-          "PENDING_FEE",
-          "Clear the pending match fee before completing this match",
-        );
-      }
     }
 
     const playerIds = body.rows.map((r) => r.player_id);

@@ -18,31 +18,17 @@ async function ScheduledMatchesData() {
   }
   // The verdict already carries the team id; no team config is needed here.
   const team = { id: verdict.teamId };
-  const [matchesRes, participantsRes] = await Promise.all([
-    supabaseServer
-      .from("matches_public")
-      .select("*")
-      .eq("team_id", team.id)
-      .eq("status", "scheduled"),
-    supabaseServer
-      .from("match_attendee_counts")
-      .select("match_id, attendee_count")
-      .eq("team_id", team.id),
-  ]);
+  // Attendance is written at completion (lib/matches.ts), so a scheduled
+  // match never has participants — no counts query here. Ordered in SQL
+  // (matches_team_status_date_idx, migration 45), soonest first.
+  const matchesRes = await supabaseServer
+    .from("matches_public")
+    .select("*")
+    .eq("team_id", team.id)
+    .eq("status", "scheduled")
+    .order("match_date", { ascending: true });
 
-  const counts = new Map(
-    (
-      (participantsRes.data ?? []) as {
-        match_id: string;
-        attendee_count: number;
-      }[]
-    ).map((r) => [r.match_id, r.attendee_count]),
-  );
-
-  // Upcoming soonest first.
-  const scheduled = ((matchesRes.data ?? []) as Match[]).sort((a, b) =>
-    a.match_date < b.match_date ? -1 : 1,
-  );
+  const scheduled = (matchesRes.data ?? []) as Match[];
 
   if (scheduled.length === 0) {
     return (
@@ -52,13 +38,7 @@ async function ScheduledMatchesData() {
     );
   }
 
-  // Plain object: a Map cannot cross the server/client boundary.
-  return (
-    <ScheduledMatchList
-      matches={scheduled}
-      counts={Object.fromEntries(counts)}
-    />
-  );
+  return <ScheduledMatchList matches={scheduled} counts={{}} />;
 }
 
 function ScheduledMatchesSkeleton() {

@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, cache } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Car, ChevronLeft } from "lucide-react";
@@ -26,6 +26,17 @@ import type {
   TournamentPublic,
 } from "@/types";
 import { CHROME_BACK_LINK, CHROME_HEADER } from "@/lib/ui";
+
+// One tournament_matches_public read per request, shared by the back
+// link and the body (React.cache dedupes within the render).
+const loadTournamentMatchRow = cache((tournamentId: string, matchId: string) =>
+  supabaseServer
+    .from("tournament_matches_public")
+    .select("*")
+    .eq("id", matchId)
+    .eq("tournament_id", tournamentId)
+    .maybeSingle(),
+);
 
 // Sibling of the SG match detail page, scoped to the tournament's
 // isolated data — no bookings, no other-fee, no guests.
@@ -116,12 +127,7 @@ async function TournamentMatchData({
       .select("*")
       .eq("id", id)
       .maybeSingle(),
-    supabaseServer
-      .from("tournament_matches_public")
-      .select("*")
-      .eq("id", mid)
-      .eq("tournament_id", id)
-      .maybeSingle(),
+    loadTournamentMatchRow(id, mid),
     supabaseServer
       .from("tournament_match_participants_public")
       .select("*")
@@ -259,19 +265,16 @@ async function TournamentMatchData({
 }
 
 // Status-aware back link, mirroring the SG match page: a scheduled
-// match came from Scheduled, anything else from Completed. Needs the
-// match row, so it streams over the pathname-based fallback.
+// match came from Scheduled, anything else from Completed. Shares
+// loadTournamentMatchRow with the body (one read, not two), and streams
+// over the pathname-based fallback.
 async function BackLink({
   params,
 }: {
   params: Promise<{ id: string; mid: string }>;
 }) {
   const { id, mid } = await params;
-  const { data } = await supabaseServer
-    .from("tournament_matches_public")
-    .select("status")
-    .eq("id", mid)
-    .maybeSingle();
+  const { data } = await loadTournamentMatchRow(id, mid);
   const scheduled = (data as { status: string } | null)?.status === "scheduled";
   return (
     <Link
