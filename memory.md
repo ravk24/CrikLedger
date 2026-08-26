@@ -1,58 +1,71 @@
-# Memory — session 21: match-fee rule fixed once and for all (drivers share the car pot); fee surfaces trimmed; tournament card loses its balance
+# Memory — session 22: performance plan v2 written and fully implemented; auth scoping; migrations 45–46; dead code gone
 
-Last updated: 2026-08-25 (session 21, end)
+Last updated: 2026-08-26 (session 22, end)
 
 ## What was built
 
-All on `main`, pushed; working tree clean. Latest commits `be8070f` (fee rule), `9db07de` (PNG trim), `977e015` (same trim on-screen), `b2fd4a5` (toast trim), `647cefd` (tournament card). No DB migration this session; migrations 43 and 44 remain the latest applied.
+One commit on `main`, pushed and deployed: `b4e3167` (113 files: 100 modified, 10 deleted, 4 added). Migrations **45** and **46** applied to prod (backups in `~/crikledger-backups/2026-08-26-pre-migration-4{5,6}.sql`). The plan itself is `performance-improvement-plan-v2.md` (git-ignored, like v1); every item there carries a status.
 
-### `be8070f` — one car-money rule everywhere
-- `engine/calc.ts`: `carSplit` option deleted. `isSharer = broughtCar || sharedCar`; result gains `cashCosts`, `headCount`, `carCount`, `ownWayCount`. Header comment carries the full rule + a "do not reinstate" history note.
-- `engine/tournamentFee.ts`: same fix in the per-match loop (`payCars` gone; `driverCredit = broughtCar ? allowance : 0`).
-- `engine/calc.test.ts`, `engine/tournamentFee.test.ts`, `lib/demo/fixtures.test.ts` rewritten around the canonical examples + an invariant sweep. New `lib/format.test.ts`. 87 tests.
-- `lib/matches.ts`, `lib/tournamentMatches.ts`: store the EFFECTIVE `shared_car` (`shared OR brought`) so `COUNT(shared_car)` = sharer count. `lib/validate.ts` unchanged shape (`shared_car` default false = own way).
-- Wizard: `components/wizard/MatchWizard.tsx` and `components/guest/GuestMatchFlow.tsx` now track `ownWay` (the exceptions) instead of `shared`; everyone shares by default, new guests share, deselecting a player clears them from `ownWay`. `components/wizard/StepSharedCar.tsx` takes `carSharePerSharer`/`sharerCount`/`carCount` from the engine (its local `Math.ceil` is gone); drivers render ticked + locked ("Drove · shares"); "Everyone shared" master tick.
-- Display: `lib/format.ts formatFee` + `components/shared/FeeAmount.tsx` — `₹5` to pay, `gets ₹53` when the team owes them. Used by `FeeTable`, `StepFeePreview`, `GuestMatchSheet`, `CostBreakdownFooter`; inlined in `app/api/share/match-sheet/route.tsx`.
-- Totals: `app/matches/[id]/page.tsx` runs the engine once (`calc`) for the sheet payload AND `CostBreakdownFooter` (which now takes `result` and computes nothing). `StepFeePreview` takes `totals: PreviewTotals` (new fields `own_way_count`, `car_count`, `cash_costs`). `GuestMatchSheet` takes `result` only (no `rows` prop).
-- Docs: README fee section, `CrikLedger-docs/08-business-rules.md` R-11..R-14b rewritten (worked examples + history note), `db/seed-matches-dev.sql` marks everyone shared and fixes the captain's stored fee (178 = −36 + 214), `lib/demo/fixtures.ts` ledger collection 2561 → 2572.
+### The audit (first half of the session)
+Three read-only explorers (dead code · server/data · client/PWA) plus hand verification of every high-severity claim. Headline answers: the Matches page and the home-match feature were already cleanly gone; what remained was three unused shadcn files, six unused lib exports, stale seeds, two SVGs, one stale sentence of copy and the ~250-line booking-linked-match path. The audit also found **three authorization holes** and that migration 40's tenant-keying never reached the views.
 
-### `9db07de` — shared PNG trimmed
-- `app/api/share/match-sheet/route.tsx`: no `Own way ₹…` footer segment, no `Guest fees charged to …` line; `ownWayCount`/`captainNote` removed from the zod schema, `MatchSheetPayload`, and both assemblers (`app/matches/[id]/page.tsx`, `GuestMatchSheet.tsx`). Footer: `Ground · Balls[ · Other] · Cars N × ₹A · Total · Per head · Surplus`.
+### Correctness / auth
+- `app/tournaments/[id]/players/[pid]/page.tsx` had **no auth at all** — now gated by the tournament's own scope (team, or the tournament for a credit-only owner), `AccessGate` otherwise.
+- `lib/session.ts requireTournamentWrite(id, { superadmin? })` — loads `tournaments.team_id`, applies the Admin-tab rule, refuses megaadmin. All 15 `app/api/tournaments/[id]/**` handlers use it; `requireAdmin()` there only proved the caller could write their OWN active team.
+- `app/api/pool/entries/[id]` PATCH/DELETE now `AND team_id = admin.scopeId`.
+- `matchSubmitSchema.rows.max(60)`.
 
-### `977e015` — same trim on-screen
-- `StepFeePreview` (Own way row + captain paragraph), `CostBreakdownFooter` (Own way + "Guest fees via" rows; `guestFee`/`captainName` props removed), `GuestMatchSheet` (Own way + Guests lines), `FeeTable` (the "guests transferred their fee to the captain" paragraph). `PreviewTotals.own_way_count` and `MatchFeeResult.ownWayCount` still exist for the engine/tests; nothing renders them.
+### Database
+- **Migration 45**: `players_public` / `tournament_players_public` join their balance views `ON b.id = p.id AND b.team_id = p.team_id` (resp. `tournament_id`). Before, the caller's `WHERE team_id` never reached the aggregate legs (no equivalence class through the PK) — `EXPLAIN` showed `HashAggregate → Seq Scan` on every leg; after, `team_id` filters + index scans. View output dumped before/after: byte-identical. `tournaments_public` fund/count are correlated scalar subqueries. New `tournament_match_attendee_counts` view. Indexes: `matches (team_id, status, match_date DESC)`, `pool_entries (team_id, kind, entry_date DESC, created_at DESC)`, `tournaments (created_at DESC)`, `entitlements (admin_id)`, `tournament_match_participants (tournament_id, match_id)`. `app/admin/players/page.tsx` SQL gained the same join predicate.
+- **Migration 46**: booking-linked-match machinery retired after confirming 0 rows on prod (`ground_bookings`, linked matches, pending amounts). Dropped `matches.ground_booking_id` (+ index), `ground_bookings.amount_pending` / `pending_cleared_entry_id`, `ground_bookings_public`; `matches_public` recreated without the column. `lib/bookings.ts` is now just `buildBookingMessage(team, captain, slots)`; `revertBookingShare`, `clearBookingPending`, `computeSlotShare`, the `opponentCaptain`/`bookingShare`/`bookingFee` props and `opponent_captain` in the edit schema are gone. The Pool-page booking credit still works.
 
-### `b2fd4a5` — wizard completion toast
-- `components/wizard/MatchWizard.tsx` `handleSubmit`: toast is now only `Collected ₹x · ₹y surplus credited to pool` (or `… (₹z ground fee recouped)`); the `· ₹n guest fees deducted from <captain>` tail is gone. `body.data.guestFee` / `captainName` are still returned by the API, just unused here.
+### Server round trips
+Captain-phone reads ride the page `Promise.all` (Home via a props-only `LedgerHowTo`; tournament Home and Admin tab, gated on use); `BackLink` shares a `React.cache`d row loader with the body on both match pages; `/matches/[id]` reuses `admin.activeTeam`; `/tournaments` runs nav + directory together; `/admin` two scalars in one statement; `/ops` `HOLDERS_SQL` once for both products; session query has a `WITH my_teams` CTE; `count:"exact"` → base-table counts (Home, tournament Home) or a `PAGE_SIZE + 1` probe (`/pool`, `/players/[id]`, tournament statement — now paged); `/schedule/completed` capped at 100 and ordered in SQL; `/schedule/upcoming` dropped its attendee query (participants only exist after completion); `lib/supabase-server.ts` pins `cache: "no-store"` via `global.fetch`. `"use cache"` on exactly two money-free reads: the tournament directory (`cacheLife("minutes")`, tag `tournament-directory`, `revalidateTag(…, "max")` from create/edit/delete) and the team row (`cacheLife("hours")`, tag `team:<id>`, revalidated from `PATCH /api/sa/team`).
 
-### `647cefd` — tournaments directory card
-- `components/tournaments/TournamentCard.tsx` (only used by `app/(app)/tournaments/page.tsx`): the green `fund_balance` `<Money variant="balance">` on the right is removed; card = trophy + name + subtitle. `TournamentPublic.fund_balance` stays for the tournament Home tab / ledger.
+### Client / PWA
+- `AccountMenu` is a hand-rolled disclosure; `components/ui/dropdown-menu.tsx`, `@radix-ui/react-dropdown-menu` and `next-themes` are gone (no `.dark` CSS existed; the provider only stripped a class nothing styled).
+- Header logo `unoptimized`, no `priority`; `next.config.ts images.unoptimized = true` (no `next/image` optimisation left anywhere).
+- Eight raw `<a href="/…">` in the legal pages → `<Link>`.
+- `renderInstallDiagrams(only?)`: signed-out Home streams 2 diagrams (first step per platform) + "See every step illustrated" → `/install`, which still renders all 8.
+- `public/sw.js` **v7**: cache-first for same-origin `GET /_next/static/*` with no query (Next 16 serves them under `/_next/static/immutable/…`, `Cache-Control: immutable` — verified on prod). `RegisterSW` waits for `load`, calls `registration.update()` on every foreground return, reloads on `controllerchange` only if a controller existed before and no `[role="dialog"]` is open.
+- `viewportFit: "cover"` (safe-area insets were 0 on iOS — the tab bar sat under the home indicator); `metadataBase` (og:image used to resolve to `VERCEL_URL`); `app/(app)/error.tsx` (no data, no placeholder figures) + `not-found.tsx`; manifest `id`/`scope`/shortcuts (`/pool`, `/schedule`); skeleton `bg-muted`.
+- `lib/format.ts`: module-level `Intl` formatters. `lib/format.test.ts` is 121 assertions captured from the OLD implementation (lakh/crore, `.5` rounding, 18:30 UTC boundary, leap day).
+- `AnimatedRupees` tweens via `ref.textContent`; `PlayerGrid` `useMemo` + `useDeferredValue` + `memo(PlayerCard)`; `"use client"` removed from `SheetShell`, `StepCars`, `StepFeePreview`.
+- `useOptimistic` added to `MatchFeeCard` (paid chip), the four captain/vice-captain tiles (name on the tile), `DebitSheet` (row into `PoolAdminSection`'s existing reducer via `onOptimisticAdd`, mirroring `CreditSheet`). 10 components use it now.
+- Share images at **720 px**: every constant in `lib/share-image.tsx` and the four routes is the old 1080 value × ⅔ (`balanceImageHeight` = `min(1467, max(600, 280 + half·40))`, ledger `max(600, 280 + n·43)`, match sheet `min(1067, max(507, 253 + half·37))`).
+
+### Dead code / tooling
+`components/ui/{badge,card,checkbox}.tsx`, `hasEnvVars`, `SUPPORT_PHONE_DISPLAY`, `getTeamBySlug`, `checkActiveTeamWrite`, `tournamentMemberships`, `violatesMegaadminIsolation`, `season_label`, `expense_recovery`, `GroundBookingPublic`, `Match.ground_booking_id`, `TeamPublic` trimmed to 5 columns, `db/seed-{dev,matches-dev}.sql`, `scripts/repair-duplicate-account.mjs`, `public/wordmark-*.svg`, `app/admin/login` (the four `redirect("/admin/login")` go to `/login`; proxy exception removed), `LEGACY_DISMISS_KEY`, `--color-card*` tokens, CreditSheet's "schedules a match per booked date" sentence. `next@16.3.0` and `@supabase/supabase-js@2.112.3` pinned exact; `eslint-config-next@16.3.0` with a native flat `eslint.config.mjs` (`@eslint/eslintrc` removed); `sharp` devDependency; `npm run analyze` = `next experimental-analyze`. Stale banners prepended to `context/{architecture,code-standards,library-docs,project-overview}.md` and `CrikLedger-docs/{04,05,09–16}`; v1 plan marked superseded.
 
 ## Decisions made
 
-- **THE fee rule (Ravi, locked 2026-08-25; also in auto-memory `crikledger-fee-rule-locked`):** base = ground+balls+other across ALL heads (players + guests), `baseShare = ceil(base/H)`; car money = cars × allowance as ONE pooled pot split evenly across everyone who rode — **drivers included** (`S = shared OR brought`), never per car; rider = base + car, own way = base, driver = base + car − allowance (may be negative). Total shown = cash + cars everywhere; surplus = collected − cash. Two separate ceils are canonical. Canonical: 2500+60, A 250, 11 players (3 drivers) + 2 guests all shared → 197 + 58 = 255 / drivers 5 / surplus 5; guests unticked → 69 → 266 / 16 / guests 197 / surplus 10. A solo driver nets the base share.
-- Wizard default: everyone ticked, drivers locked on, admin unticks own-way people.
-- Display convention: never a bare `+₹`/`−₹` on a per-person fee (Ravi reads "+5" as "pays 5"); tournament *statement* rows keep signed amounts because they are ledger deltas.
-- Every fee surface stays minimal (PNG `9db07de`, on-screen `977e015`): rows + Total / Per head / Collected / Surplus; no "Own way" line, no "guest fees charged to the captain" sentence anywhere. The captain's "incl. ₹x guest fees" sub-label in FeeTable and the charge-only GUEST FEES row stay (they explain a number, not the rule). The completion toast follows the same rule (`b2fd4a5`).
-- The `/tournaments` list card shows no money figure (`647cefd`); a paid-tournament user sees the fund balance only inside the tournament.
-- `shared_car` columns stay (no migration) and now mean "funded the car pot" (drivers always true).
+- **Deferred, on purpose (both recorded in the v2 file):** Part E stage 2 (Server Actions — a rewrite of every money write; needs the device walk first) and G17 (`cn`/`cx` split — 84 sites, silent styling risk for ~8 KB).
+- **`reactCompiler` evaluated, NOT enabled** — money app with `useOptimistic`; the concrete hot spots were fixed by hand instead.
+- **F2 (header chip on static pages)** keeps its one session read; a display-only cookie is a new auth surface for no visible gain.
+- **C6**: column lists only where the TS type is narrow (Home roster, team row); tournament tabs and match reads keep `*` because `TournamentPublic`/`Match` consume every column and a cast would hide `undefined`s.
+- **Lint rules from eslint-config-next 16**: `react-hooks/set-state-in-effect` → **warn** (12 hits, all the documented re-seed-on-open sheets; a key-based remount is its own refactor); `react-hooks/error-boundaries` → **off for `app/api/share/**`** (satori renders synchronously inside `ImageResponse`).
+- Tournament Admin tab's phone read is now parallel and gated on *use*, not on fetch (one indexed read for a bounced visitor was the accepted trade).
+- `/return-policy` → `/shipping-policy` and the `LegacyTournamentMatches` redirect stay for old links.
 
 ## Problems solved
 
-- Root cause of "wrong calculation every time": commit `1c680ee` (2026-08-20) encoded "a driver is never a sharer" + no rebate when nobody ticked shared; it was documented as a FACT (R-14b), copied to tournaments (`876bc43`) and locked by tests, so later sessions preserved it. README/seed/migration comments described a *third* model. Fixed by collapsing to one model and rewriting docs/tests; SQL comments in `db/migration-7/-25/-34/-39.sql` are stale prose (noted in R-14b), SQL untouched.
-- Five re-implementations of Total/Surplus disagreed (`/matches/[id]` PNG printed cash-only Total; demo printed cash + cars; `CostBreakdownFooter`, `StepFeePreview`, `StepSharedCar` recomputed locally) — all now read engine output.
-- Bash heredocs with large Python scripts broke on Git Bash quoting; writing the script to the scratchpad and running `python <file>` works.
-- Verifying the PNG: `npm run build && npm start`, POST a JSON payload to `/api/share/match-sheet`, Read the PNG; then kill the port-3000 node child (`netstat -ano | grep :3000` → `taskkill //F //PID … //T`).
+- **satori drops nested `<svg>` AND `<img>` under a parent `transform: scale()`** — a `ShareCanvas` wrapper (1080 layout scaled to 720) lost the crown/car marks; data-URI PNG marks vanished too. Fixed by rescaling the constants instead; inline SVG marks restored at ⅔ size. Verified by eye on the built server and on prod (720×512, crown + C + car marks present).
+- Perl multi-line edits silently skipped several files with CRLF endings (`app/api/tournaments/[id]/route.ts`, `ScheduleMatchSheet.tsx`, `MatchAdminActions.tsx`, `share/balances`); after any bulk perl pass, grep for the old text and finish with exact Edits.
+- `npx tsc` reported stale `.next/types/validator.ts` errors for the deleted `/admin/login` page — `rm -rf .next/types .next/dev/types`, the build regenerates them.
+- The `todayIST` regex in the generated test lost its backslashes going through a bash heredoc → template literal; fixed by hand.
+- Node 24 runs `.ts` directly (type stripping) — used to capture the formatter's old output from `lib/format.ts` without a build.
+- `pg_dump` lives at `C:\Program Files\PostgreSQL\17\bin\pg_dump.exe`; a dbcheck script must live inside the repo (scratchpad can't resolve `pg`).
 
 ## Current state
 
-Deployed to main → Vercel (`647cefd`). `tsc`, `eslint`, 87 vitest tests, `next build` all green (pre-existing `[ops/accounts]` cookies-during-prerender line, exit 0). PNG verified from the built server for the canonical examples. Prod DB still has no completed matches, so the wizard defaults/`ownWay` flow and the real match page footer were verified by type-check + tests + PNG, not on device.
+Deployed (`b4e3167`) and probed from here: `/api/health` bom1/db ok; warm pages `/` 0.09 s, `/pool` 0.08, `/schedule` 0.10, `/tournaments` 0.10, `/privacy` 0.08 (9.5 KB), `/more` 0.09 — at or under the v1 baseline; no image preload, canonical `og:image`, `viewport-fit=cover`, no theme script; `sw.js` v7; manifest id + shortcuts; match sheet 720×512 in 0.25 s; hashed chunks `immutable`, CDN HIT. `tsc` clean, 92 vitest tests, lint 0 errors / 12 warnings, `next build` green (same `[ops/accounts]` prerender line as before). Prod DB: 2 teams, 21 players, 45 pool entries, 1 tournament, 0 match participants — the wizard/fee flows are still verified by tests + PNG, not on device.
 
 ## Next session starts with
 
-On-device walk of the fee flow with the new rule: (1) demo sample → "Who shared the car" shows all ticked, 3 drivers locked "Drove · shares", caption "₹750 … 11 ways — ₹69 each"; add 2 guests → "13 ways — ₹58"; preview riders ₹255 / drivers ₹5 / footer `Total ₹3,310 · Per head ₹255 · Surplus ₹5`; untick both guests → 266 / 16 / 197, and no "Own way" or guest-charge line on screen or on the PNG. (2) Complete a real match with those inputs → FeeTable, footer and PNG agree; ledger "Match surplus +₹5"; captain balance moves by own fee + 510; edit → guests unticked → surplus row ₹10. (3) Tournament: one match, 11 players, 3 drivers, defaults, joining fee 2,560 → driver charge 52, rider 302, fund surplus 12; confirm the `/tournaments` card shows no ₹ figure. Then continue the session-20 device walk (onboarding checklists, captain phone + WhatsApp fee message, Schedule hub dues share).
+The signed-in on-device walk that curl cannot cover, in this order: (1) account menu (hand-rolled: opens, Escape/outside-tap close, team switch, logout); (2) Home install card — 2 pictures + the "See every step illustrated" link; (3) `/admin` captain change → the tile updates instantly, phone saves; (4) `/pool` debit → row appears at once, reconciles on refresh; (5) a scheduled match → clear pending fee → "Fully paid" chip flips at once; (6) all four share images (balances, ledger, tournament balances, match sheet) look right at 720; (7) tournament statement page bounces a non-member and pages at 50; (8) an installed PWA closed and reopened after this deploy picks up the new build (SW update flow), and a sheet left open is NOT reloaded under the user. Then the session-21 fee-rule walk that was still pending.
 
 ## Open questions
 
+- Part E stage 2 (Server Actions) and G17 (`cn`/`cx`) — only after the walk above; both documented in `performance-improvement-plan-v2.md`.
+- The 12 `set-state-in-effect` warnings: refactor the re-seed sheets to key-based remounts, or leave as warnings?
 - Migrate the ~15 remaining hardcoded contact literals to `lib/contact.ts`? Still deferred.
-- Old tournament matches-list URL redirect streams as HTTP 200 + redirect payload — fine for browsers; revisit only if SEO matters.
