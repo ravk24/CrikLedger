@@ -9,6 +9,7 @@ import {
   ShareFrame,
   SHARE_WIDTH,
   balanceImageHeight,
+  balanceRupees,
   shareDate,
 } from "@/lib/share-image";
 import type { PlayerPublic } from "@/types";
@@ -24,17 +25,25 @@ export async function GET() {
   try {
     const admin = await requireTeamAdmin();
     const team = await getTeamById(admin.scopeId);
-    const { data } = await supabaseServer
-      .from("players_public")
-      .select("*")
-      .eq("team_id", team.id)
-      // Same order the JS sort below applies; the DB limit keeps the
-      // fetch bounded to what the image can show.
-      .order("is_active", { ascending: false })
-      .order("balance", { ascending: true })
-      .order("name", { ascending: true })
-      .limit(MAX_ROWS);
-    const players = ((data ?? []) as PlayerPublic[])
+    const [playersRes, balanceRes] = await Promise.all([
+      supabaseServer
+        .from("players_public")
+        .select("*")
+        .eq("team_id", team.id)
+        // Same order the JS sort below applies; the DB limit keeps the
+        // fetch bounded to what the image can show.
+        .order("is_active", { ascending: false })
+        .order("balance", { ascending: true })
+        .order("name", { ascending: true })
+        .limit(MAX_ROWS),
+      supabaseServer
+        .from("pool_balance")
+        .select("balance")
+        .eq("team_id", team.id)
+        .single(),
+    ]);
+    const balance = Number(balanceRes.data?.balance ?? 0);
+    const players = ((playersRes.data ?? []) as PlayerPublic[])
       // Same order as the Home dashboard: active first, biggest debtors
       // on top, names only break ties.
       .sort((a, b) => {
@@ -58,7 +67,7 @@ export async function GET() {
         <ShareFrame
           title={`${team.display_name} · Balances`}
           subtitle={`${activeCount} active players · ${shareDate()}`}
-          footer="Negative = amount owed to the team pool"
+          footer={`Team pool ${balanceRupees(balance)} · Negative = amount owed to the team pool`}
         >
           <BalanceRows players={rows} />
         </ShareFrame>

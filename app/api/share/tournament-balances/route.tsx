@@ -10,6 +10,7 @@ import {
   ShareFrame,
   SHARE_WIDTH,
   balanceImageHeight,
+  balanceRupees,
   shareDate,
 } from "@/lib/share-image";
 import type { TournamentPlayerPublic, TournamentPublic } from "@/types";
@@ -76,7 +77,7 @@ export async function GET(req: NextRequest) {
         <ShareFrame
           title={`${tournament.name} · Balances`}
           subtitle={`${activeCount} active players · ${shareDate()}`}
-          footer="Negative = amount owed to the tournament fund"
+          footer={`Tournament fund ${balanceRupees(Number(tournament.fund_balance))} · Negative = amount owed to the tournament fund`}
         >
           <BalanceRows players={rows} />
         </ShareFrame>
