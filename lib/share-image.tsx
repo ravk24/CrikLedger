@@ -66,7 +66,7 @@ export function ShareFrame({ title, subtitle, highlight, children, footer }: Fra
           style={{
             display: "flex",
             alignSelf: "flex-start",
-            alignItems: "baseline",
+            alignItems: "center",
             gap: 8,
             marginTop: 12,
             padding: "6px 14px",
