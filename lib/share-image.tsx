@@ -29,11 +29,14 @@ export const moneyColor = (n: number) => (n < 0 ? "#f87171" : "#4ade80");
 type FrameProps = {
   title: string;
   subtitle?: string;
+  // Fund total shown as an amber pill under the title — the one number a
+  // screengrab must not lose (team pool / tournament fund).
+  highlight?: { label: string; amount: number };
   children: React.ReactNode;
   footer?: string;
 };
 
-export function ShareFrame({ title, subtitle, children, footer }: FrameProps) {
+export function ShareFrame({ title, subtitle, highlight, children, footer }: FrameProps) {
   return (
     <div
       style={{
@@ -58,6 +61,29 @@ export function ShareFrame({ title, subtitle, children, footer }: FrameProps) {
           {subtitle}
         </div>
       ) : null}
+      {highlight ? (
+        <div
+          style={{
+            display: "flex",
+            alignSelf: "flex-start",
+            alignItems: "baseline",
+            gap: 8,
+            marginTop: 12,
+            padding: "6px 14px",
+            borderRadius: 999,
+            backgroundColor: "#facc15",
+            color: "#0f172a",
+          }}
+        >
+          {/* satori ignores textTransform, so uppercase in JS. */}
+          <div style={{ display: "flex", fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>
+            {highlight.label.toUpperCase()}
+          </div>
+          <div style={{ display: "flex", fontSize: 24, fontWeight: 700 }}>
+            {balanceRupees(highlight.amount)}
+          </div>
+        </div>
+      ) : null}
 
       {children}
 
@@ -68,7 +94,15 @@ export function ShareFrame({ title, subtitle, children, footer }: FrameProps) {
       ) : null}
       {/* The image gets forwarded far past the team group — this is how
           someone who receives it can find the app. */}
-      <div style={{ display: "flex", marginTop: 11, fontSize: 17, color: "#38bdf8" }}>
+      <div
+        style={{
+          display: "flex",
+          // Without a footer this line is what pins to the bottom edge.
+          marginTop: footer ? 11 : "auto",
+          fontSize: 17,
+          color: "#38bdf8",
+        }}
+      >
         {SITE_HOST}
       </div>
     </div>
@@ -89,9 +123,10 @@ type BalanceRow = { id: string; name: string; is_active: boolean; balance: numbe
 
 // The "who owes what" list shared by the team and tournament balance
 // images: one column up to 15 rows, two beyond. Rows arrive pre-sorted.
+// The base covers frame chrome plus the ~50 px fund-total pill.
 export function balanceImageHeight(rows: number): number {
   const half = rows > 15 ? Math.ceil(rows / 2) : rows;
-  return Math.min(1467, Math.max(600, 280 + Math.max(half, 1) * 40));
+  return Math.min(1467, Math.max(600, 330 + Math.max(half, 1) * 40));
 }
 
 export function BalanceRows({ players }: { players: BalanceRow[] }) {

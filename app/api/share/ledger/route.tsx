@@ -8,7 +8,6 @@ import { formatDateShort } from "@/lib/format";
 import {
   ShareFrame,
   SHARE_WIDTH,
-  balanceRupees,
   moneyColor,
   shareDate,
   signedRupees,
@@ -53,15 +52,16 @@ export async function GET() {
     const entries = (entriesRes.data ?? []) as PoolLedgerRow[];
     const balance = Number(balanceRes.data?.balance ?? 0);
 
-    // 720-space (lib/share-image.tsx): the old 1080 formula × ⅔.
-    const height = Math.max(600, 280 + Math.max(entries.length, 1) * 43);
+    // 720-space (lib/share-image.tsx): the old 1080 formula × ⅔, plus
+    // ~50 px for the pool-balance pill under the title.
+    const height = Math.max(600, 330 + Math.max(entries.length, 1) * 43);
 
     return new ImageResponse(
       (
         <ShareFrame
           title={`${team.display_name} · Ledger`}
           subtitle={`Last ${entries.length} entries · ${shareDate()}`}
-          footer={`Pool balance ${balanceRupees(balance)}`}
+          highlight={{ label: "Pool balance", amount: balance }}
         >
           <div style={{ display: "flex", flexDirection: "column", marginTop: 21 }}>
             {entries.length === 0 ? (

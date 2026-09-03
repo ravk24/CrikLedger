@@ -9,7 +9,6 @@ import {
   ShareFrame,
   SHARE_WIDTH,
   balanceImageHeight,
-  balanceRupees,
   shareDate,
 } from "@/lib/share-image";
 import type { PlayerPublic } from "@/types";
@@ -67,7 +66,8 @@ export async function GET() {
         <ShareFrame
           title={`${team.display_name} · Balances`}
           subtitle={`${activeCount} active players · ${shareDate()}`}
-          footer={`Team pool ${balanceRupees(balance)} · Negative = amount owed to the team pool`}
+          highlight={{ label: "Team pool", amount: balance }}
+          footer="Negative = amount owed to the team pool"
         >
           <BalanceRows players={rows} />
         </ShareFrame>
