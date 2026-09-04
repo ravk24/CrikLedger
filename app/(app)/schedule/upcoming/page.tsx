@@ -54,7 +54,7 @@ export default function ScheduledMatches() {
   return (
     <>
       <div>
-        <h1 className="text-xl font-bold text-text-primary">Scheduled</h1>
+        <h1 className="text-xl font-bold text-text-primary">Matches</h1>
         <p className="mt-0.5 text-xs text-text-muted">
           Upcoming matches, soonest first.
         </p>

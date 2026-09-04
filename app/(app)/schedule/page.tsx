@@ -19,7 +19,7 @@ type Option = {
 // sheet instead, so it lives in its own client component.
 const OPTIONS: Option[] = [
   {
-    label: "Scheduled",
+    label: "Matches",
     href: "/schedule/upcoming",
     icon: Swords,
     iconClass: "bg-accent-light text-accent",
