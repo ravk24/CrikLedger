@@ -31,6 +31,11 @@ export type PoolLedgerRow = {
   edited_by: string | null;
   player_name: string | null; // linked player, deposit / opening_due only
   created_at: string; // same-day tiebreak; entry_date alone is just a DATE
+  // Owning match when this row is a match fee (settled or cleared-
+  // pending slice, migration 48); null for every other row.
+  match_id: string | null;
+  match_opponent: string | null; // raw; render via opponentLabel()
+  match_status: MatchStatus | null;
 };
 
 export type MatchStatus = "scheduled" | "completed" | "abandoned";

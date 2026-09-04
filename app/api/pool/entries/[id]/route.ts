@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withTransaction } from "@/lib/db";
 import { ceilSplit } from "@/engine/split";
+import { deleteScheduledMatchWithFees } from "@/lib/matches";
 import { requireAdmin } from "@/lib/session";
 import { ApiError, handleRouteError, poolEntryEditSchema } from "@/lib/validate";
 import type { PoolClient } from "pg";
@@ -136,16 +137,52 @@ export async function DELETE(
     const admin = await requireAdmin();
     const { id } = await params;
 
-    await withTransaction(async (client) => {
+    const result = await withTransaction(async (client) => {
       await loadManualEntry(client, id, admin.scopeId);
+
+      // A plain_debit / other_income row may be a match's fee (settled
+      // or cleared-pending slice). Lock the owning match so a
+      // concurrent complete / cancel serialises against this delete.
+      const linked = await client.query(
+        `SELECT id, status, other_fee_entry_id, pending_cleared_entry_id
+         FROM matches
+         WHERE team_id = $2
+           AND (other_fee_entry_id = $1 OR pending_cleared_entry_id = $1)
+         FOR UPDATE`,
+        [id, admin.scopeId],
+      );
+      const match = linked.rows[0];
+
+      if (match?.status === "completed") {
+        // The fee is baked into the stored collection (R-38): removing
+        // it would silently drift the pool by the recouped amount.
+        throw new ApiError(
+          409,
+          "AUTO_ENTRY",
+          "This fee is settled inside its completed match — delete the match instead",
+        );
+      }
+      if (match?.status === "scheduled") {
+        // The fee cannot outlive its match, nor the match its fee:
+        // remove the match and BOTH slices, whichever one was tapped.
+        const { fee_reverted } = await deleteScheduledMatchWithFees(
+          client,
+          match,
+        );
+        return { match_deleted: true, match_id: match.id, fee_reverted };
+      }
+
+      // No link, or an abandoned match (abandon already returned the
+      // settled fee; a leftover cleared-pending link just SET NULLs).
       // Common-debit deletes cascade their shares and recovery row via FKs.
       await client.query(
         `DELETE FROM pool_entries WHERE id = $1 AND team_id = $2`,
         [id, admin.scopeId],
       );
+      return { match_deleted: false };
     });
 
-    return NextResponse.json({ success: true, data: null });
+    return NextResponse.json({ success: true, data: result });
   } catch (error) {
     return handleRouteError("[pool/entries]", error);
   }

@@ -10,6 +10,7 @@ import { MoneyInput } from "@/components/shared/MoneyInput";
 import { CreditSheet } from "@/components/pool/CreditSheet";
 import { DebitSheet } from "@/components/pool/DebitSheet";
 import { DownloadImageButton } from "@/components/shared/DownloadImageButton";
+import { opponentLabel } from "@/lib/format";
 import type { PoolLedgerRow } from "@/types";
 
 type PlayerOption = { id: string; name: string };
@@ -36,6 +37,23 @@ type LedgerChange =
   | { type: "edit"; id: string; amount: number; message: string }
   | { type: "delete"; id: string }
   | { type: "add"; row: PoolLedgerRow };
+
+// A fee row of a completed match is locked: its amount is already
+// baked into the match's stored collection, so only the match's own
+// delete may remove it (the server refuses with 409 as the backstop).
+function isSettledMatchFee(entry: PoolLedgerRow | null) {
+  return entry?.match_id != null && entry.match_status === "completed";
+}
+
+function deleteDescription(entry: PoolLedgerRow | null): string {
+  if (entry?.kind === "common_debit") {
+    return "The debit and every player's share are removed together.";
+  }
+  if (entry?.match_id && entry.match_status === "scheduled") {
+    return `This is the match fee vs ${opponentLabel(entry.match_opponent)}. Deleting it also deletes that scheduled match.`;
+  }
+  return "This removes the entry and its effect on the pool balance.";
+}
 
 function applyLedgerChange(state: PoolLedgerRow[], change: LedgerChange) {
   switch (change.type) {
@@ -126,8 +144,11 @@ export function PoolAdminSection({
     if (!editing) return;
     const target = editing;
     setPending(true);
+    setError(null);
     setConfirmDelete(false);
-    setEditing(null);
+    // The sheet stays open until the server agrees, so a refusal (a
+    // completed match's fee, a stale row) is visible; the optimistic
+    // removal reverts on its own when the transition settles.
     startTransition(async () => {
       changeLedger({ type: "delete", id: target.id });
       try {
@@ -139,6 +160,10 @@ export function PoolAdminSection({
           setError(body.error?.message ?? "Could not delete — try again.");
           return;
         }
+        setEditing(null);
+        // A match fee delete also removed its scheduled match; the
+        // match never appears in the ledger, so a refresh is all the
+        // UI needs.
         router.refresh();
       } catch {
         setError("Could not reach the server — check your connection.");
@@ -235,14 +260,22 @@ export function PoolAdminSection({
           >
             {pending ? "Saving…" : "Save changes"}
           </button>
-          <button
-            type="button"
-            onClick={() => setConfirmDelete(true)}
-            disabled={pending}
-            className="h-11 w-full rounded-md border border-debit-light text-sm font-medium text-debit disabled:opacity-60"
-          >
-            Delete entry
-          </button>
+          {isSettledMatchFee(editing) ? (
+            <p className="text-xs text-text-muted">
+              This fee is settled inside the completed match vs{" "}
+              {opponentLabel(editing?.match_opponent)} — delete the match
+              instead.
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              disabled={pending}
+              className="h-11 w-full rounded-md border border-debit-light text-sm font-medium text-debit disabled:opacity-60"
+            >
+              Delete entry
+            </button>
+          )}
         </form>
       </SheetShell>
 
@@ -250,11 +283,7 @@ export function PoolAdminSection({
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         title="Delete this entry?"
-        description={
-          editing?.kind === "common_debit"
-            ? "The debit and every player's share are removed together."
-            : "This removes the entry and its effect on the pool balance."
-        }
+        description={deleteDescription(editing)}
         confirmLabel="Delete"
         destructive
         pending={pending}

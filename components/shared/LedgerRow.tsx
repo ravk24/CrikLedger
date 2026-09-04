@@ -9,7 +9,10 @@ import type { PoolLedgerRow } from "@/types";
 
 // Structural row — PoolLedgerRow and TournamentLedgerRow both satisfy
 // it (tournament ledgers carry kinds the SG pool never uses).
-type LedgerEntry = Omit<PoolLedgerRow, "kind"> & { kind: string };
+type LedgerEntry = Omit<
+  PoolLedgerRow,
+  "kind" | "match_id" | "match_opponent" | "match_status"
+> & { kind: string };
 
 type Props = {
   entry: LedgerEntry;

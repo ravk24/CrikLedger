@@ -334,3 +334,38 @@ export async function clearMatchPending(
 
   return { cleared: pending, entry_id: entryRes.rows[0].id };
 }
+
+// Removes a SCHEDULED match together with every pool entry that holds
+// its fee: the settled slice (other_fee_entry_id, migration 18) and the
+// cleared-pending slice (pending_cleared_entry_id, migration 41).
+// Participants and any collection row cascade with the match. The
+// caller has already locked the row (FOR UPDATE) and checked
+// status = 'scheduled'. Deleting the entries is the correct reversal in
+// either direction: a debit the pool fronted comes back, a credit it
+// received goes away. The match goes first so the SET NULL links never
+// fire against a row about to vanish.
+export async function deleteScheduledMatchWithFees(
+  client: PoolClient,
+  match: {
+    id: string;
+    other_fee_entry_id: string | null;
+    pending_cleared_entry_id: string | null;
+  },
+): Promise<{ fee_reverted: number }> {
+  await client.query(`DELETE FROM matches WHERE id = $1`, [match.id]);
+  const entryIds = [match.other_fee_entry_id, match.pending_cleared_entry_id]
+    .filter((x): x is string => Boolean(x));
+  let feeReverted = 0;
+  if (entryIds.length > 0) {
+    const res = await client.query(
+      `DELETE FROM pool_entries WHERE id = ANY($1::uuid[]) RETURNING amount`,
+      [entryIds],
+    );
+    feeReverted = res.rows.reduce(
+      (sum: number, r: { amount: string | number }) =>
+        sum + Math.abs(Number(r.amount)),
+      0,
+    );
+  }
+  return { fee_reverted: feeReverted };
+}

@@ -65,6 +65,9 @@ export function DebitSheet({
       edited_by: null,
       player_name: null,
       created_at: new Date().toISOString(),
+      match_id: null,
+      match_opponent: null,
+      match_status: null,
     };
     startTransition(async () => {
       if (onOptimisticAdd) onOptimisticAdd(optimisticRow);
