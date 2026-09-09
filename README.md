@@ -51,6 +51,8 @@ One unified, chronological ledger with a running balance:
 
 The admin Credit sheet offers: Player deposit · Ground booking · Other income · Last season due. (An `equipment` credit kind existed earlier and was removed from the sheet; old rows still render with an EQUIPMENT chip.)
 
+**Export.** Any admin of the team can download the whole ledger as an Excel workbook from the spreadsheet icon in the `/pool` toolbar (`GET /api/export/ledger`): a **Ledger** sheet oldest-first with a running balance that ends on the pool balance, a **Balances** sheet in dashboard order, and a **Statements** sheet with every player's statement rows. Dates are real date cells and amounts are numbers, so the file sorts and filters in Excel or Google Sheets. It is built server-side with ExcelJS from the same views the pages read — no money is recomputed.
+
 > **Note on the match surplus:** it is credited when fees are *charged* to player balances, not when the cash arrives, so the pool total can run slightly ahead of the physical cash box — bounded by the sum of all surpluses (a few rupees per match). This is intentional: the surplus is the team's small discretionary fund (gear, tea/coffee party), and exact cash reconciliation is not a goal.
 
 ### Player balances
@@ -95,7 +97,7 @@ reaches the browser.
 | `/car-fee` | Car Fee Calculator — enter the Google Maps distance (starting location → ground), fee = CEILING(2 × distance × ₹9.6/km) |
 | `/car-count` | Car Counter — active players with how many times each brought a car (derived from match participation) |
 | `/matches/[id]` | Match detail — fee table, cost breakdown, surplus to pool |
-| `/pool` | Team fund ledger (+ Credit/Debit buttons when logged in as admin) |
+| `/pool` | Team fund ledger (+ Credit/Debit, share-image and Excel-export buttons when logged in as admin) |
 | `/players/[id]` | Public player statement with running balance |
 | `/admin` | Admin console — schedule match, 6-step complete-match wizard (result → costs → players → guests → cars → fee preview), edit/abandon |
 | `/admin/players` | Player management (add, edit, activate/deactivate) |

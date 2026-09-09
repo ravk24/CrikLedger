@@ -1,13 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Loader2 } from "lucide-react";
+import { Loader2, Share2, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Props = {
-  endpoint: string; // GET route that returns a PNG
+type FileProps = {
+  endpoint: string; // GET route that returns the file
   filename: string;
-  title: string; // share-sheet title and aria-label
+  title: string; // share-sheet title
+  label: string; // aria-label and tooltip — says what the tap does
+  mimeType: string;
+  icon: LucideIcon;
+  errorText: string;
   // Companion message: copied to the clipboard on tap (WhatsApp drops
   // share-sheet text riding with files, so paste-below-the-image is
   // the reliable channel) and passed to navigator.share as best
@@ -16,16 +20,23 @@ type Props = {
   className?: string;
 };
 
-// Icon-only "save as image" button, admin surfaces only (the caller
-// gates it). Native share sheet where the device has one — the
-// WhatsApp path on Android — otherwise a plain download.
-export function DownloadImageButton({
+// Icon-only "send this file somewhere" button, admin surfaces only (the
+// caller gates it). Native share sheet first, where the device has one
+// AND accepts the file type — the WhatsApp path on Android for images.
+// Plain download otherwise: desktop, and Android Chrome for .xlsx, which
+// it refuses in the share sheet. The caller picks the glyph and label
+// to match the path the file will actually take.
+export function DownloadFileButton({
   endpoint,
   filename,
   title,
+  label,
+  mimeType,
+  icon: Icon,
+  errorText,
   shareText,
   className,
-}: Props) {
+}: FileProps) {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +46,7 @@ export function DownloadImageButton({
     setError(null);
     // Copy FIRST, inside the tap's user activation — iOS revokes the
     // gesture after the fetch await below, and a failed copy must not
-    // block the image share.
+    // block the file share.
     if (shareText) {
       try {
         await navigator.clipboard.writeText(shareText);
@@ -48,9 +59,19 @@ export function DownloadImageButton({
     }
     try {
       const res = await fetch(endpoint, { cache: "no-store" });
-      if (!res.ok) throw new Error("render failed");
+      if (!res.ok) {
+        // Failures arrive in the JSON envelope; say why when it says.
+        let message = errorText;
+        try {
+          const body = await res.json();
+          if (typeof body?.error?.message === "string") message = body.error.message;
+        } catch {
+          // Not JSON — keep the generic text.
+        }
+        throw new Error(message);
+      }
       const blob = await res.blob();
-      const file = new File([blob], filename, { type: "image/png" });
+      const file = new File([blob], filename, { type: mimeType });
 
       if (
         typeof navigator !== "undefined" &&
@@ -64,7 +85,7 @@ export function DownloadImageButton({
           });
         } catch (e) {
           // Some UAs accept files but reject a text rider — retry
-          // image-only rather than losing the share.
+          // file-only rather than losing the share.
           if (shareText && (e as Error)?.name === "TypeError") {
             await navigator.share({ files: [file], title });
           } else {
@@ -84,7 +105,7 @@ export function DownloadImageButton({
       // A cancelled native share rejects too — not worth an error.
       if ((e as Error)?.name !== "AbortError") {
         setCopied(false);
-        setError("Could not build the image — try again.");
+        setError((e as Error)?.message || errorText);
       }
     } finally {
       setBusy(false);
@@ -97,14 +118,14 @@ export function DownloadImageButton({
         type="button"
         onClick={run}
         disabled={busy}
-        aria-label={`Download ${title} as image`}
-        title={`Download ${title} as image`}
+        aria-label={label}
+        title={label}
         className="flex size-11 shrink-0 items-center justify-center rounded-md border border-border bg-surface shadow-card text-text-secondary disabled:opacity-60"
       >
         {busy ? (
           <Loader2 size={18} className="animate-spin" />
         ) : (
-          <Download size={18} />
+          <Icon size={18} />
         )}
       </button>
       {error ? (
@@ -123,5 +144,29 @@ export function DownloadImageButton({
         </span>
       ) : null}
     </span>
+  );
+}
+
+type ImageProps = {
+  endpoint: string; // GET route that returns a PNG
+  filename: string;
+  title: string;
+  shareText?: string;
+  className?: string;
+};
+
+// The PNG flavour every share surface uses — unchanged call signature.
+// A share glyph, not a download one: these images exist to be dropped in
+// the team WhatsApp group, and the match-sheet and guest buttons already
+// say "Share" with Share2.
+export function DownloadImageButton(props: ImageProps) {
+  return (
+    <DownloadFileButton
+      {...props}
+      label={`Share ${props.title} image`}
+      mimeType="image/png"
+      icon={Share2}
+      errorText="Could not build the image — try again."
+    />
   );
 }

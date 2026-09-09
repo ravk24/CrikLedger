@@ -2,15 +2,19 @@
 
 import { startTransition, useOptimistic, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Minus, Plus } from "lucide-react";
+import { FileSpreadsheet, Minus, Plus } from "lucide-react";
 import { LedgerRow } from "@/components/shared/LedgerRow";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { CreditSheet } from "@/components/pool/CreditSheet";
 import { DebitSheet } from "@/components/pool/DebitSheet";
-import { DownloadImageButton } from "@/components/shared/DownloadImageButton";
-import { opponentLabel } from "@/lib/format";
+import {
+  DownloadFileButton,
+  DownloadImageButton,
+} from "@/components/shared/DownloadImageButton";
+import { exportFilename } from "@/lib/export/ledgerRows";
+import { opponentLabel, todayIST } from "@/lib/format";
 import type { PoolLedgerRow } from "@/types";
 
 type PlayerOption = { id: string; name: string };
@@ -19,7 +23,11 @@ type Props = {
   entries: PoolLedgerRow[];
   players: PlayerOption[];
   activePlayerCount: number;
+  teamSlug: string; // names the exported workbook
 };
+
+const XLSX_TYPE =
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 const MANUAL_KINDS: PoolLedgerRow["kind"][] = [
   "deposit",
@@ -74,6 +82,7 @@ export function PoolAdminSection({
   entries: serverEntries,
   players,
   activePlayerCount,
+  teamSlug,
 }: Props) {
   // The list reflects an edit, delete or new credit the moment it is
   // sent; the refresh after the write reconciles it with the ledger
@@ -175,7 +184,7 @@ export function PoolAdminSection({
 
   return (
     <>
-      <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+      <div className="grid grid-cols-[1fr_1fr_auto_auto] gap-2">
         <button
           type="button"
           onClick={() => setCreditOpen(true)}
@@ -194,6 +203,17 @@ export function PoolAdminSection({
           endpoint="/api/share/ledger"
           filename="ledger.png"
           title="Ledger"
+        />
+        {/* The whole ledger, balances and statements as a workbook —
+            the season's books, not a WhatsApp picture. */}
+        <DownloadFileButton
+          endpoint="/api/export/ledger"
+          filename={exportFilename(teamSlug, todayIST())}
+          title="Ledger"
+          label="Download Ledger as spreadsheet"
+          mimeType={XLSX_TYPE}
+          icon={FileSpreadsheet}
+          errorText="Could not build the spreadsheet — try again."
         />
       </div>
 
