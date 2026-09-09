@@ -11,6 +11,9 @@ jobs:
     # secrets live in the "Production" environment (not repository secrets)
     environment: Production
     timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: write # the prune step deletes old backup artifacts
     steps:
       - name: Install postgresql-client 17 (PGDG)
         # pg_dump's major version must be >= the server's; the PGDG repo guarantees 17
@@ -75,10 +78,30 @@ jobs:
           gpg --batch --symmetric --cipher-algo AES256 --passphrase "$BACKUP_PASSPHRASE" backup.sql.gz
           echo "BACKUP_DATE=$(date -u +%F)" >> "$GITHUB_ENV"
 
-      - name: Upload artifact (30-day rolling retention)
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: db-backup-${{ env.BACKUP_DATE }}-run${{ github.run_number }}
           path: backup.sql.gz.gpg
-          retention-days: 30
+          # Retention is by COUNT (the prune step below keeps the newest 7).
+          # 90 days is only GitHub's backstop, set well past 7 × 5 days so
+          # time expiry can never undercut the count.
+          retention-days: 90
           if-no-files-found: error
+
+      - name: Keep only the newest 7 backups
+        # Runs only after a successful upload, so a failed dump never evicts
+        # an older backup: seven good backups stay seven. Manual runs count
+        # like scheduled ones — a pre-migration backup is still a backup.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEEP: 7
+        run: |
+          gh api --paginate "repos/${{ github.repository }}/actions/artifacts?per_page=100" \
+            --jq '.artifacts[] | select(.name | startswith("db-backup-")) | select(.expired | not) | "\(.created_at) \(.id) \(.name)"' \
+            | sort -r | tail -n +$((KEEP + 1)) \
+            | while read -r created id name; do
+                echo "deleting $name ($created)"
+                gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id"
+              done
+          echo "kept the newest $KEEP backups"

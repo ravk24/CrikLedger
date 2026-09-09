@@ -6,12 +6,13 @@ The Supabase database is the single source of truth for the club ledger, so it i
 - Runs from 18–21 Aug 2026 were the original *daily* schedule, renamed and slowed to 5-day on 2026-08-21.
 - **What is backed up:** a full `pg_dump` of the `public` schema — all tables, views, functions, and RLS policies, plus every row of data.
 - **Where it goes:** an encrypted workflow artifact on the run (GitHub → Actions → DB Backup (every 5 days) → pick a run → Artifacts).
-- **Retention:** each artifact is kept for **30 days**, then GitHub deletes it automatically — a rolling 30-day window with zero cleanup code.
-- **Encryption:** the repo is public, so every dump is gzip'd and GPG-encrypted (AES256) with a passphrase before upload. Without the passphrase the artifact is unreadable.
+- **Retention:** the **newest 7 backups** are kept, by count. The last step of every successful run lists the `db-backup-*` artifacts and deletes everything after the 7th — so the 8th backup evicts the 1st, the 9th evicts the 2nd, and so on (about 35 days of history at one run per 5 days). Manual runs count like scheduled ones. A failed run never prunes, so seven good backups stay seven. GitHub's own `retention-days` is set to 90 purely as a backstop. (Until 2026-09-09 this was a plain 30-day window.)
+- **Encryption:** every dump is gzip'd and GPG-encrypted (AES256) with a passphrase before upload. Without the passphrase the artifact is unreadable. The repo is private (it was public when this was written), but the encryption stays: anyone with repo access can download an artifact, and the passphrase is the second factor.
 - **Alerting:** GitHub emails the repo owner automatically if a scheduled run fails.
 
 ## Status
 
+- **2026-09-09:** `BACKUP_PASSPHRASE` rotated (the old one was lost; artifacts run7–run13 are encrypted with it and will be pruned or expire). Manual run #14 green with the new passphrase — artifact `db-backup-2026-09-09-run14`. Retention switched from a 30-day window to the newest-7 count above; the first prune removes run7.
 - **2026-08-22 (armed):** first successful run #7 — artifact `db-backup-2026-08-22-run7` (19 KB, expires 2026-09-21). Runs 1–6 failed because the `Production` environment had no secrets, then a direct-connection URL, then a pooler URL with user `postgres` instead of `postgres.<ref>`. If it ever breaks again, fall back to a local dump before each migration with the installed client: `"C:/Program Files/PostgreSQL/17/bin/pg_dump.exe" "<session-pooler-url>" --schema=public --no-owner --no-privileges --clean --if-exists -f backup.sql` (the session pooler URL is the app's `DATABASE_URL` with port `6543` replaced by `5432`). Last local dump: 2026-08-22, before migration 40.
 
 ## One-time setup (required before the first backup works)
@@ -21,7 +22,7 @@ Add two secrets at **GitHub → repo → Settings → Environments → Productio
 | Secret | Value |
 | --- | --- |
 | `SUPABASE_DB_URL` | The **Session pooler** connection string from Supabase Dashboard → **Connect** → *Session pooler*. It is the app's `DATABASE_URL` with port **5432** instead of 6543: `postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres`. ⚠️ Not the unmodified `DATABASE_URL` — `pg_dump` cannot use the transaction pooler (port 6543), and the workflow fails fast if it detects one. |
-| `BACKUP_PASSPHRASE` | A strong passphrase of your choosing. **Save it in a password manager too** — if it is lost, every backup is permanently unreadable. |
+| `BACKUP_PASSPHRASE` | A strong passphrase of your choosing. **Save it in a password manager too** — if it is lost, every backup is permanently unreadable. GitHub never shows a secret again; if it is lost, overwrite it with `gh secret set BACKUP_PASSPHRASE --env Production`, run the workflow once by hand, and decrypt that artifact to prove the new value works (done 2026-09-09). |
 
 Then trigger a manual run to verify: **Actions → DB Backup (every 5 days) → Run workflow** (or `gh workflow run "DB Backup (every 5 days)"`).
 
