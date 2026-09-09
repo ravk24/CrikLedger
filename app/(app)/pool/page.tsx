@@ -91,7 +91,6 @@ async function PoolLedgerData({ page }: { page: number }) {
           entries={entries}
           players={players.map((p) => ({ id: p.id, name: p.name }))}
           activePlayerCount={players.length}
-          teamSlug={team.slug}
         />
         {olderLink}
       </>
