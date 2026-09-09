@@ -21,7 +21,14 @@ jobs:
           sudo install -d /usr/share/postgresql-common/pgdg
           sudo curl --fail -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
-          sudo apt-get update -qq
+          # Refresh ONLY the PGDG list. The runner image ships third-party
+          # sources (Google Chrome, Microsoft…) we never use, and a hash
+          # mismatch on one of their mirrors failed two backups on
+          # 2026-09-09 (apt-get update exit 100) before this change.
+          sudo apt-get update -qq \
+            -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/pgdg.list \
+            -o Dir::Etc::sourceparts=- \
+            -o APT::Get::List-Cleanup=0
           sudo apt-get install -y -qq postgresql-client-17
 
       - name: Dump database
