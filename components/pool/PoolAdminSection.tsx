@@ -214,6 +214,7 @@ export function PoolAdminSection({
           mimeType={XLSX_TYPE}
           icon={FileSpreadsheet}
           errorText="Could not build the spreadsheet — try again."
+          share={false}
         />
       </div>
 

@@ -17,15 +17,30 @@ type FileProps = {
   // the reliable channel) and passed to navigator.share as best
   // effort. Callers build it server-side, admin-gated.
   shareText?: string;
+  // false = never offer the share sheet, straight to a download. Android
+  // Chrome's canShare() in the page says yes to any file, but its share
+  // dialog only takes images, audio/video, pdf, csv, txt and html and
+  // rejects the rest with NotAllowedError ("Permission denied").
+  share?: boolean;
   className?: string;
 };
 
+// The plain-download path: desktop, and any file the share sheet will
+// not take. Needs no user activation, so it also works after a slow fetch.
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // Icon-only "send this file somewhere" button, admin surfaces only (the
 // caller gates it). Native share sheet first, where the device has one
-// AND accepts the file type — the WhatsApp path on Android for images.
-// Plain download otherwise: desktop, and Android Chrome for .xlsx, which
-// it refuses in the share sheet. The caller picks the glyph and label
-// to match the path the file will actually take.
+// AND the caller allows it — the WhatsApp path on Android for images.
+// Plain download otherwise. The caller picks the glyph and label to
+// match the path the file will actually take.
 export function DownloadFileButton({
   endpoint,
   filename,
@@ -35,6 +50,7 @@ export function DownloadFileButton({
   icon: Icon,
   errorText,
   shareText,
+  share = true,
   className,
 }: FileProps) {
   const [busy, setBusy] = useState(false);
@@ -74,6 +90,7 @@ export function DownloadFileButton({
       const file = new File([blob], filename, { type: mimeType });
 
       if (
+        share &&
         typeof navigator !== "undefined" &&
         navigator.canShare?.({ files: [file] })
       ) {
@@ -83,24 +100,24 @@ export function DownloadFileButton({
             title,
             ...(shareText ? { text: shareText } : {}),
           });
+          return;
         } catch (e) {
+          const name = (e as Error)?.name;
           // Some UAs accept files but reject a text rider — retry
           // file-only rather than losing the share.
-          if (shareText && (e as Error)?.name === "TypeError") {
+          if (shareText && name === "TypeError") {
             await navigator.share({ files: [file], title });
-          } else {
-            throw e;
+            return;
           }
+          // NotAllowedError is Chrome's "Permission denied": the share
+          // dialog refused the file type, or the tap's user activation
+          // ran out while a cold function built the file. The file is
+          // already here — save it instead of showing an error.
+          if (name !== "NotAllowedError") throw e;
         }
-        return;
       }
 
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, filename);
     } catch (e) {
       // A cancelled native share rejects too — not worth an error.
       if ((e as Error)?.name !== "AbortError") {
