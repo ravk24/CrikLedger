@@ -33,7 +33,11 @@ export function LoginForm() {
             ? "This admin account has been revoked."
             : code === "INVALID_CREDENTIALS"
               ? "Invalid username or password"
-              : "Server error — please try again in a moment.",
+              : // The viewer's single seat is taken: the server's message
+                // names the superadmin and when the seat was taken.
+                code === "VIEWER_BUSY" && typeof body.error?.message === "string"
+                ? body.error.message
+                : "Server error — please try again in a moment.",
         );
         return;
       }

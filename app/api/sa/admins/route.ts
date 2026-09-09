@@ -10,12 +10,14 @@ import { ApiError, createAdminSchema, handleRouteError } from "@/lib/validate";
 export async function GET() {
   try {
     const superadmin = await requireTeamSuperadmin();
+    // The team viewer is a membership too, but it is managed by
+    // /api/sa/viewer and is not an admin: keep it out of this list.
     const res = await pool.query(
       `SELECT a.id, a.username, a.name, m.team_role AS role,
               m.is_active, m.created_at
          FROM team_memberships m
          JOIN admins a ON a.id = m.admin_id
-        WHERE m.team_id = $1
+        WHERE m.team_id = $1 AND m.team_role <> 'viewer'
         ORDER BY m.created_at ASC`,
       [superadmin.scopeId],
     );
@@ -67,6 +69,21 @@ export async function POST(req: NextRequest) {
       let tempPassword: string | null = null;
       if (existing.rows[0]) {
         adminId = existing.rows[0].id;
+        // A team's shared viewer login must never gain write rights on
+        // any team — including its own, via a superadmin typing its
+        // username here by mistake.
+        const viewer = await client.query(
+          `SELECT 1 FROM team_memberships
+            WHERE admin_id = $1 AND team_role = 'viewer'`,
+          [adminId],
+        );
+        if ((viewer.rowCount ?? 0) > 0) {
+          throw new ApiError(
+            409,
+            "VIEWER_ACCOUNT",
+            "That is a team viewer login — it cannot be made an admin",
+          );
+        }
         const already = await client.query(
           `SELECT is_active FROM team_memberships
             WHERE team_id = $1 AND admin_id = $2`,

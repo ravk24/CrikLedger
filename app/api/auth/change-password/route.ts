@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/lib/db";
+import { isViewer } from "@/lib/roles";
 import {
   requireAccount,
   setSessionCookie,
   signSession,
+  viewerReadOnlyError,
 } from "@/lib/session";
 import {
   ApiError,
@@ -16,6 +18,10 @@ export async function POST(req: NextRequest) {
     // requireAccount, not requireTeamAdmin: an account with no team must
     // still be able to change its password.
     const admin = await requireAccount({ allowPasswordChangePending: true });
+    // The team viewer's password is shared by the whole team and owned by
+    // the superadmin (POST /api/sa/viewer/reset-password). One player
+    // changing it would lock everyone else out.
+    if (isViewer(admin)) throw viewerReadOnlyError();
     const { current_password, new_password } = changePasswordSchema.parse(
       await req.json(),
     );

@@ -42,6 +42,14 @@ const monthFormat = new Intl.DateTimeFormat("en-IN", {
   timeZone: TZ,
 });
 const isoDayFormat = new Intl.DateTimeFormat("en-CA", { timeZone: TZ });
+const dateTimeFormat = new Intl.DateTimeFormat("en-IN", {
+  day: "2-digit",
+  month: "short",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+  timeZone: TZ,
+});
 
 export function formatRupees(amount: number): string {
   return rupeesFormat.format(Math.abs(Math.round(amount)));
@@ -75,6 +83,12 @@ export function formatDateShort(iso: string): string {
 // "August 2026" — month separators in the scheduled list.
 export function formatMonth(iso: string): string {
   return monthFormat.format(new Date(iso));
+}
+
+// "09 Sep, 10:15 pm" — when a session began, in the words a player reads
+// in the WhatsApp group (the viewer-seat message at login).
+export function formatDateTime(iso: string): string {
+  return dateTimeFormat.format(new Date(iso));
 }
 
 // Today's date (yyyy-mm-dd) in IST regardless of the server timezone.

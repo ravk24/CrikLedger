@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Check } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WHATSAPP_NUMBER } from "@/lib/contact";
@@ -49,6 +50,9 @@ function buyWhatsApp(name: string, price: string) {
 
 async function PurchasesData() {
   const nav = await getNavState();
+  // The shared team-viewer login buys nothing: purchases belong to the
+  // superadmin's own account. proxy.ts only proved a signed token.
+  if (nav.isViewer) redirect("/");
   const owned = {
     team_ledger: nav.hasTeamLedger,
     tournament_credit: nav.hasTournamentCredit,

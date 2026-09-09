@@ -12,10 +12,17 @@ export async function POST() {
     // There is no sessions table, so this is logout-everywhere by
     // design — every device holding a token for this account is signed
     // out. Per-device invalidation would need session rows (Feature 7).
+    //
+    // For the team viewer this is also what frees its single seat
+    // (migration 50): the next player can sign in the moment this one
+    // logs out. NULL is a no-op on every other account.
     const admin = await getSessionAdmin();
     if (admin) {
       await pool.query(
-        `UPDATE admins SET session_epoch = session_epoch + 1 WHERE id = $1`,
+        `UPDATE admins
+            SET session_epoch = session_epoch + 1,
+                viewer_session_started_at = NULL
+          WHERE id = $1`,
         [admin.id],
       );
     }

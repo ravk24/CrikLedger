@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { pool } from "@/lib/db";
 import { tournamentCreditsLeft } from "@/lib/entitlements";
+import { canWrite } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getCurrentTeam } from "@/lib/team";
@@ -71,6 +72,10 @@ async function ConsoleData() {
   const admin = await getSessionAdmin();
   if (!admin) redirect("/login");
   if (admin.mustChangePassword) redirect("/admin/password");
+  // proxy.ts only proves a signed token. A session that cannot write
+  // this team — the shared viewer login, the megaadmin observer — has
+  // no business on the console; every tile here is a write.
+  if (!canWrite(admin, "team", admin.activeTeamId)) redirect("/");
 
   const isSuperadmin = admin.activeTeamRole === "superadmin";
   const team = await getCurrentTeam();

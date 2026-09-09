@@ -124,6 +124,18 @@ export const createAdminSchema = z.object({
   name: z.string().trim().min(1).max(80),
 });
 
+// The team viewer's shared password, chosen by the superadmin on create
+// and on reset (app/api/sa/viewer). Same floor as changePasswordSchema.
+export const viewerPasswordSchema = z.object({
+  password: z.string().min(8).max(200),
+});
+
+// Create: the superadmin picks the viewer's user id too (same rules as
+// an admin's), so the team can be told something memorable.
+export const createViewerSchema = viewerPasswordSchema.extend({
+  username: usernameField,
+});
+
 // Operator console grant (app/api/ops/grants): which product, to whom.
 // `name` is only needed when the account does not exist yet; the route
 // enforces that on the create branch so an existing customer needs

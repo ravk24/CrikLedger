@@ -135,7 +135,9 @@ export function AccountMenu({ nav }: { nav: NavState }) {
           )}
 
           {separator}
-          {nav.hasTeamLedger && (
+          {/* The console is a writer's page: the shared viewer login
+              (and a megaadmin observing) would only be bounced from it. */}
+          {nav.hasTeamLedger && nav.canWriteActiveTeam && (
             <Link href="/admin" role="menuitem" className={itemClass} onClick={() => setOpen(false)}>
               Team admin
             </Link>
@@ -145,12 +147,18 @@ export function AccountMenu({ nav }: { nav: NavState }) {
               Operator console
             </Link>
           )}
-          <Link href="/purchases" role="menuitem" className={itemClass} onClick={() => setOpen(false)}>
-            Purchases
-          </Link>
-          <Link href="/admin/password" role="menuitem" className={itemClass} onClick={() => setOpen(false)}>
-            Change password
-          </Link>
+          {/* A viewer buys nothing and owns no password — the superadmin
+              holds both. Log out stays: it only drops this phone's cookie. */}
+          {!nav.isViewer && (
+            <>
+              <Link href="/purchases" role="menuitem" className={itemClass} onClick={() => setOpen(false)}>
+                Purchases
+              </Link>
+              <Link href="/admin/password" role="menuitem" className={itemClass} onClick={() => setOpen(false)}>
+                Change password
+              </Link>
+            </>
+          )}
           {separator}
           <button
             type="button"

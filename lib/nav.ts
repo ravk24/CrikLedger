@@ -1,5 +1,11 @@
 import { hasEntitlement, tournamentCreditsLeft } from "@/lib/entitlements";
-import { isMegaadmin, teamMemberships, type Membership } from "@/lib/roles";
+import {
+  canWrite,
+  isMegaadmin,
+  isViewer,
+  teamMemberships,
+  type Membership,
+} from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 
 // The adaptive 5-tab bar's state machine, kept pure and separate from
@@ -36,6 +42,12 @@ export type NavState = {
   teams: Membership[];
   activeTeamId: string | null;
   activeTeamName: string | null;
+  // Write verdicts for client components (AccountMenu, tab bars) that
+  // must not show a writer's links to the shared team-viewer login or
+  // the megaadmin observer. Entitlement says what was bought; these
+  // say what this session may do.
+  isViewer: boolean;
+  canWriteActiveTeam: boolean;
 };
 
 const GUEST_NAV: NavState = {
@@ -50,6 +62,8 @@ const GUEST_NAV: NavState = {
   teams: [],
   activeTeamId: null,
   activeTeamName: null,
+  isViewer: false,
+  canWriteActiveTeam: false,
 };
 
 export async function getNavState(): Promise<NavState> {
@@ -70,6 +84,9 @@ export async function getNavState(): Promise<NavState> {
     activeTeamId: admin.activeTeamId,
     activeTeamName:
       teams.find((t) => t.id === admin.activeTeamId)?.name ?? null,
+    isViewer: isViewer(admin),
+    canWriteActiveTeam:
+      !admin.mustChangePassword && canWrite(admin, "team", admin.activeTeamId),
   };
 }
 

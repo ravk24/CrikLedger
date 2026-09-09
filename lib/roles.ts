@@ -7,7 +7,9 @@
 //   - An ACCOUNT (admins row) has a platform_role and no powers of its own.
 //   - Power comes from MEMBERSHIP rows, one per (account, scope), where a
 //     scope is a team or a tournament. Each scope grants 'superadmin'
-//     (the purchaser) or 'admin' (<= 2 per scope).
+//     (the purchaser), 'admin' (<= 2 per scope), or — teams only, since
+//     migration 49 — 'viewer': one shared read-only login the whole team
+//     uses. A viewer reads what a member reads and writes nothing.
 //   - A person may hold different roles in different scopes: superadmin of
 //     their own team, admin on someone else's.
 //   - megaadmin is PLATFORM level: it reads every scope so user-reported
@@ -16,7 +18,7 @@
 
 export type PlatformRole = "user" | "megaadmin";
 export type ScopeKind = "team" | "tournament";
-export type ScopeRole = "superadmin" | "admin";
+export type ScopeRole = "superadmin" | "admin" | "viewer";
 
 export type Membership = {
   kind: ScopeKind;
@@ -44,6 +46,21 @@ export type Principal = {
 
 export function isMegaadmin(p: Principal | null): boolean {
   return p?.platformRole === "megaadmin";
+}
+
+/**
+ * The shared team-viewer login: an account whose every membership is a
+ * 'viewer' row. The viewer routes never link an existing account and
+ * /api/sa/admins refuses to link a viewer one, so in practice it holds
+ * exactly one. Used for account-level decisions (no password change,
+ * logout must not sign out the other phones); scope decisions still go
+ * through canWrite, which is what refuses the writes.
+ */
+export function isViewer(p: Principal | null): boolean {
+  if (!p || isMegaadmin(p)) return false;
+  return (
+    p.memberships.length > 0 && p.memberships.every((m) => m.role === "viewer")
+  );
 }
 
 /**
@@ -99,6 +116,11 @@ export function canRead(
  * a bug in the /ops console from corrupting a customer's ledger, and what
  * keeps the platform account off other people's "edited by" stamps.
  *
+ * A 'viewer' membership is refused too: membership alone used to be
+ * enough here, and the day a third role arrived that would have made
+ * the shared read-only login a full admin. The role is consulted, not
+ * just the row.
+ *
  * Account-level actions the megaadmin legitimately performs (password
  * reset, suspend) are not scope writes and do not come through here.
  */
@@ -109,7 +131,8 @@ export function canWrite(
 ): boolean {
   if (!scopeId || !p) return false;
   if (isMegaadmin(p)) return false;
-  return isScopeMember(p, kind, scopeId);
+  const role = scopeRoleFor(p, kind, scopeId);
+  return role !== null && role !== "viewer";
 }
 
 /** Scope writes reserved for the purchaser (destructive actions, managing admins). */

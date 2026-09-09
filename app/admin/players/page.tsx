@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { PlayerManager, type AdminPlayerRow } from "@/components/admin/PlayerManager";
 import { Skeleton } from "@/components/ui/skeleton";
+import { canWrite } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { pool } from "@/lib/db";
 import { getCurrentTeamId } from "@/lib/team";
@@ -13,6 +14,8 @@ async function PlayersData() {
   const admin = await getSessionAdmin();
   if (!admin) redirect("/login");
   if (admin.mustChangePassword) redirect("/admin/password");
+  // Same rule as /admin: a read-only session gets no management page.
+  if (!canWrite(admin, "team", admin.activeTeamId)) redirect("/");
 
   const teamId = await getCurrentTeamId(pool);
   const res = await pool.query(

@@ -61,7 +61,7 @@ function buildFeatures(nav: NavState): Feature[] {
       icon: Receipt,
       iconClass: "bg-credit-light text-credit-foreground",
     },
-    ...(nav.signedIn
+    ...(nav.signedIn && !nav.isViewer
       ? [
           {
             label: "Purchases",

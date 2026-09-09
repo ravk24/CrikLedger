@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { HomeIntro } from "@/components/install/HomeIntro";
 import { pool } from "@/lib/db";
 import { getNavState } from "@/lib/nav";
+import { canWrite } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getCurrentTeam } from "@/lib/team";
@@ -111,7 +112,9 @@ async function DashboardData() {
       <PlayerGrid
         players={players}
         downloadSlot={
-          admin && !admin.mustChangePassword ? (
+          // The share image is admin-only server-side (requireTeamAdmin),
+          // so the button is too: the team viewer reads, it does not post.
+          admin && !admin.mustChangePassword && canWrite(admin, "team", team.id) ? (
             <DownloadImageButton
               endpoint="/api/share/balances"
               filename="player-balances.png"

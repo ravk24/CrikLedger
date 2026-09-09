@@ -6,6 +6,7 @@ import {
   isEpochValid,
   isMegaadmin,
   isScopeSuperadmin,
+  isViewer,
   resolveActiveTeamId,
   scopeRoleFor,
   type Membership,
@@ -190,5 +191,64 @@ describe("megaadmin vs ordinary account", () => {
     expect(isMegaadmin(megaadmin)).toBe(true);
     expect(isMegaadmin(owner)).toBe(false);
     expect(isScopeSuperadmin(owner, "team", TEAM_A)).toBe(true);
+  });
+});
+
+// The shared team-viewer login (migration 49): a membership row whose
+// role is 'viewer'. It reads like a member and writes like a stranger.
+// canWrite used to grant ANY membership row — the load-bearing case here
+// is that it now consults the role.
+describe("viewer role", () => {
+  const viewer = principal([teamMembership(TEAM_A, "alpha", "viewer")]);
+  // Admin on one team, viewer on another — allowed by the model even
+  // though the viewer routes never create it.
+  const mixed = principal([
+    teamMembership(TEAM_A, "alpha", "admin"),
+    teamMembership(TEAM_B, "bravo", "viewer"),
+  ]);
+
+  it("is reported as the explicit role held", () => {
+    expect(scopeRoleFor(viewer, "team", TEAM_A)).toBe("viewer");
+    expect(scopeRoleFor(viewer, "team", TEAM_B)).toBeNull();
+  });
+
+  it("reads its own team and nothing else", () => {
+    expect(canRead(viewer, "team", TEAM_A)).toBe(true);
+    expect(canRead(viewer, "team", TEAM_B)).toBe(false);
+  });
+
+  it("never writes, even where it is a member", () => {
+    expect(canWrite(viewer, "team", TEAM_A)).toBe(false);
+    expect(canAdminister(viewer, "team", TEAM_A)).toBe(false);
+  });
+
+  it("is refused per scope, not per account", () => {
+    expect(canWrite(mixed, "team", TEAM_A)).toBe(true);
+    expect(canWrite(mixed, "team", TEAM_B)).toBe(false);
+    expect(canRead(mixed, "team", TEAM_B)).toBe(true);
+  });
+
+  it("isViewer is true only for a pure viewer account", () => {
+    expect(isViewer(viewer)).toBe(true);
+    expect(isViewer(mixed)).toBe(false);
+    expect(isViewer(owner)).toBe(false);
+    expect(isViewer(stranger)).toBe(false);
+    expect(isViewer(megaadmin)).toBe(false);
+    expect(isViewer(null)).toBe(false);
+  });
+
+  it("resolves its one team as the active team", () => {
+    expect(resolveActiveTeamId(viewer, null)).toBe(TEAM_A);
+    expect(resolveActiveTeamId(viewer, "alpha")).toBe(TEAM_A);
+    expect(resolveActiveTeamId(viewer, "forged")).toBe(TEAM_A);
+  });
+
+  it("keeps the megaadmin refused even with a stray viewer row", () => {
+    const strayMega = principal(
+      [teamMembership(TEAM_A, "alpha", "viewer")],
+      "megaadmin",
+    );
+    expect(canWrite(strayMega, "team", TEAM_A)).toBe(false);
+    expect(isViewer(strayMega)).toBe(false);
   });
 });

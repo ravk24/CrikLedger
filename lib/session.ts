@@ -244,6 +244,17 @@ type RequireOptions = {
   allowPasswordChangePending?: boolean;
 };
 
+// The shared team-viewer login attempted a write. One code for every
+// surface — pool, matches, players, tournaments, share images, export,
+// password change — so the UI can say the same thing everywhere.
+export function viewerReadOnlyError(): ApiError {
+  return new ApiError(
+    403,
+    "VIEWER_READ_ONLY",
+    "The team viewer login can only view — it cannot change anything",
+  );
+}
+
 /**
  * Signed in, nothing more. The guard for account-level routes (signup
  * follow-ups, change password, team switch) — a fresh account holds no
@@ -305,9 +316,11 @@ async function requireScope(
     : canWrite(admin, kind, id);
   if (!allowed) {
     const role = scopeRoleFor(admin, kind, id);
-    throw role === null
-      ? new ApiError(403, "NOT_A_MEMBER", "You do not have access to this team")
-      : new ApiError(403, "SCOPE_FORBIDDEN", "Superadmin only");
+    if (role === null) {
+      throw new ApiError(403, "NOT_A_MEMBER", "You do not have access to this team");
+    }
+    if (role === "viewer") throw viewerReadOnlyError();
+    throw new ApiError(403, "SCOPE_FORBIDDEN", "Superadmin only");
   }
   return { ...admin, scopeId: id, scopeRole: scopeRoleFor(admin, kind, id)! };
 }
@@ -370,6 +383,9 @@ export async function requireTournamentWrite(
   if (!row) throw new ApiError(404, "NOT_FOUND", "Tournament not found");
   const kind: ScopeKind = row.team_id ? "team" : "tournament";
   const scopeId = row.team_id ?? row.id;
+  if (scopeRoleFor(admin, kind, scopeId) === "viewer") {
+    throw viewerReadOnlyError();
+  }
   if (!canWrite(admin, kind, scopeId)) {
     throw new ApiError(
       403,

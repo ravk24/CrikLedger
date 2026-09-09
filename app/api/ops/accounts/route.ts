@@ -42,6 +42,10 @@ export async function GET(req: NextRequest) {
             WHERE owner_admin_id = a.id ORDER BY created_at LIMIT 1
          ) t ON TRUE
         WHERE a.platform_role <> 'megaadmin' AND a.is_active
+          -- A team's shared viewer login is not a customer: a purchase
+          -- must never attach to it (migration 49).
+          AND NOT EXISTS (SELECT 1 FROM team_memberships vm
+                           WHERE vm.admin_id = a.id AND vm.team_role = 'viewer')
           AND ($1 = '' OR a.username ILIKE '%' || $1 || '%'
                OR a.name ILIKE '%' || $1 || '%'
                OR a.email ILIKE '%' || $1 || '%')

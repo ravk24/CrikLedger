@@ -5,6 +5,7 @@ import { PoolAdminSection } from "@/components/pool/PoolAdminSection";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DemoLedger } from "@/components/guest/DemoLedger";
 import { getNavState } from "@/lib/nav";
+import { canWrite } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getCurrentTeam } from "@/lib/team";
@@ -66,7 +67,12 @@ async function PoolLedgerData({ page }: { page: number }) {
     </Link>
   ) : null;
 
-  if (entries.length === 0 && !admin) {
+  // A session alone is not a writer: the team viewer (migration 49) and
+  // the megaadmin observer both read this page and get the plain list.
+  const canEdit =
+    !!admin && !admin.mustChangePassword && canWrite(admin, "team", team.id);
+
+  if (entries.length === 0 && !canEdit) {
     return (
       <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
         The ledger is empty — deposits and match collections will appear here.
@@ -74,7 +80,7 @@ async function PoolLedgerData({ page }: { page: number }) {
     );
   }
 
-  if (admin && !admin.mustChangePassword) {
+  if (canEdit) {
     const players = (playersRes.data ?? []) as Pick<
       PlayerPublic,
       "id" | "name" | "is_active"

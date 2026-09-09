@@ -6,6 +6,7 @@ import {
   Check,
   ChevronDown,
   Crown,
+  Eye,
   ShieldCheck,
   Trophy,
   UserPlus,
@@ -73,6 +74,17 @@ export function PrivilegesCard({ name, teamName, adminCount, creditsLeft }: Prop
           You can invite up to <strong>2 admins</strong> ({adminCount}/2 in
           use). Admins can add and edit ledger entries, matches and players —
           only you can delete them, or remove an admin.
+        </>
+      ),
+    },
+    {
+      icon: Eye,
+      text: (
+        <>
+          One shared <strong>Team viewer</strong> login lets players see
+          balances, the ledger and the schedule without editing anything —
+          one player at a time. Create it, sign the viewer out, or reset its
+          password under Manage admins.
         </>
       ),
     },

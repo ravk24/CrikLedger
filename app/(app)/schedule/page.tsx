@@ -5,6 +5,7 @@ import { GuestMatchFlow } from "@/components/guest/GuestMatchFlow";
 import { ScheduleMatch } from "@/components/schedule/ScheduleMatch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getNavState } from "@/lib/nav";
+import { canWrite, isViewer } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
@@ -46,12 +47,30 @@ async function ScheduleData() {
   // pre-made match to complete and share, entirely client-side.
   if (!nav.hasTeamLedger) return <GuestMatchFlow />;
   // Same gate the old /schedule/new page applied before showing its
-  // button — an account still on its first-login password cannot write.
+  // button — an account still on its first-login password cannot write,
+  // and neither can a member whose role is read-only. The team viewer
+  // does not get a greyed tile: it is a role that never schedules, so
+  // the action is absent rather than disabled.
   const admin = await getSessionAdmin();
-  return <ScheduleChooser canSchedule={!!admin && !admin.mustChangePassword} />;
+  const canSchedule =
+    !!admin &&
+    !admin.mustChangePassword &&
+    canWrite(admin, "team", admin.activeTeamId);
+  return (
+    <ScheduleChooser
+      canSchedule={canSchedule}
+      showSchedule={!isViewer(admin)}
+    />
+  );
 }
 
-function ScheduleChooser({ canSchedule }: { canSchedule: boolean }) {
+function ScheduleChooser({
+  canSchedule,
+  showSchedule,
+}: {
+  canSchedule: boolean;
+  showSchedule: boolean;
+}) {
   return (
     <>
       <div>
@@ -61,7 +80,9 @@ function ScheduleChooser({ canSchedule }: { canSchedule: boolean }) {
         </p>
       </div>
       <section className="grid grid-cols-2 gap-3">
-        <ScheduleMatch canSchedule={canSchedule} tileClass={ACTION_CLASS} />
+        {showSchedule && (
+          <ScheduleMatch canSchedule={canSchedule} tileClass={ACTION_CLASS} />
+        )}
         {OPTIONS.map((option) => {
           const Icon = option.icon;
           return (

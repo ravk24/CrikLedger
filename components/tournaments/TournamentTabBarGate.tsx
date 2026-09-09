@@ -1,12 +1,21 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { CalendarDays, Home, Settings, Undo2, Wallet } from "lucide-react";
+import { isViewer } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { TournamentTabBar } from "./TournamentTabBar";
 
 async function Gate() {
   const admin = await getSessionAdmin();
-  return <TournamentTabBar isAdmin={!!admin && !admin.mustChangePassword} />;
+  // The bar has no tournament id (it lives in the layout), so this is
+  // the account-level gate; the Admin page itself re-checks canWrite for
+  // the tournament's own scope. The shared viewer login is greyed here
+  // rather than sent to a page that would only bounce it.
+  return (
+    <TournamentTabBar
+      isAdmin={!!admin && !admin.mustChangePassword && !isViewer(admin)}
+    />
+  );
 }
 
 // Static placeholder for the prerendered shell — same geometry as the

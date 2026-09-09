@@ -2,11 +2,15 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { ChangePasswordForm } from "@/components/admin/ChangePasswordForm";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isViewer } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 
 async function PasswordGate() {
   const admin = await getSessionAdmin();
   if (!admin) redirect("/login");
+  // The team viewer's password belongs to the superadmin (it is shared
+  // by the whole team); the route refuses too, so no form is offered.
+  if (isViewer(admin)) redirect("/");
 
   return (
     <>
