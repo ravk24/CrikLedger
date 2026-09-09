@@ -2,7 +2,7 @@
 
 import { startTransition, useEffect, useOptimistic, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Award } from "lucide-react";
+import { Medal } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { ViceCaptainMark } from "@/components/shared/ViceCaptainMark";
 
@@ -73,7 +73,7 @@ export function ViceCaptainTile({ players }: Props) {
         className="flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface shadow-card p-4 text-left text-text-primary"
       >
         <span className="flex size-9 items-center justify-center rounded-md bg-accent-light text-accent">
-          <Award size={18} />
+          <Medal size={18} />
         </span>
         <span className="text-sm font-semibold">
           Team vice-captain

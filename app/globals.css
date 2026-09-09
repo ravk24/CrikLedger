@@ -74,7 +74,8 @@
   --color-gold-light: #fef08a;
   --color-gold-foreground: #713f12;
 
-  /* Role: VICE-CAPTAIN — silver ("VC" pill) */
+  /* Role: VICE-CAPTAIN — silver (medal + "VC" pill) */
+  --color-silver: #6b7280;
   --color-silver-light: #e5e7eb;
   --color-silver-foreground: #374151;
 
