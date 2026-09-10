@@ -1,10 +1,10 @@
-# Memory — session 28: single-ceiling fee rounding, fee preview columns, ball default 65
+# Memory — session 28: ground presets + car-fee prefill, single-ceiling fee rounding, fee preview columns, ball default 65
 
-Last updated: 2026-09-10, late morning
+Last updated: 2026-09-10, midday
 
 ## What was built
 
-- **Ground presets + car-fee prefill (Feature 6 slice; code uncommitted; migration 51 APPLIED to
+- **Ground presets + car-fee prefill (Feature 6 slice, commit `005da13`; migration 51 APPLIED to
   prod on 2026-09-10 after backup run 34437987910 went green — 51 migrations now).** Verified in
   the browser as superadmin: console tile → `/admin/grounds` empty state → added "MCG" ₹50 and
   "Barne, Pusane" ₹250 (real presets for LR-SuperGiants, left in place; edit as needed) → a
@@ -86,9 +86,11 @@ Last updated: 2026-09-10, late morning
 
 ## Current state
 
-- **Git:** `main` at `574c5e7` (single-ceiling rounding) on top of `eb8f1f8` (notes) and
-  `ec0dbb2` (fee preview columns, ball 65), all pushed; Vercel deploys from `main`. Tree clean
-  apart from this notes commit. Verified in the local app before the commit: the same 11-player /
+- **Git:** `main` at `005da13` (ground presets) on top of `4108d04` (notes), `574c5e7`
+  (single-ceiling rounding), `eb8f1f8` (notes) and `ec0dbb2` (fee preview columns, ball 65), all
+  pushed; Vercel deploys from `main`. Tree clean apart from this notes commit.
+- **DB:** 51 migrations applied. `team_grounds` holds two real presets for LR-SuperGiants: "MCG"
+  ₹50 and "Barne, Pusane" ₹250 (the owner may edit them). Still 65 scheduled / 0 completed matches. Verified in the local app before the commit: the same 11-player /
   3-car / 3,565 case previews 393 / 3,573 / +8 (nothing submitted). `context/ui-registry.md`
   (git-ignored) documents the `SummaryRow` totals pattern.
 - **Verified:** tsc clean, eslint clean on the three files, `vitest run lib/demo engine` 47/47. In the local app: Costs step prefilled Ball cost 65; with a 90000 ground fee the fee preview showed `₹90,065` / `₹22,517` / `₹90,068` / `+₹3` on one line each, right-aligned.
@@ -97,6 +99,9 @@ Last updated: 2026-09-10, late morning
 
 ## Next session starts with
 
+0. On the phone after the deploy: open Console → "Grounds & car fee", check the two presets and
+   fix the amounts, add the other grounds (CSMCC, Lords Mawal, …); then Schedule a Match and
+   confirm the dropdown, and Complete match on an MCG fixture to see ₹50 prefilled.
 1. On the phone after the deploy: open a scheduled match → Complete match → fee preview and confirm the surplus label wraps inside the left column with the amount on one line, and that the 11-player case reads 393 / +8. Because the phone's service worker caches static chunks, the first load after a deploy is fine (hashed URLs), no action needed.
 2. Carried from session 27: create the real team viewer from Manage admins (user id + password), share in the group, have a second player try to sign in while the first is in — expect the "already in use … Ask Ravi Kant" message; then try Sign out the viewer from the card.
 3. Carried: known issue 10.10 (abandon and completed-match DELETE still orphan `pending_cleared_entry_id`); browser check of the delete-from-ledger flow as a non-super admin.
@@ -104,6 +109,9 @@ Last updated: 2026-09-10, late morning
 
 ## Open questions
 
+- Ground presets: should tournament scheduling get the same dropdown (tournament venue is free
+  text on the tournament, not per match)? Should a preset also carry a default ground fee? Should
+  "Other ground…" offer "save as preset" to a superadmin? None requested yet.
 - Should the guest demo sample also move to ball 65, accepting the re-derived fixture numbers?
 - Should the tournament schedule tab's "Scheduled" card also become "Matches"? (carried)
 - Should a viewer ever get the tournament balances share image, or is view-only final? (carried; today refused with `VIEWER_READ_ONLY`)
