@@ -44,7 +44,7 @@ export const DEMO_DRIVERS = ["d2", "d5", "d9"] as const;
 
 export const DEMO_COSTS = {
   ground: "2500",
-  ball: "60", // the club default the paid wizard prefills
+  ball: "60", // sample cost — the paid wizard prefills 65; the demo totals are pinned by fixtures.test.ts
   other: "0",
   allowance: "250",
 } as const;

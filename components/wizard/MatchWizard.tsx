@@ -143,7 +143,7 @@ export function MatchWizard({
   const [costs, setCosts] = useState<WizardCosts>(
     initial?.costs ?? {
       ground: initialGroundFee ? String(initialGroundFee) : "",
-      ball: "60", // club default ball cost — editable like every prefill
+      ball: "65", // club default ball cost — editable like every prefill
       other: "0",
       allowance: "",
     },

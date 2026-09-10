@@ -104,39 +104,57 @@ export function StepFeePreview({
 
       <div className="rounded-md bg-surface-secondary p-3 text-sm">
         {totals.car_count > 0 && carAllowancePerCar > 0 && (
-          <div className="mb-0.5 flex justify-between">
-            <span className="text-text-secondary">
-              Cars {totals.car_count} × ₹{formatRupees(carAllowancePerCar)}
-            </span>
-            <Money
-              amount={totals.car_count * carAllowancePerCar}
-              className="font-semibold"
-            />
-          </div>
-        )}
-        <div className="flex justify-between">
-          <span className="text-text-secondary">Total match cost</span>
-          <Money amount={totals.total_cost} className="font-semibold" />
-        </div>
-        <div className="mt-0.5 flex justify-between">
-          <span className="text-text-secondary">Per head</span>
-          <Money amount={perHead} className="font-semibold" />
-        </div>
-        <div className="mt-0.5 flex justify-between">
-          <span className="text-text-secondary">Collected</span>
-          <Money amount={totals.collected_total} className="font-semibold" />
-        </div>
-        <div className="mt-0.5 flex justify-between">
-          <span className="font-semibold text-credit">
-            Rounding surplus credited to {fundLabel}
-          </span>
-          <Money
-            amount={totals.surplus_to_pool}
-            variant="signed"
-            className="font-bold"
+          <SummaryRow
+            className="mb-0.5"
+            label={`Cars ${totals.car_count} × ₹${formatRupees(carAllowancePerCar)}`}
+            amount={totals.car_count * carAllowancePerCar}
           />
-        </div>
+        )}
+        <SummaryRow label="Total match cost" amount={totals.total_cost} />
+        <SummaryRow className="mt-0.5" label="Per head" amount={perHead} />
+        <SummaryRow
+          className="mt-0.5"
+          label="Collected"
+          amount={totals.collected_total}
+        />
+        <SummaryRow
+          className="mt-0.5"
+          label={`Rounding surplus credited to ${fundLabel}`}
+          labelClass="font-semibold text-credit"
+          amount={totals.surplus_to_pool}
+          variant="signed"
+          amountClass="font-bold"
+        />
       </div>
+    </div>
+  );
+}
+
+// Label wraps inside the left column; the amount keeps a fixed right column
+// wide enough for a five-digit signed value (+₹12,345) and never breaks.
+function SummaryRow({
+  label,
+  amount,
+  variant = "neutral",
+  labelClass = "text-text-secondary",
+  amountClass = "font-semibold",
+  className,
+}: {
+  label: string;
+  amount: number;
+  variant?: "neutral" | "signed";
+  labelClass?: string;
+  amountClass?: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex items-baseline justify-between gap-3", className)}>
+      <span className={cn("min-w-0 flex-1", labelClass)}>{label}</span>
+      <Money
+        amount={amount}
+        variant={variant}
+        className={cn("w-24 shrink-0 whitespace-nowrap text-right", amountClass)}
+      />
     </div>
   );
 }
