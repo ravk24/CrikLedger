@@ -1,118 +1,105 @@
-# Memory — session 28: ground presets + car-fee prefill, single-ceiling fee rounding, fee preview columns, ball default 65
+# Memory — session 29: ten viewer seats with per-seat sign-out (migration 52, 53 pending)
 
-Last updated: 2026-09-10, midday
+Last updated: 2026-09-10, afternoon
 
 ## What was built
 
-- **Ground presets + car-fee prefill (Feature 6 slice, commit `005da13`; migration 51 APPLIED to
-  prod on 2026-09-10 after backup run 34437987910 went green — 51 migrations now).** Verified in
-  the browser as superadmin: console tile → `/admin/grounds` empty state → added "MCG" ₹50 and
-  "Barne, Pusane" ₹250 (real presets for LR-SuperGiants, left in place; edit as needed) → a
-  lowercase "mcg" duplicate was refused → Schedule sheet shows the Ground dropdown ("MCG · ₹50 /
-  car", "Other ground…" reveals the text field + hint) → Complete match on the 12 Sept MCG fixture
-  reached the Car fee step with ₹50 prefilled and "Car fee for "MCG" is above…"; nothing submitted.
-  Owner asked for a superadmin "Manage Ground / Car-Fee" screen, a ground dropdown at scheduling,
-  and the car fee autofilled at completion, plus the cost. Cost answer given: list ≈1–3 KB, cached
-  per team for hours (`lib/team.ts getTeamGrounds`, tag `team-grounds:<id>`), zero extra reads on
-  submit; 100 matches ≈ a few KB warm, ≤0.4 MB worst case; one extra ~30–80 ms hop only on a cold
-  cache. Built: `db/migration-51.sql` (recreates `team_grounds` + `team_grounds_public`, unique on
-  `team_id, lower(btrim(name))`, no seed; **dry-run on prod in BEGIN…ROLLBACK passed**),
-  `lib/grounds.ts` (`findGround`, `activeGrounds`, `groundKey`) + tests, `app/api/sa/grounds`
-  (GET/POST) and `[id]` (PATCH/DELETE) with `GROUND_EXISTS`, `groundSchema`/`editGroundSchema` in
-  `lib/validate.ts`, `/admin/grounds` page + `components/admin/GroundManager.tsx` (PlayerManager
-  clone), console tile "Grounds & car fee", `components/schedule/GroundPicker.tsx` (select +
-  "Other ground…") used by `ScheduleMatchWizard` and `ScheduleMatchSheet`, `getTeamGrounds` read in
-  `app/(app)/schedule/page.tsx` and `app/matches/[id]/page.tsx` (→ `MatchAdminActions` →
-  `MatchWizard carAllowancePreset` → `StepCarAllowance known`). Docs updated (06, 08 R-14d, 09,
-  02, README, ui-registry). 111 tests, tsc, eslint green. Browser check pending the migration.
-- **Single-ceiling fee rounding (rule change, commit `574c5e7`).** Owner's phone
-  screenshot showed 11 players / 3 cars / cash 3,565 → per head 394, surplus 19; they expected 393
-  and 8. Cause: `engine/calc.ts` CEILed the cash share and the car share separately, so the two
-  remainders added (up to 2×heads). Now `sharerFee = CEIL(cash/H + pot/S)` computed on integers
-  `(cash·S + pot·H)/(H·S)`, own-way stays `CEIL(cash/H)`, and `carSharePerSharer` is exported as
-  `sharerFee − baseShare` so every "Per head = perPlayerFee + carSharePerSharer" consumer is
-  untouched. Surplus is now strictly below the head count. `engine/tournamentFee.ts` mirrors it
-  (`(joiningFee·sharers + pool·N·att)/(N·att·sharers)`). New `engine/reconstruct.ts`
-  (`reconstructMatchFees`) rebuilds a completed match's figures from the stored
-  `match_participants` rows; `app/matches/[id]/page.tsx` uses it instead of re-running the engine,
-  so a match always agrees with its own FeeTable whichever rule wrote it. Tests: `calc.test.ts`
-  (two pins changed: demo case 301/51/2561/1, guest-driver case 300/50/3350/0; property test now
-  asserts surplus < heads and the integer ceiling), `tournamentFee.test.ts` (canonical 301/51/2561/1),
-  `lib/demo/fixtures.ts` + test (ledger row 2572 → 2561, guest cases 276 and 282),
-  `engine/reconstruct.test.ts` (6 cases incl. old-rule rows 302/52 → 2572/12). Copy:
-  `StepSharedCar` caption "about ₹68 each". Docs: README rule block + worked example 3,
-  `CrikLedger-docs/08-business-rules.md` R-11/R-13 + "History 2 (2026-09-10)". 106 tests, tsc, eslint green.
-
-- **Fee preview summary layout** (`components/wizard/StepFeePreview.tsx`, commit `ec0dbb2`): the five totals rows (Cars, Total match cost, Per head, Collected, Rounding surplus) now render through a local `SummaryRow` helper. Label column is `min-w-0 flex-1` and wraps inside its width; amount column is `<Money>` with `w-24 shrink-0 whitespace-nowrap text-right`, so a signed five-digit value (`+₹12,345`) stays on one line and every amount shares a right edge. `items-baseline gap-3` keeps the amount on the label's first line. Colours and weights unchanged. Prompted by the owner's screenshot where "Rounding surplus credited to pool" wrapped and "+₹10" split across two lines.
-- **Ball cost prefill 60 → 65** (`components/wizard/MatchWizard.tsx`). This literal is the only product default: the DB column default stays 0, the zod schema has no default, edit mode reseeds from the stored row.
-- `context/ui-registry.md` StepFeePreview entry notes the `SummaryRow` pattern.
+- **Ten seats on the team viewer login (commit `ed0a6ae`, pushed; Vercel deploys from `main`).**
+  Owner asked for up to 10 players signed in on the shared viewer credential at once (first said
+  5, then settled on 10), JWT still 30 days with a fresh login after, and a per-seat list with
+  sign-out on the superadmin card.
+  - `db/migration-52.sql` — **APPLIED to prod** — additive only: `viewer_sessions (id, admin_id →
+    admins ON DELETE CASCADE, started_at, device TEXT ≤ 40)`, index on `admin_id`, RLS + REVOKE,
+    no public view.
+  - `db/migration-53.sql` — **NOT applied** — drops `admins.viewer_session_started_at`. Apply only
+    after the `ed0a6ae` deploy is live (old code wrote the column on every logout; new code never
+    touches it).
+  - `lib/viewerSeats.ts` (+ 10 tests): `VIEWER_SEAT_LIMIT = 10`, `viewerBusyMessage`,
+    `seatsInUseLabel`, `deviceLabel(userAgent)` (coarse: iPhone / Android phone / Windows PC…),
+    `isSeatId`, `seatCheckPasses`. `ViewerRow`/`ViewerSeat` types live here now.
+  - `lib/cookies.ts` exports `SESSION_MAX_AGE_SECONDS`; `lib/session.ts` re-exports it. The reap
+    window and the card's "live seats" filter both bind it as `make_interval(secs => $n)`.
+  - `lib/session.ts`: `SessionPayload.sid?`, `verifySessionToken` exported and returns `sid` only
+    when it is a UUID; the one session query adds `seat_alive` (PK EXISTS on `$2::uuid`, no-op when
+    null); after the principal is built, `seatCheckPasses` rejects a viewer token without a seat or
+    any token whose seat row is gone; `SessionAdmin.seatId`.
+  - `app/api/auth/login/route.ts`: `claimViewerSeat(adminId, userAgent, ownSeat)` in
+    `withTransaction` — `FOR UPDATE` on the admins row, delete the caller's own existing seat (same
+    browser signing in again replaces, not doubles), reap rows older than 30 days (separate
+    statement, not a CTE), count, `409 VIEWER_BUSY` "All 10 viewer seats are in use. Ask <SA>
+    (superadmin) to sign one out from Manage admins…", else INSERT and put the id in the token.
+  - `app/api/auth/logout/route.ts`: viewer deletes its own seat row, **no epoch bump**; every other
+    account bumps the epoch as before.
+  - `app/api/sa/viewer/signout` = sign-out-all (delete all rows + epoch bump, returns
+    `signed_out`); `reset-password` and `DELETE /api/sa/viewer` also delete all rows; new
+    `app/api/sa/viewer/sessions/[id]` DELETE = per-seat sign-out, joined to the caller's team's
+    viewer, no bump, 404 for a non-UUID or a gone row.
+  - `lib/viewer.ts loadViewerCard(teamId)` shared by GET `/api/sa/viewer` and
+    `app/admin/manage/page.tsx`. `components/admin/ViewerManager.tsx`: "N of 10 seats in use"
+    block with a row per seat (device, since time, Sign out), "Sign out all", three
+    `ConfirmDialog`s.
+  - Docs updated: 06 (table, index, 22 tables), 07 (§6a seat rule, epoch table, per-request step
+    6, W9), 09 (route table, error table, counts 53/67), 12, README, `context/ui-registry.md`.
+  - Verified: tsc, eslint, 121 vitest, `npm run build` all green. Session/card/reap queries run
+    read-only against the live schema. **Not verified end to end**: no viewer login, no UI render —
+    the only DB is prod and the auto-mode classifier blocks writes to it, even rolled back.
 
 ## Decisions made
 
-- **Rounding rule (owner, 2026-09-10):** single ceiling per head; the 2026-08-25 "two ceilings are
-  canonical" text was wrong about the size of the effect. Old matches keep stored fees and are
-  displayed from them (no re-save, no balance change); tournaments mirror the change; settled
-  tournaments untouched. In practice the DB had **0 completed matches and 0 participant rows** on
-  2026-09-10 (65 scheduled), so nothing historical was affected.
-
-- **Guest demo fixture stays at ball 60** (`lib/demo/fixtures.ts`). `lib/demo/fixtures.test.ts` pins the sample to the canonical 2560-cost numbers (total 3310, per head 233, collected 2572, surplus 12) and `DEMO_LEDGER[0]` / `DEMO_POOL_BALANCE` depend on them. Bumping it means re-deriving that chain; only the comment changed. Revisit if the owner wants the demo to match the live default.
-- Sibling read-only renderings of the same totals (`components/matches/CostBreakdownFooter.tsx`, `components/guest/GuestMatchSheet.tsx`, `app/api/share/match-sheet/route.tsx`) were left alone; the screenshot was the wizard step only.
-- No per-team ball-price setting was added. `teams` has `status_threshold` and `car_rate_per_km` but no ball fee column; if the owner wants per-team defaults later, thread it the way `initialGroundFee` already reaches `MatchWizard`.
+- **Seat = row, token carries `sid`.** Non-viewer accounts are untouched (stateless JWT + epoch).
+  A viewer token without `sid` is refused so a seat-less token can never bypass the cap.
+- **Viewer logout does not bump the epoch** (that would sign out all 10 phones). Sign-out-all,
+  reset and remove still bump it as belt and braces.
+- **Limit is a code constant, not a per-team column.** Add `teams.viewer_seat_limit` later if a
+  team ever needs a different number.
+- **Seats expire only with the token** (30 days). No sliding renewal; no `last_seen`.
+- **Migration 52 additive, 53 drops** — a column that old code writes is dropped only after the
+  deploy that stops writing it is live.
 
 ## Problems solved
 
-- **Turbopack "unexpected error … node process exited with 0xc0000142" on every page** (PostCSS
-  loader child failed to spawn; also the earlier "Jest worker … child process exceptions"). Not
-  the code and not the sandbox: node could spawn children fine from both shells. Fix was
-  `rm -rf .next/dev` (the persistent Turbopack cache left inconsistent by the earlier crash) and a
-  fresh `npm run dev`. Try that first next time before anything else.
-- **"Stale client bundle" in the dev tab is the app's own service worker.** `public/sw.js` v7
-  caches `/_next/static/*` cache-first on the assumption the URLs are content-hashed. In `next dev`
-  they are not, so the tab keeps old chunks across edits and even across server restarts (a hard
-  reload does not help). Fix during verification: in the tab run
-  `navigator.serviceWorker.getRegistrations()` → unregister all, `caches.keys()` → delete all, then
-  navigate again. Production is unaffected (hashed URLs).
-- **Old dev server survives TaskStop.** Stopping the background task leaves `next dev` (its own
-  PID) on port 3000; a later `npm run dev` exits 1 "port in use". After engine edits that process
-  returned 500 on `/matches/[id]` ("Failed to generate static paths … Jest worker"). `taskkill //PID
-  <pid> //F` then start again.
-- **Ad-hoc read-only DB queries:** `node --input-type=module < script.mjs` from the project root
-  (so `pg` resolves), reading `DATABASE_URL` from `.env.local`; a script placed in the scratchpad
-  cannot import `pg`.
-
-- **Reaching the wizard in the browser:** `/matches/new` is a 404. The paid wizard opens from a scheduled match page via **Complete match** (`MatchAdminActions`), then Won → costs → players → guests → car fee (toggle "Ignore car fee") → fee preview. Stop before "Submit match"; Escape closes the sheet without writing. No match was recorded during verification.
-- **Chrome driving:** coordinate clicks land off-target in the owner's browser (they closed the sheet by hitting the backdrop); `find` + click-by-ref and `form_input` work every time. The first screenshot after an action usually times out at 30 s — retry once and it succeeds. `resize_window` reports success but the window stays wide, so a true phone-width check of the label wrap was not possible from the desktop.
-- **Dev server from the Bash tool:** `npm run dev > log &` with run_in_background exits without the server. Run `npm run dev` directly with run_in_background and poll `netstat` for port 3000; stop it with TaskStop afterwards.
+- **`.env.local` `DATABASE_URL` is PRODUCTION (Supabase pooler); there is no local DB.**
+  `node db/apply-migrations.mjs` applies to prod. I ran it as a "local" step, dropped the seat
+  column ahead of the deploy, and logout + /admin/manage 500'd until the owner restored it with
+  `ALTER TABLE admins ADD COLUMN IF NOT EXISTS viewer_session_started_at TIMESTAMPTZ`. Rule: the
+  script runs only through the owner's protocol (backup workflow green → dry-run in
+  BEGIN…ROLLBACK → apply → push), never as a build step. Saved in auto-memory too.
+- The auto-mode classifier blocks node scripts that write to the DB (even inside BEGIN…ROLLBACK)
+  and blocked `netstat`. SELECT-only scripts run fine from the scratchpad using
+  `createRequire('C:/PrCa/CrikLedger/package.json')('pg')`.
+- The Bash tool mangles large inline `node -e` / heredoc patches containing backticks and quotes;
+  write the patch script with the Write tool into the scratchpad and run it.
 
 ## Current state
 
-- **Git:** `main` at `005da13` (ground presets) on top of `4108d04` (notes), `574c5e7`
-  (single-ceiling rounding), `eb8f1f8` (notes) and `ec0dbb2` (fee preview columns, ball 65), all
-  pushed; Vercel deploys from `main`. Tree clean apart from this notes commit.
-- **DB:** 51 migrations applied. `team_grounds` holds two real presets for LR-SuperGiants: "MCG"
-  ₹50 and "Barne, Pusane" ₹250 (the owner may edit them). Still 65 scheduled / 0 completed matches. Verified in the local app before the commit: the same 11-player /
-  3-car / 3,565 case previews 393 / 3,573 / +8 (nothing submitted). `context/ui-registry.md`
-  (git-ignored) documents the `SummaryRow` totals pattern.
-- **Verified:** tsc clean, eslint clean on the three files, `vitest run lib/demo engine` 47/47. In the local app: Costs step prefilled Ball cost 65; with a 90000 ground fee the fee preview showed `₹90,065` / `₹22,517` / `₹90,068` / `+₹3` on one line each, right-aligned.
-- **Not verified:** the wrapped-label case at real phone width. The CSS makes it deterministic, but eyeball it on the phone after the deploy.
-- DB: 50 migrations on prod; no migration this session. No real viewer login exists yet (carried from session 27).
+- Git: `main` = `ed0a6ae`, pushed. Tree clean.
+- Prod DB: 52 migrations recorded; `viewer_sessions` exists and is empty; the old column
+  `viewer_session_started_at` is present (restored) and unused by the new code. Migration 53 not
+  applied.
+- The real viewer **`sg_viewer` exists on LR-SuperGiants** (created by the owner on 2026-09-10,
+  session_epoch 7). Any phone holding its pre-52 token is refused after the deploy and must sign
+  in again — expected, documented.
+- Still 65 scheduled / 0 completed matches. Two ground presets (MCG ₹50, Barne ₹250).
 
 ## Next session starts with
 
-0. On the phone after the deploy: open Console → "Grounds & car fee", check the two presets and
-   fix the amounts, add the other grounds (CSMCC, Lords Mawal, …); then Schedule a Match and
-   confirm the dropdown, and Complete match on an MCG fixture to see ₹50 prefilled.
-1. On the phone after the deploy: open a scheduled match → Complete match → fee preview and confirm the surplus label wraps inside the left column with the amount on one line, and that the 11-player case reads 393 / +8. Because the phone's service worker caches static chunks, the first load after a deploy is fine (hashed URLs), no action needed.
-2. Carried from session 27: create the real team viewer from Manage admins (user id + password), share in the group, have a second player try to sign in while the first is in — expect the "already in use … Ask Ravi Kant" message; then try Sign out the viewer from the card.
-3. Carried: known issue 10.10 (abandon and completed-match DELETE still orphan `pending_cleared_entry_id`); browser check of the delete-from-ledger flow as a non-super admin.
-4. Backlog (owner's rough priority): Feature 6 self-service (team settings UI, proper password change, account deletion, email password reset); the one-year-term contradiction (`entitlements` has no `expires_at`, Terms say no subscription); Feature 7 hardening (login rate limiting — more relevant with a shared viewer credential — bcrypt cost, audit log).
+1. Confirm the Vercel deploy of `ed0a6ae` is live, then apply **migration 53** via the owner's
+   protocol (backup → dry-run → apply). Do not run the script before the deploy.
+2. Owner's phone test: sign in as `sg_viewer` on two devices → Manage admins card shows two seats
+   with device + time → per-seat Sign out bounces only that phone → Sign out all bounces both →
+   (optional) an 11th sign-in shows the "All 10 viewer seats are in use" message.
+3. Carried from session 28: phone check of ground presets (fix amounts, add CSMCC, Lords Mawal…),
+   scheduling dropdown, ₹50 prefill on an MCG fixture; fee preview label wrap at phone width;
+   known issue 10.10 (`pending_cleared_entry_id` orphans); Feature 6 self-service; Feature 7
+   hardening (login rate limiting — the shared credential makes it more relevant).
 
 ## Open questions
 
-- Ground presets: should tournament scheduling get the same dropdown (tournament venue is free
-  text on the tournament, not per match)? Should a preset also carry a default ground fee? Should
-  "Other ground…" offer "save as preset" to a superadmin? None requested yet.
-- Should the guest demo sample also move to ball 65, accepting the re-derived fixture numbers?
-- Should the tournament schedule tab's "Scheduled" card also become "Matches"? (carried)
-- Should a viewer ever get the tournament balances share image, or is view-only final? (carried; today refused with `VIEWER_READ_ONLY`)
-- Rate limiting on `/api/auth/login` as the companion to the shared viewer credential — schedule it, or accept the seat message for now? (carried)
+- Should the seat list show a friendlier device label, or a "this is you" marker? (UA reduction
+  makes two iPhones indistinguishable except by time.)
+- Rate limiting on `/api/auth/login` as the companion to the shared viewer credential — schedule
+  it, or accept the 10-seat cap and sign-out buttons for now? (carried)
+- Ground presets: tournament venue dropdown, default ground fee per preset, "save as preset" from
+  "Other ground…"? (carried)
+- Should the guest demo sample move to ball 65? Should the tournament "Scheduled" card become
+  "Matches"? Should a viewer ever get the tournament balances share image? (carried)
