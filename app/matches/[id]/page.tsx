@@ -26,10 +26,11 @@ import {
   opponentLabel,
   teamLabel,
 } from "@/lib/format";
+import { findGround } from "@/lib/grounds";
 import { canWrite, isScopeSuperadmin } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
-import { getTeamById } from "@/lib/team";
+import { getTeamById, getTeamGrounds } from "@/lib/team";
 import type { WizardInitial } from "@/components/wizard/wizardTypes";
 import type { Match, MatchParticipantPublic } from "@/types";
 import { CHROME_HEADER, CHROME_BACK_LINK } from "@/lib/ui";
@@ -57,7 +58,7 @@ async function buildAdminProps(match: MatchPublicRow) {
   // completed match's participants, and the match's fee money in one
   // row. The last-played derivation is scoped to the team so it never
   // aggregates another tenant's participants.
-  const [playersRes, rowsRes, moneyRes] = await Promise.all([
+  const [playersRes, rowsRes, moneyRes, grounds] = await Promise.all([
     pool.query(
       `SELECT p.id, p.name, p.is_captain, p.phone
        FROM players p
@@ -89,7 +90,13 @@ async function buildAdminProps(match: MatchPublicRow) {
        WHERE m.id = $1`,
       [match.id],
     ),
+    // Ground presets (migration 51): cached per team, so usually free.
+    // The edit sheet lists them; the wizard prefills the matched
+    // ground's car allowance.
+    getTeamGrounds(match.team_id),
   ]);
+  const carAllowancePreset =
+    findGround(grounds, match.venue)?.car_allowance ?? null;
   const playerRows = playersRes.rows as {
     id: string;
     name: string;
@@ -179,6 +186,8 @@ async function buildAdminProps(match: MatchPublicRow) {
     otherFee,
     matchFeeTotal,
     matchFee,
+    grounds,
+    carAllowancePreset,
   };
 }
 
@@ -394,6 +403,8 @@ async function MatchDetailData({
           initialGroundFee={
             adminProps.matchFeeTotal || undefined
           }
+          grounds={adminProps.grounds}
+          carAllowancePreset={adminProps.carAllowancePreset}
         />
       )}
 

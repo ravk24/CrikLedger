@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import {
   Home,
   KeyRound,
+  MapPin,
   MinusCircle,
   PlusCircle,
   DatabaseBackup,
@@ -56,6 +57,13 @@ const TILES: Tile[] = [
     href: "/admin/manage",
     icon: ShieldCheck,
     iconClass: "bg-accent-light text-accent",
+    superadminOnly: true,
+  },
+  {
+    label: "Grounds & car fee",
+    href: "/admin/grounds",
+    icon: MapPin,
+    iconClass: "bg-low-light text-low-foreground",
     superadminOnly: true,
   },
 ];

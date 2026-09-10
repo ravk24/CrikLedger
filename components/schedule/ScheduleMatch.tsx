@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CalendarPlus } from "lucide-react";
 import { ScheduleMatchWizard } from "@/components/schedule/ScheduleMatchWizard";
+import type { TeamGround } from "@/lib/grounds";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -13,12 +14,14 @@ type Props = {
   // The hub's shared tile shape, so this button and its sibling links
   // cannot drift apart.
   tileClass: string;
+  // The team's ground presets for the wizard's dropdown ([] = free text).
+  grounds: TeamGround[];
 };
 
 // The Schedule tab's first card. Unlike its siblings it opens the
 // wizard in place instead of navigating — scheduling is a modal, not a
 // destination.
-export function ScheduleMatch({ canSchedule, tileClass }: Props) {
+export function ScheduleMatch({ canSchedule, tileClass, grounds }: Props) {
   const [open, setOpen] = useState(false);
 
   const face = (
@@ -48,7 +51,11 @@ export function ScheduleMatch({ canSchedule, tileClass }: Props) {
       <button type="button" onClick={() => setOpen(true)} className={tileClass}>
         {face}
       </button>
-      <ScheduleMatchWizard open={open} onOpenChange={setOpen} />
+      <ScheduleMatchWizard
+        open={open}
+        onOpenChange={setOpen}
+        grounds={grounds}
+      />
     </>
   );
 }

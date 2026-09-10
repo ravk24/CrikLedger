@@ -4,12 +4,16 @@ import { startTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
+import { GroundPicker } from "@/components/schedule/GroundPicker";
 import { Switch } from "@/components/ui/switch";
+import type { TeamGround } from "@/lib/grounds";
 import { cn } from "@/lib/utils";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // The team's ground presets for the dropdown ([] = free text).
+  grounds?: TeamGround[];
   // The match being fixed. feeAmount is the whole fee (settled +
   // pending), which is what the form edits — the server splits it again
   // on save.
@@ -29,7 +33,12 @@ const inputClass =
 
 // Edit a scheduled match. Mirrors the scheduling form field for field,
 // because this is where a bare-date match gains its opponent and its fee.
-export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
+export function ScheduleMatchSheet({
+  open,
+  onOpenChange,
+  editing,
+  grounds = [],
+}: Props) {
   const router = useRouter();
   const [date, setDate] = useState(editing.date);
   const [venue, setVenue] = useState(editing.venue ?? "");
@@ -223,18 +232,12 @@ export function ScheduleMatchSheet({ open, onOpenChange, editing }: Props) {
           />
         </label>
 
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-text-secondary">
-            Ground
-          </span>
-          <input
-            type="text"
-            value={venue}
-            onChange={(e) => setVenue(e.target.value)}
-            placeholder="Ground name"
-            className={inputClass}
-          />
-        </label>
+        <GroundPicker
+          grounds={grounds}
+          value={venue}
+          onChange={setVenue}
+          inputClass={inputClass}
+        />
 
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-text-secondary">

@@ -6,6 +6,7 @@ import { MatchWizard } from "@/components/wizard/MatchWizard";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { ScheduleMatchSheet } from "@/components/admin/ScheduleMatchSheet";
 import { opponentLabel } from "@/lib/format";
+import type { TeamGround } from "@/lib/grounds";
 import { cn } from "@/lib/utils";
 import type { WizardInitial, WizardPlayer } from "@/components/wizard/wizardTypes";
 
@@ -28,6 +29,10 @@ type Props = {
   initial?: WizardInitial; // present when status = completed
   // Pool-fronted ground fee, pre-fills the wizard's Costs step.
   initialGroundFee?: number;
+  // Ground presets (migration 51): the list feeds the edit sheet's
+  // dropdown; the matched allowance prefills the wizard's car-fee step.
+  grounds?: TeamGround[];
+  carAllowancePreset?: number | null;
 };
 
 export function MatchAdminActions({
@@ -44,6 +49,8 @@ export function MatchAdminActions({
   isSuperadmin,
   initial,
   initialGroundFee,
+  grounds = [],
+  carAllowancePreset = null,
 }: Props) {
   const router = useRouter();
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -82,6 +89,7 @@ export function MatchAdminActions({
       players={players}
       mode={status === "scheduled" ? "complete" : "edit"}
       groundLabel={venue ?? ""}
+      carAllowancePreset={carAllowancePreset}
       initial={initial}
       initialGroundFee={initialGroundFee}
     />
@@ -147,6 +155,7 @@ export function MatchAdminActions({
         <ScheduleMatchSheet
           open={editScheduleOpen}
           onOpenChange={setEditScheduleOpen}
+          grounds={grounds}
           editing={{
             matchId,
             date: matchDate,

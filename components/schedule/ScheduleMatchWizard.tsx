@@ -4,14 +4,19 @@ import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { MoneyInput } from "@/components/shared/MoneyInput";
+import { GroundPicker } from "@/components/schedule/GroundPicker";
 import { Switch } from "@/components/ui/switch";
 import { formatRupees } from "@/lib/format";
+import type { TeamGround } from "@/lib/grounds";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // The team's ground presets (migration 51). [] keeps the free-text
+  // field; otherwise the field is a dropdown with "Other ground…".
+  grounds?: TeamGround[];
 };
 
 const LAST_STEP = 3;
@@ -43,7 +48,11 @@ const inputClass =
 // admin enters every date once, each becomes a bare match (no opponent,
 // no pool entry), and the details get filled in later from the card's
 // edit sheet. Match details are therefore hidden in that mode.
-export function ScheduleMatchWizard({ open, onOpenChange }: Props) {
+export function ScheduleMatchWizard({
+  open,
+  onOpenChange,
+  grounds = [],
+}: Props) {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [date, setDate] = useState("");
@@ -411,19 +420,13 @@ export function ScheduleMatchWizard({ open, onOpenChange }: Props) {
                 </ul>
               )}
 
-              <label className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-text-secondary">
-                  Ground
-                </span>
-                <input
-                  type="text"
-                  value={venue}
-                  onChange={(e) => setVenue(e.target.value)}
-                  placeholder="Ground name"
-                  required
-                  className={inputClass}
-                />
-              </label>
+              <GroundPicker
+                grounds={grounds}
+                value={venue}
+                onChange={setVenue}
+                required
+                inputClass={inputClass}
+              />
 
               {switchRow("Multiple dates", multiOn, (on) => {
                 setMultiOn(on);

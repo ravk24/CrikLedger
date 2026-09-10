@@ -32,9 +32,13 @@ type Props = {
   players: WizardPlayer[]; // all active players
   mode: "complete" | "edit";
   // The match's ground name ("" when none was recorded) — labels the
-  // Car fee step. There is no allowance prefill any more: the grounds
-  // list it came from was dropped (dropped-home_match-feature.md).
+  // Car fee step.
   groundLabel: string;
+  // The ground preset's car allowance (migration 51), matched by name on
+  // the server; null = no preset. Prefills the Car fee step on
+  // completion (editable, like every prefill). Edit mode ignores it —
+  // the stored allowance is the truth there.
+  carAllowancePreset?: number | null;
   initial?: WizardInitial;
   // Pre-fills the Costs step's ground fee on completion; editable.
   // Migration-36 matches: the opponent's full fee — settled entry +
@@ -124,6 +128,7 @@ export function MatchWizard({
   players,
   mode,
   groundLabel,
+  carAllowancePreset = null,
   initial,
   initialGroundFee,
   apiBase,
@@ -145,9 +150,10 @@ export function MatchWizard({
       ground: initialGroundFee ? String(initialGroundFee) : "",
       ball: "65", // club default ball cost — editable like every prefill
       other: "0",
-      allowance: "",
+      allowance: carAllowancePreset !== null ? String(carAllowancePreset) : "",
     },
   );
+  const allowanceKnown = mode === "complete" && carAllowancePreset !== null;
   // Edit mode: a stored allowance of 0 means it was ignored (or genuinely
   // zero) — reflect that on the switch. Complete-mode blank must not.
   const [ignoreAllowance, setIgnoreAllowance] = useState(
@@ -559,7 +565,7 @@ export function MatchWizard({
             {stepKey === "carFee" && (
               <StepCarAllowance
                 groundLabel={groundLabel}
-                known={false}
+                known={allowanceKnown}
                 allowance={costs.allowance}
                 onAllowanceChange={(v) => setCosts({ ...costs, allowance: v })}
                 ignored={ignoreAllowance}

@@ -4,6 +4,27 @@ Last updated: 2026-09-10, late morning
 
 ## What was built
 
+- **Ground presets + car-fee prefill (Feature 6 slice; code uncommitted; migration 51 APPLIED to
+  prod on 2026-09-10 after backup run 34437987910 went green — 51 migrations now).** Verified in
+  the browser as superadmin: console tile → `/admin/grounds` empty state → added "MCG" ₹50 and
+  "Barne, Pusane" ₹250 (real presets for LR-SuperGiants, left in place; edit as needed) → a
+  lowercase "mcg" duplicate was refused → Schedule sheet shows the Ground dropdown ("MCG · ₹50 /
+  car", "Other ground…" reveals the text field + hint) → Complete match on the 12 Sept MCG fixture
+  reached the Car fee step with ₹50 prefilled and "Car fee for "MCG" is above…"; nothing submitted.
+  Owner asked for a superadmin "Manage Ground / Car-Fee" screen, a ground dropdown at scheduling,
+  and the car fee autofilled at completion, plus the cost. Cost answer given: list ≈1–3 KB, cached
+  per team for hours (`lib/team.ts getTeamGrounds`, tag `team-grounds:<id>`), zero extra reads on
+  submit; 100 matches ≈ a few KB warm, ≤0.4 MB worst case; one extra ~30–80 ms hop only on a cold
+  cache. Built: `db/migration-51.sql` (recreates `team_grounds` + `team_grounds_public`, unique on
+  `team_id, lower(btrim(name))`, no seed; **dry-run on prod in BEGIN…ROLLBACK passed**),
+  `lib/grounds.ts` (`findGround`, `activeGrounds`, `groundKey`) + tests, `app/api/sa/grounds`
+  (GET/POST) and `[id]` (PATCH/DELETE) with `GROUND_EXISTS`, `groundSchema`/`editGroundSchema` in
+  `lib/validate.ts`, `/admin/grounds` page + `components/admin/GroundManager.tsx` (PlayerManager
+  clone), console tile "Grounds & car fee", `components/schedule/GroundPicker.tsx` (select +
+  "Other ground…") used by `ScheduleMatchWizard` and `ScheduleMatchSheet`, `getTeamGrounds` read in
+  `app/(app)/schedule/page.tsx` and `app/matches/[id]/page.tsx` (→ `MatchAdminActions` →
+  `MatchWizard carAllowancePreset` → `StepCarAllowance known`). Docs updated (06, 08 R-14d, 09,
+  02, README, ui-registry). 111 tests, tsc, eslint green. Browser check pending the migration.
 - **Single-ceiling fee rounding (rule change, commit `574c5e7`).** Owner's phone
   screenshot showed 11 players / 3 cars / cash 3,565 → per head 394, surplus 19; they expected 393
   and 8. Cause: `engine/calc.ts` CEILed the cash share and the car share separately, so the two
@@ -40,6 +61,11 @@ Last updated: 2026-09-10, late morning
 
 ## Problems solved
 
+- **Turbopack "unexpected error … node process exited with 0xc0000142" on every page** (PostCSS
+  loader child failed to spawn; also the earlier "Jest worker … child process exceptions"). Not
+  the code and not the sandbox: node could spawn children fine from both shells. Fix was
+  `rm -rf .next/dev` (the persistent Turbopack cache left inconsistent by the earlier crash) and a
+  fresh `npm run dev`. Try that first next time before anything else.
 - **"Stale client bundle" in the dev tab is the app's own service worker.** `public/sw.js` v7
   caches `/_next/static/*` cache-first on the assumption the URLs are content-hashed. In `next dev`
   they are not, so the tab keeps old chunks across edits and even across server restarts (a hard

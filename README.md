@@ -30,6 +30,7 @@ Worked: ground 2,500 + balls 60, 3 cars @ ₹250, 11 players + 2 guests, everyon
 
 - Rounding always favors the pool — the small ceiling surplus is auto-credited to the team fund. Match fees themselves stay on player balances; besides this credit and the away-match ground-fee flow (below), every pool credit/debit is entered manually by an admin.
 - Fees are computed server-side from attendance; the wizard preview runs the same engine in the browser and nothing is editable by hand.
+- **Ground presets** (superadmin, `/admin/grounds`): each ground carries its car allowance. Scheduling picks the ground from a dropdown ("Other ground…" still types a name), and completing a match there prefills that allowance — editable, and snapshotted on the match, so later edits to the list never change history.
 - **Guests** count in the split like players, and their charges land on the **standing captain's balance** — merged into the captain's own fee row when they play, or a charge-only row when they don't. Guests hand the captain cash offline; the app never bills a guest directly. Guest drivers get the same car-allowance credit, which reduces the captain's charge.
 - On submit, one database transaction updates the match, writes the final fee rows, and auto-credits the pool with the rounding surplus (collected − cash costs). If admin edits erase the surplus, no pool entry is created.
 - **Away (Other) matches**: the pool fronts the team's ground-fee contribution when the match is scheduled (a linked debit), and the completion credit recoups it on top of the surplus (collected − cash costs + contribution). Abandoning, cancelling, or deleting the match returns the fee to the pool. Barne matches never touch money at scheduling — the season's slots were block-paid up front.
@@ -100,7 +101,8 @@ reaches the browser.
 | `/players/[id]` | Public player statement with running balance |
 | `/admin` | Admin console — schedule match, 6-step complete-match wizard (result → costs → players → guests → cars → fee preview), edit/abandon |
 | `/admin/players` | Player management (add, edit, activate/deactivate) |
-| `/admin/manage` | Superadmin panel (admin accounts) |
+| `/admin/manage` | Superadmin panel (admin accounts, team viewer) |
+| `/admin/grounds` | Superadmin panel — the team's grounds with a per-car allowance; feeds the scheduling dropdown and the wizard's car-fee prefill |
 
 The app is installable as a **PWA** (web manifest + install nudge) and designed mobile-first: bottom sheets, one-step-per-screen wizard, sticky balance summary, large tap targets.
 

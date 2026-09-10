@@ -3,6 +3,7 @@ import { cacheLife, cacheTag } from "next/cache";
 import { supabaseServer } from "@/lib/supabase-server";
 import { ApiError } from "@/lib/validate";
 import { getSessionAdmin } from "@/lib/session";
+import type { TeamGround } from "@/lib/grounds";
 
 // Multi-team resolution (Feature 4). There is deliberately NO current-team
 // constant and NO cross-request memo any more: under multi-team, a module
@@ -52,6 +53,32 @@ export const getTeamById = cache(async (teamId: string): Promise<TeamPublic> => 
   if (!team) throw new Error(`Team '${teamId}' not found`);
   return team;
 });
+
+// The team's ground presets (migration 51) — the same near-immutable,
+// no-money shape as the team row, cached the same way. The scheduling
+// picker and the completion wizard's car-fee prefill both read this;
+// every write in app/api/sa/grounds revalidates the tag. A team list is
+// a couple of KB, so a cold read costs one small PostgREST hop and a
+// warm one costs nothing.
+async function loadTeamGrounds(teamId: string): Promise<TeamGround[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(`team-grounds:${teamId}`);
+  const { data, error } = await supabaseServer
+    .from("team_grounds_public")
+    .select("id, name, car_allowance, is_active")
+    .eq("team_id", teamId)
+    .order("name");
+  if (error) {
+    throw new Error(`Grounds for team '${teamId}' failed: ${error.message}`);
+  }
+  return ((data ?? []) as TeamGround[]).map((g) => ({
+    ...g,
+    car_allowance: Number(g.car_allowance),
+  }));
+}
+
+export const getTeamGrounds = cache(loadTeamGrounds);
 
 /**
  * The signed-in user's active team, or null for a guest / an account with

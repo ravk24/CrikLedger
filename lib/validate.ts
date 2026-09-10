@@ -147,6 +147,28 @@ export const grantSchema = z.object({
 });
 
 // Superadmin renames their own team (app/api/sa/team).
+// Ground presets (migration 51): a name and the per-car allowance in
+// whole rupees. The DB enforces the per-team, case-insensitive name
+// uniqueness; the route maps that violation to GROUND_EXISTS.
+export const groundSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  car_allowance: z.number().int().nonnegative(),
+});
+
+export const editGroundSchema = z
+  .object({
+    name: z.string().trim().min(1).max(80).optional(),
+    car_allowance: z.number().int().nonnegative().optional(),
+    is_active: z.boolean().optional(),
+  })
+  .refine(
+    (body) =>
+      body.name !== undefined ||
+      body.car_allowance !== undefined ||
+      body.is_active !== undefined,
+    { message: "Nothing to update" },
+  );
+
 export const teamNameSchema = z.object({
   display_name: z.string().trim().min(2).max(60),
 });

@@ -4,9 +4,11 @@ import { CheckCircle2, Swords } from "lucide-react";
 import { GuestMatchFlow } from "@/components/guest/GuestMatchFlow";
 import { ScheduleMatch } from "@/components/schedule/ScheduleMatch";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { TeamGround } from "@/lib/grounds";
 import { getNavState } from "@/lib/nav";
 import { canWrite, isViewer } from "@/lib/roles";
 import { getSessionAdmin } from "@/lib/session";
+import { getTeamGrounds } from "@/lib/team";
 import { cn } from "@/lib/utils";
 
 type Option = {
@@ -56,10 +58,17 @@ async function ScheduleData() {
     !!admin &&
     !admin.mustChangePassword &&
     canWrite(admin, "team", admin.activeTeamId);
+  // The ground presets feed the scheduling dropdown. Cached per team in
+  // lib/team.ts, so this is the hub's only read and usually free.
+  const grounds =
+    canSchedule && admin?.activeTeamId
+      ? await getTeamGrounds(admin.activeTeamId)
+      : [];
   return (
     <ScheduleChooser
       canSchedule={canSchedule}
       showSchedule={!isViewer(admin)}
+      grounds={grounds}
     />
   );
 }
@@ -67,9 +76,11 @@ async function ScheduleData() {
 function ScheduleChooser({
   canSchedule,
   showSchedule,
+  grounds,
 }: {
   canSchedule: boolean;
   showSchedule: boolean;
+  grounds: TeamGround[];
 }) {
   return (
     <>
@@ -81,7 +92,11 @@ function ScheduleChooser({
       </div>
       <section className="grid grid-cols-2 gap-3">
         {showSchedule && (
-          <ScheduleMatch canSchedule={canSchedule} tileClass={ACTION_CLASS} />
+          <ScheduleMatch
+            canSchedule={canSchedule}
+            tileClass={ACTION_CLASS}
+            grounds={grounds}
+          />
         )}
         {OPTIONS.map((option) => {
           const Icon = option.icon;
