@@ -1,7 +1,11 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
-import { SESSION_COOKIE, TEAM_COOKIE } from "@/lib/cookies";
+import {
+  SESSION_COOKIE,
+  SESSION_MAX_AGE_SECONDS,
+  TEAM_COOKIE,
+} from "@/lib/cookies";
 import { pool } from "@/lib/db";
 import { ApiError } from "@/lib/validate";
 import type { TeamPublic } from "@/lib/team";
@@ -10,6 +14,7 @@ import {
   canWrite,
   isEpochValid,
   isMegaadmin,
+  isViewer,
   resolveActiveTeamId,
   type EntitlementSummary,
   scopeRoleFor,
@@ -18,10 +23,10 @@ import {
   type ScopeKind,
   type ScopeRole,
 } from "@/lib/roles";
+import { isSeatId, seatCheckPasses } from "@/lib/viewerSeats";
 
-export { SESSION_COOKIE, TEAM_COOKIE };
-const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
-const SESSION_MAX_AGE_JWT = "30d"; // keep in step with the seconds above
+export { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, TEAM_COOKIE };
+const SESSION_MAX_AGE_JWT = "30d"; // keep in step with SESSION_MAX_AGE_SECONDS
 
 // Not `process.env.SESSION_SECRET!`: undefined encodes to a zero-length
 // key, and jose then fails inside its own crypto layer, so the log line
@@ -42,9 +47,13 @@ const secret = () => {
 // The token carries identity and nothing else. Roles deliberately LEFT
 // the payload at migration 32: they now live in membership rows that can
 // be revoked mid-session, and a role baked into a 30-day cookie cannot.
-type SessionPayload = {
+// `sid` is the one addition (migration 52): only the team viewer's
+// tokens carry it — the viewer_sessions row this sign-in claimed — and
+// the row's disappearance is how one phone is signed out.
+export type SessionPayload = {
   adminId: string;
   epoch: number;
+  sid?: string;
 };
 
 export type SessionAdmin = Principal & {
@@ -63,6 +72,8 @@ export type SessionAdmin = Principal & {
    * (lib/team.ts falls back to a lookup for that case).
    */
   activeTeam: TeamPublic | null;
+  /** The viewer's seat row (migration 52); null on every other account. */
+  seatId: string | null;
 };
 
 export async function signSession(payload: SessionPayload): Promise<string> {
@@ -106,7 +117,7 @@ export async function clearSessionCookie(): Promise<void> {
   store.delete(TEAM_COOKIE);
 }
 
-async function verifySessionToken(
+export async function verifySessionToken(
   token: string,
 ): Promise<SessionPayload | null> {
   try {
@@ -115,7 +126,10 @@ async function verifySessionToken(
     // Pre-migration-32 tokens carry `role` and no `epoch`; they fail here
     // and the holder simply signs in again.
     if (typeof payload.epoch !== "number") return null;
-    return { adminId: payload.adminId, epoch: payload.epoch };
+    // A malformed seat id is treated as absent, so it never reaches a
+    // ::uuid cast — a viewer token without a seat is refused downstream.
+    const sid = isSeatId(payload.sid) ? payload.sid : undefined;
+    return { adminId: payload.adminId, epoch: payload.epoch, sid };
   } catch {
     return null;
   }
@@ -130,6 +144,7 @@ type AdminRow = {
   must_change_password: boolean;
   is_active: boolean;
   session_epoch: number;
+  seat_alive: boolean;
   memberships: Membership[] | null;
   entitlements: EntitlementSummary[] | null;
   teams: TeamPublic[] | null;
@@ -137,7 +152,9 @@ type AdminRow = {
 
 // Fresh-row lookup on EVERY REQUEST — the is_active re-check is what
 // makes revocation instant, and memberships now ride the same query so
-// a revoked membership dies just as fast. React cache() dedupes only
+// a revoked membership dies just as fast. The viewer's seat row rides
+// it too (one PK probe, skipped when the token has no `sid`): deleting
+// the row signs out that one phone. React cache() dedupes only
 // within a single request's render (page + layout share one query);
 // outside a render (API routes) it is a pass-through. Never cache across
 // requests (library-docs § jose).
@@ -159,6 +176,10 @@ const loadSessionAdmin = cache(async (): Promise<SessionAdmin | null> => {
      )
      SELECT a.id, a.username, a.name, a.email, a.platform_role,
             a.must_change_password, a.is_active, a.session_epoch,
+            ($2::uuid IS NOT NULL AND EXISTS (
+              SELECT 1 FROM viewer_sessions vs
+               WHERE vs.id = $2::uuid AND vs.admin_id = a.id
+            )) AS seat_alive,
             COALESCE((
               SELECT json_agg(m ORDER BY m.name)
               FROM (
@@ -193,7 +214,7 @@ const loadSessionAdmin = cache(async (): Promise<SessionAdmin | null> => {
             ), '[]'::json) AS teams
        FROM admins a
       WHERE a.id = $1`,
-    [payload.adminId],
+    [payload.adminId, payload.sid ?? null],
   );
   const row = res.rows[0];
   if (!row || !row.is_active) return null;
@@ -207,6 +228,19 @@ const loadSessionAdmin = cache(async (): Promise<SessionAdmin | null> => {
     memberships: row.memberships ?? [],
     entitlements: row.entitlements ?? [],
   };
+
+  // The viewer's per-seat lever (migration 52). Needs memberships, so it
+  // comes after the principal: a viewer token must name a live seat, and
+  // any token naming a seat is good only while that row exists.
+  if (
+    !seatCheckPasses({
+      isViewer: isViewer(principal),
+      sid: payload.sid,
+      seatAlive: row.seat_alive,
+    })
+  ) {
+    return null;
+  }
 
   const cookieSlug = store.get(TEAM_COOKIE)?.value ?? null;
   // A megaadmin may observe a team it holds no membership in, so its slug
@@ -236,6 +270,7 @@ const loadSessionAdmin = cache(async (): Promise<SessionAdmin | null> => {
     activeTeamRole: scopeRoleFor(principal, "team", activeTeamId),
     activeTeam:
       (row.teams ?? []).find((t) => t.id === activeTeamId) ?? null,
+    seatId: payload.sid ?? null,
   };
 });
 

@@ -1,31 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { pool, withTransaction } from "@/lib/db";
+import { withTransaction } from "@/lib/db";
 import { requireTeamSuperadmin } from "@/lib/session";
 import { ApiError, createViewerSchema, handleRouteError } from "@/lib/validate";
+import { loadViewerCard } from "@/lib/viewer";
 
 // The team viewer: ONE shared read-only login per team (migration 49),
-// created and owned by the team's superadmin. Any number of players sign
-// in with it at once; the superadmin's sign-out and reset live in the
-// sibling routes. Everything here is scoped to the caller's active team.
-
-export type ViewerRow = {
-  username: string;
-  created_at: string;
-  in_use_since: string | null; // the single seat (migration 50); null = free
-};
-
-const VIEWER_SQL = `
-  SELECT a.username, m.created_at::text AS created_at,
-         a.viewer_session_started_at::text AS in_use_since
-    FROM team_memberships m
-    JOIN admins a ON a.id = m.admin_id
-   WHERE m.team_id = $1 AND m.team_role = 'viewer' AND m.is_active`;
+// created and owned by the team's superadmin. Up to VIEWER_SEAT_LIMIT
+// players sign in with it at once (migration 52); the superadmin's
+// sign-out and reset live in the sibling routes. Everything here is
+// scoped to the caller's active team.
 
 export async function GET() {
   try {
     const superadmin = await requireTeamSuperadmin();
-    const res = await pool.query<ViewerRow>(VIEWER_SQL, [superadmin.scopeId]);
-    return NextResponse.json({ success: true, data: res.rows[0] ?? null });
+    const viewer = await loadViewerCard(superadmin.scopeId);
+    return NextResponse.json({ success: true, data: viewer });
   } catch (error) {
     return handleRouteError("[sa/viewer]", error);
   }
@@ -123,11 +112,15 @@ export async function DELETE() {
       if (!adminId) {
         throw new ApiError(404, "NO_VIEWER", "This team has no viewer login");
       }
+      // The account is deactivated, not deleted, so the seats' FK
+      // cascade never fires — drop them here.
+      await client.query(`DELETE FROM viewer_sessions WHERE admin_id = $1`, [
+        adminId,
+      ]);
       await client.query(
         `UPDATE admins
             SET is_active = FALSE,
-                session_epoch = session_epoch + 1,
-                viewer_session_started_at = NULL
+                session_epoch = session_epoch + 1
           WHERE id = $1`,
         [adminId],
       );

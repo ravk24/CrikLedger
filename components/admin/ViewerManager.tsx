@@ -6,27 +6,31 @@ import { Copy, Eye } from "lucide-react";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { formatDate, formatDateTime } from "@/lib/format";
-
-export type ViewerRow = {
-  username: string;
-  created_at: string;
-  in_use_since: string | null; // one seat: who holds it is unknown, when is not
-};
+import {
+  VIEWER_SEAT_LIMIT,
+  seatsInUseLabel,
+  type ViewerRow,
+} from "@/lib/viewerSeats";
 
 type Props = {
   viewer: ViewerRow | null;
 };
 
-type Confirm = "signout" | "remove" | null;
+type Confirm =
+  | { kind: "seat"; id: string }
+  | { kind: "signout-all" }
+  | { kind: "remove" }
+  | null;
 
 const INPUT_CLASS =
   "h-11 w-full rounded-md border border-border bg-surface-secondary px-3 text-base text-text-primary focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent";
 
 // The superadmin's card for the one shared read-only login (migration
-// 49) with its single seat (migration 50). The superadmin chooses the
-// password on create and on reset — it is never generated, never shown
-// back, never stored in plain text — so the card only ever displays the
-// username, and whether the seat is taken.
+// 49) and its seats (migration 52): one row per signed-in phone, each
+// with its own sign-out. The superadmin chooses the password on create
+// and on reset — it is never generated, never shown back, never stored
+// in plain text — so the card only ever displays the username and who
+// is signed in (when, and roughly on what).
 export function ViewerManager({ viewer }: Props) {
   const router = useRouter();
   const [username, setUsername] = useState("");
@@ -42,7 +46,11 @@ export function ViewerManager({ viewer }: Props) {
   async function call(
     url: string,
     init: RequestInit,
-  ): Promise<{ success: boolean; data?: { username?: string }; error?: { message?: string } } | null> {
+  ): Promise<{
+    success: boolean;
+    data?: { username?: string; id?: string; signed_out?: number };
+    error?: { message?: string };
+  } | null> {
     setPending(true);
     setError(null);
     setNotice(null);
@@ -89,24 +97,28 @@ export function ViewerManager({ viewer }: Props) {
     setNewPassword("");
     setResetOpen(false);
     setNotice(
-      "Password changed and the viewer signed out. Share the new password with the team.",
+      "Password changed and everyone signed out. Share the new password with the team.",
     );
     startTransition(() => router.refresh());
   }
 
   async function handleConfirm() {
     if (!confirm) return;
-    const kind = confirm;
+    const action = confirm;
     const body =
-      kind === "signout"
-        ? await call("/api/sa/viewer/signout", { method: "POST" })
-        : await call("/api/sa/viewer", { method: "DELETE" });
+      action.kind === "seat"
+        ? await call(`/api/sa/viewer/sessions/${action.id}`, { method: "DELETE" })
+        : action.kind === "signout-all"
+          ? await call("/api/sa/viewer/signout", { method: "POST" })
+          : await call("/api/sa/viewer", { method: "DELETE" });
     setConfirm(null);
     if (!body) return;
     setNotice(
-      kind === "signout"
-        ? "The viewer is signed out and the login is free. The same password works on the next sign-in."
-        : "Viewer login removed. You can create a new one whenever you like.",
+      action.kind === "seat"
+        ? "Seat signed out. The login is free for one more player."
+        : action.kind === "signout-all"
+          ? `Everyone is signed out and all ${VIEWER_SEAT_LIMIT} seats are free. The same password works on the next sign-in.`
+          : "Viewer login removed. You can create a new one whenever you like.",
     );
     startTransition(() => router.refresh());
   }
@@ -131,9 +143,9 @@ export function ViewerManager({ viewer }: Props) {
         <div className="min-w-0">
           <h2 className="text-sm font-semibold text-text-primary">Team viewer</h2>
           <p className="mt-0.5 text-xs text-text-muted">
-            One shared read-only login for the whole team, one player at a
-            time. They see balances, the ledger and the schedule — and can
-            change nothing.
+            One shared read-only login for the whole team, up to{" "}
+            {VIEWER_SEAT_LIMIT} players at a time. They see balances, the
+            ledger and the schedule — and can change nothing.
           </p>
         </div>
       </div>
@@ -168,25 +180,58 @@ export function ViewerManager({ viewer }: Props) {
           <p className="text-xs text-text-muted">
             Password: the one you set · since {formatDate(viewer.created_at)}.
           </p>
-          <p
+          <div
             className={
-              viewer.in_use_since
-                ? "rounded-md bg-low-light px-3 py-2 text-xs font-medium text-low-foreground"
+              viewer.seats.length > 0
+                ? "rounded-md bg-low-light px-3 py-2 text-xs text-low-foreground"
                 : "rounded-md bg-surface-secondary px-3 py-2 text-xs text-text-secondary"
             }
           >
-            {viewer.in_use_since
-              ? `In use since ${formatDateTime(viewer.in_use_since)}. Anyone else who tries to sign in is told to ask you, or the player signed in, to log out.`
-              : "Not signed in right now — the next player to sign in takes the seat."}
-          </p>
+            <p className="font-medium">
+              {seatsInUseLabel(viewer.seats.length, VIEWER_SEAT_LIMIT)}
+            </p>
+            {viewer.seats.length > 0 && (
+              <ul className="mt-2 flex flex-col divide-y divide-border/60">
+                {viewer.seats.map((seat) => (
+                  <li
+                    key={seat.id}
+                    className="flex items-center justify-between gap-3 py-1.5"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm text-text-primary">
+                        {seat.device ?? "Unknown device"}
+                      </p>
+                      <p className="text-xs text-text-muted">
+                        since {formatDateTime(seat.started_at)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setConfirm({ kind: "seat", id: seat.id })}
+                      disabled={pending}
+                      className="h-9 shrink-0 rounded-md border border-border bg-surface px-3 text-xs font-medium text-text-primary disabled:opacity-60"
+                    >
+                      Sign out
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {viewer.seats.length >= VIEWER_SEAT_LIMIT && (
+              <p className="mt-2 text-xs">
+                All seats are taken — the next player to sign in is asked to
+                wait for one.
+              </p>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => setConfirm("signout")}
-              disabled={pending || !viewer.in_use_since}
+              onClick={() => setConfirm({ kind: "signout-all" })}
+              disabled={pending || viewer.seats.length === 0}
               className="h-11 rounded-md border border-border bg-surface text-sm font-medium text-text-primary disabled:opacity-60"
             >
-              Sign out the viewer
+              Sign out all
             </button>
             <button
               type="button"
@@ -202,7 +247,7 @@ export function ViewerManager({ viewer }: Props) {
           </div>
           <button
             type="button"
-            onClick={() => setConfirm("remove")}
+            onClick={() => setConfirm({ kind: "remove" })}
             disabled={pending}
             className="h-11 w-full rounded-md border border-debit-light text-sm font-medium text-debit disabled:opacity-60"
           >
@@ -262,7 +307,7 @@ export function ViewerManager({ viewer }: Props) {
         open={resetOpen}
         onOpenChange={setResetOpen}
         title="Reset viewer password"
-        description="Whoever is signed in is signed out, and the new password is needed from now on."
+        description="Everyone signed in is signed out, and the new password is needed from now on."
       >
         <form onSubmit={handleReset} className="flex flex-col gap-3">
           <label className="flex flex-col gap-1">
@@ -292,16 +337,25 @@ export function ViewerManager({ viewer }: Props) {
       </SheetShell>
 
       <ConfirmDialog
-        open={confirm === "signout"}
+        open={confirm?.kind === "seat"}
         onOpenChange={(open) => !open && setConfirm(null)}
-        title="Sign out the viewer?"
-        description="The player signed in with the viewer login is signed out on their next tap, and the login is free for someone else. The password stays the same."
+        title="Sign out this seat?"
+        description="That phone is signed out on its next tap. The other seats stay signed in and the password is unchanged."
         confirmLabel="Sign out"
         pending={pending}
         onConfirm={handleConfirm}
       />
       <ConfirmDialog
-        open={confirm === "remove"}
+        open={confirm?.kind === "signout-all"}
+        onOpenChange={(open) => !open && setConfirm(null)}
+        title="Sign out everyone?"
+        description="Every phone signed in with the viewer login is signed out on its next tap, and all the seats are free. The password stays the same."
+        confirmLabel="Sign out all"
+        pending={pending}
+        onConfirm={handleConfirm}
+      />
+      <ConfirmDialog
+        open={confirm?.kind === "remove"}
         onOpenChange={(open) => !open && setConfirm(null)}
         title="Remove the viewer login?"
         description="The username stops working everywhere. You can create a new viewer login later."

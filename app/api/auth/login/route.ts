@@ -1,49 +1,99 @@
 import { NextRequest, NextResponse } from "next/server";
-import { pool } from "@/lib/db";
-import { formatDateTime } from "@/lib/format";
-import { signSession, setSessionCookie, setTeamCookie } from "@/lib/session";
+import { cookies } from "next/headers";
+import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/lib/cookies";
+import { pool, withTransaction } from "@/lib/db";
+import {
+  signSession,
+  setSessionCookie,
+  setTeamCookie,
+  verifySessionToken,
+} from "@/lib/session";
 import { ApiError, handleRouteError, loginSchema } from "@/lib/validate";
+import {
+  VIEWER_SEAT_LIMIT,
+  deviceLabel,
+  viewerBusyMessage,
+} from "@/lib/viewerSeats";
 
-// The team viewer (migrations 49–50) is a shared credential with ONE
-// seat. Claim it atomically — the UPDATE only lands when nobody holds it
-// — or tell the player who does, and who can free it. Checked AFTER the
-// password, so a wrong password never learns whether the seat is taken.
-async function claimViewerSeat(adminId: string): Promise<void> {
+// The team viewer (migrations 49, 52) is a shared credential with a
+// fixed number of seats, one viewer_sessions row each. Claim one inside
+// a transaction that locks the account row, so two players who both see
+// nine seats cannot both take the tenth — or tell the refused player who
+// can free one. Checked AFTER the password, so a wrong password never
+// learns whether the seats are full. Returns the seat id for the token,
+// or null for every non-viewer account.
+async function claimViewerSeat(
+  adminId: string,
+  userAgent: string | null,
+  ownSeat: string | undefined,
+): Promise<string | null> {
   const viewerOf = await pool.query<{ team_id: string }>(
     `SELECT team_id FROM team_memberships
       WHERE admin_id = $1 AND team_role = 'viewer' AND is_active`,
     [adminId],
   );
   const teamId = viewerOf.rows[0]?.team_id;
-  if (!teamId) return; // not a viewer account
+  if (!teamId) return null; // not a viewer account
 
-  const claimed = await pool.query(
-    `UPDATE admins SET viewer_session_started_at = NOW()
-      WHERE id = $1 AND viewer_session_started_at IS NULL`,
-    [adminId],
-  );
-  if ((claimed.rowCount ?? 0) > 0) return;
+  return withTransaction(async (client) => {
+    await client.query(`SELECT id FROM admins WHERE id = $1 FOR UPDATE`, [
+      adminId,
+    ]);
+    // The same browser signing in again while it still holds a seat
+    // replaces that seat rather than taking a second one.
+    if (ownSeat) {
+      await client.query(
+        `DELETE FROM viewer_sessions WHERE id = $1 AND admin_id = $2`,
+        [ownSeat, adminId],
+      );
+    }
+    // A seat older than the session lifetime belongs to a token that no
+    // longer verifies. Two statements, not a CTE: a DELETE inside WITH is
+    // invisible to a count in the same statement.
+    await client.query(
+      `DELETE FROM viewer_sessions
+        WHERE admin_id = $1
+          AND started_at < NOW() - make_interval(secs => $2)`,
+      [adminId, SESSION_MAX_AGE_SECONDS],
+    );
+    const live = await client.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM viewer_sessions WHERE admin_id = $1`,
+      [adminId],
+    );
+    if (live.rows[0].n >= VIEWER_SEAT_LIMIT) {
+      const sa = await client.query<{ name: string }>(
+        `SELECT sa.name
+           FROM team_memberships m
+           JOIN admins sa ON sa.id = m.admin_id
+          WHERE m.team_id = $1 AND m.team_role = 'superadmin' AND m.is_active
+          ORDER BY m.created_at
+          LIMIT 1`,
+        [teamId],
+      );
+      throw new ApiError(
+        409,
+        "VIEWER_BUSY",
+        viewerBusyMessage(VIEWER_SEAT_LIMIT, sa.rows[0]?.name ?? null),
+      );
+    }
+    const seat = await client.query<{ id: string }>(
+      `INSERT INTO viewer_sessions (admin_id, device)
+       VALUES ($1, $2)
+       RETURNING id`,
+      [adminId, deviceLabel(userAgent)],
+    );
+    return seat.rows[0].id;
+  });
+}
 
-  const info = await pool.query<{ since: string | null; superadmin: string | null }>(
-    `SELECT a.viewer_session_started_at::text AS since,
-            (SELECT sa.name
-               FROM team_memberships m
-               JOIN admins sa ON sa.id = m.admin_id
-              WHERE m.team_id = $2 AND m.team_role = 'superadmin' AND m.is_active
-              ORDER BY m.created_at
-              LIMIT 1) AS superadmin
-       FROM admins a
-      WHERE a.id = $1`,
-    [adminId, teamId],
-  );
-  const since = info.rows[0]?.since;
-  const superadmin = info.rows[0]?.superadmin ?? "your superadmin";
-  throw new ApiError(
-    409,
-    "VIEWER_BUSY",
-    `The viewer login is already in use${since ? ` since ${formatDateTime(since)}` : ""}. ` +
-      `Ask ${superadmin} (superadmin) to sign that session out, or ask whoever is signed in on your WhatsApp group to log out.`,
-  );
+// The seat this browser already holds for THIS account, if its cookie
+// still verifies. Anything else (no cookie, another account, a stale
+// token) is ignored — the login page is reachable while signed in.
+async function currentSeatOf(adminId: string): Promise<string | undefined> {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!token) return undefined;
+  const payload = await verifySessionToken(token);
+  return payload?.adminId === adminId ? payload.sid : undefined;
 }
 
 export async function POST(req: NextRequest) {
@@ -69,14 +119,19 @@ export async function POST(req: NextRequest) {
     if (!row.is_active) {
       throw new ApiError(403, "ADMIN_REVOKED", "This account has been revoked");
     }
-    await claimViewerSeat(row.id);
+    const sid = await claimViewerSeat(
+      row.id,
+      req.headers.get("user-agent"),
+      await currentSeatOf(row.id),
+    );
 
     // Roles are NOT in the token — they live in membership rows that can
     // be revoked mid-session. The epoch is, so logout and password change
-    // can invalidate this token.
+    // can invalidate this token. The viewer's seat id rides along too.
     const token = await signSession({
       adminId: row.id,
       epoch: row.session_epoch,
+      ...(sid ? { sid } : {}),
     });
     await setSessionCookie(token);
 

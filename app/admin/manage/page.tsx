@@ -3,11 +3,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { AdminManager, type AdminListRow } from "@/components/admin/AdminManager";
-import { ViewerManager, type ViewerRow } from "@/components/admin/ViewerManager";
+import { ViewerManager } from "@/components/admin/ViewerManager";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getSessionAdmin } from "@/lib/session";
 import { pool } from "@/lib/db";
 import { CHROME_HEADER, CHROME_BACK_LINK } from "@/lib/ui";
+import { loadViewerCard } from "@/lib/viewer";
 
 async function ManageData() {
   const admin = await getSessionAdmin();
@@ -22,7 +23,7 @@ async function ManageData() {
   // cross-tenant leak the moment a second team existed. The viewer row
   // is a membership too but has its own card, so it stays out of the
   // admin list (and out of AdminListRow's role type).
-  const [res, viewerRes] = await Promise.all([
+  const [res, viewer] = await Promise.all([
     pool.query(
       `SELECT a.id, a.username, a.name, m.team_role AS role,
               m.is_active, m.created_at
@@ -32,21 +33,14 @@ async function ManageData() {
         ORDER BY m.created_at ASC`,
       [admin.activeTeamId],
     ),
-    pool.query<ViewerRow>(
-      `SELECT a.username, m.created_at::text AS created_at,
-              a.viewer_session_started_at::text AS in_use_since
-         FROM team_memberships m
-         JOIN admins a ON a.id = m.admin_id
-        WHERE m.team_id = $1 AND m.team_role = 'viewer' AND m.is_active`,
-      [admin.activeTeamId],
-    ),
+    loadViewerCard(admin.activeTeamId),
   ]);
   const admins = res.rows as AdminListRow[];
 
   return (
     <>
       <AdminManager admins={admins} selfId={admin.id} />
-      <ViewerManager viewer={viewerRes.rows[0] ?? null} />
+      <ViewerManager viewer={viewer} />
     </>
   );
 }

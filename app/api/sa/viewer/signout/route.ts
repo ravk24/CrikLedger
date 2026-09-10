@@ -3,21 +3,27 @@ import { pool } from "@/lib/db";
 import { requireTeamSuperadmin } from "@/lib/session";
 import { ApiError, handleRouteError } from "@/lib/validate";
 
-// "Sign out the viewer": bump the viewer account's session_epoch so the
-// phone holding that token is refused on its next request, and free the
-// single seat (migration 50) so the next player can sign in. The
-// password is unchanged — the same credential works, it just has to be
-// typed once more.
+// "Sign out all": drop every viewer_sessions row (migration 52) so each
+// phone on the shared login is refused on its next request, and bump
+// the account's session_epoch as belt and braces. The password is
+// unchanged — the same credential works, it just has to be typed once
+// more, and the seats are all free. Per-seat sign-out lives in
+// sessions/[id].
 export async function POST() {
   try {
     const superadmin = await requireTeamSuperadmin();
-    const res = await pool.query<{ username: string }>(
-      `UPDATE admins
-          SET session_epoch = session_epoch + 1,
-              viewer_session_started_at = NULL
-        WHERE id = (SELECT admin_id FROM team_memberships
-                     WHERE team_id = $1 AND team_role = 'viewer' AND is_active)
-      RETURNING username`,
+    const res = await pool.query<{ username: string; signed_out: number }>(
+      `WITH v AS (
+         SELECT admin_id FROM team_memberships
+          WHERE team_id = $1 AND team_role = 'viewer' AND is_active
+       ), gone AS (
+         DELETE FROM viewer_sessions
+          WHERE admin_id IN (SELECT admin_id FROM v)
+         RETURNING id
+       )
+       UPDATE admins SET session_epoch = session_epoch + 1
+        WHERE id IN (SELECT admin_id FROM v)
+       RETURNING username, (SELECT count(*)::int FROM gone) AS signed_out`,
       [superadmin.scopeId],
     );
     if (res.rowCount === 0) {

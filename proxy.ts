@@ -11,7 +11,8 @@ import { SESSION_COOKIE } from "@/lib/cookies";
 // expired". Every gated page and API route re-authorizes for itself via
 // requireAccount()/requireTeamAdmin()/getSessionAdmin(), which re-read
 // the account row on every request — that is where revocation, epoch
-// invalidation and team membership are actually enforced.
+// invalidation, team membership and the viewer's seat row (migration
+// 52) are actually enforced.
 //
 // cl_team is passed through untouched: validating it needs memberships,
 // i.e. the database.
