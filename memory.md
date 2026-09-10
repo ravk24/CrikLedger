@@ -4,7 +4,7 @@ Last updated: 2026-09-10, late morning
 
 ## What was built
 
-- **Single-ceiling fee rounding (rule change, uncommitted at the time of writing).** Owner's phone
+- **Single-ceiling fee rounding (rule change, commit `574c5e7`).** Owner's phone
   screenshot showed 11 players / 3 cars / cash 3,565 → per head 394, surplus 19; they expected 393
   and 8. Cause: `engine/calc.ts` CEILed the cash share and the car share separately, so the two
   remainders added (up to 2×heads). Now `sharerFee = CEIL(cash/H + pot/S)` computed on integers
@@ -60,18 +60,17 @@ Last updated: 2026-09-10, late morning
 
 ## Current state
 
-- **Git:** `main` at `eb8f1f8` (notes) on top of `ec0dbb2` (fee preview columns, ball 65), pushed.
-  **The rounding change is in the working tree, not committed** — 9 modified files plus
-  `engine/reconstruct.ts` and `engine/reconstruct.test.ts`. Verified in the local app: the same
-  11-player / 3-car / 3,565 case now previews 393 / 3,573 / +8 (nothing submitted).
+- **Git:** `main` at `574c5e7` (single-ceiling rounding) on top of `eb8f1f8` (notes) and
+  `ec0dbb2` (fee preview columns, ball 65), all pushed; Vercel deploys from `main`. Tree clean
+  apart from this notes commit. Verified in the local app before the commit: the same 11-player /
+  3-car / 3,565 case previews 393 / 3,573 / +8 (nothing submitted). `context/ui-registry.md`
+  (git-ignored) documents the `SummaryRow` totals pattern.
 - **Verified:** tsc clean, eslint clean on the three files, `vitest run lib/demo engine` 47/47. In the local app: Costs step prefilled Ball cost 65; with a 90000 ground fee the fee preview showed `₹90,065` / `₹22,517` / `₹90,068` / `+₹3` on one line each, right-aligned.
 - **Not verified:** the wrapped-label case at real phone width. The CSS makes it deterministic, but eyeball it on the phone after the deploy.
 - DB: 50 migrations on prod; no migration this session. No real viewer login exists yet (carried from session 27).
 
 ## Next session starts with
 
-0. If the rounding change is still uncommitted: `git status`, re-run `npx vitest run`, commit as
-   `feat(engine): one ceiling per head …` and push when the owner says so.
 1. On the phone after the deploy: open a scheduled match → Complete match → fee preview and confirm the surplus label wraps inside the left column with the amount on one line, and that the 11-player case reads 393 / +8. Because the phone's service worker caches static chunks, the first load after a deploy is fine (hashed URLs), no action needed.
 2. Carried from session 27: create the real team viewer from Manage admins (user id + password), share in the group, have a second player try to sign in while the first is in — expect the "already in use … Ask Ravi Kant" message; then try Sign out the viewer from the card.
 3. Carried: known issue 10.10 (abandon and completed-match DELETE still orphan `pending_cleared_entry_id`); browser check of the delete-from-ledger flow as a non-super admin.
