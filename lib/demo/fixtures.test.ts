@@ -37,19 +37,19 @@ describe("guest sample match", () => {
     expect(run().rows).toHaveLength(DEMO_PLAYERS.length);
   });
 
-  it("is the canonical 2560 + 3 cars over 11 heads: 233 + 69, riders 302, drivers 52, surplus 12", () => {
+  it("is the canonical 2560 + 3 cars over 11 heads: CEIL(3310/11) = 301, drivers 51, surplus 1", () => {
     const result = run();
     expect(result.totalCost).toBe(3310);
     expect(result.perPlayerFee).toBe(233);
-    expect(result.carSharePerSharer).toBe(69);
+    expect(result.carSharePerSharer).toBe(68); // 301 − 233
     expect(result.sharerCount).toBe(11);
     expect(result.ownWayCount).toBe(0);
     for (const row of result.rows) {
-      expect(row.fee).toBe(row.broughtCar ? 52 : 302);
+      expect(row.fee).toBe(row.broughtCar ? 51 : 301);
       expect(row.sharedCar).toBe(true);
     }
-    expect(result.collectedTotal).toBe(2572);
-    expect(result.surplusToPool).toBe(12);
+    expect(result.collectedTotal).toBe(2561);
+    expect(result.surplusToPool).toBe(1);
   });
 
   it("its ledger row is what the sample match collects", () => {
@@ -74,19 +74,20 @@ describe("guest sample match", () => {
   // land on the captain, so the roster must keep one.
   it("charges a guest's fee to the captain — a sharing guest pays like a rider", () => {
     const withGuest = run([{ name: "Ravi", broughtCar: false, sharedCar: true }]);
-    // 12 heads: base CEIL(2560/12) = 214, car CEIL(750/12) = 63.
+    // 12 heads: base CEIL(2560/12) = 214, sharer CEIL(3310/12) = 276.
     expect(withGuest.perPlayerFee).toBe(214);
-    expect(withGuest.carSharePerSharer).toBe(63);
+    expect(withGuest.carSharePerSharer).toBe(62);
     expect(withGuest.guestRows).toHaveLength(1);
-    expect(withGuest.guestRows[0].fee).toBe(277);
-    expect(withGuest.captainCharge).toBe(277);
+    expect(withGuest.guestRows[0].fee).toBe(276);
+    expect(withGuest.captainCharge).toBe(276);
   });
 
   it("a guest who came on their own pays only the base share", () => {
     const withGuest = run([{ name: "Ravi", broughtCar: false, sharedCar: false }]);
     expect(withGuest.sharerCount).toBe(11);
     expect(withGuest.ownWayCount).toBe(1);
-    expect(withGuest.carSharePerSharer).toBe(69);
+    // Sharers: CEIL(2560/12 + 750/11) = CEIL(281.5) = 282 → 282 − 214.
+    expect(withGuest.carSharePerSharer).toBe(68);
     expect(withGuest.guestRows[0].fee).toBe(214);
     expect(withGuest.captainCharge).toBe(214);
   });

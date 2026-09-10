@@ -69,10 +69,10 @@ export const DEMO_LEDGER: DemoLedgerRow[] = [
     entry_date: "2026-09-13",
     title: "Match collection · vs Challengers",
     detail: "11 players",
-    // What the sample match itself collects (engine/calc.ts): base
-    // CEIL(2560 / 11) = 233 + car CEIL(750 / 11) = 69 → riders 302,
-    // the three drivers 302 − 250 = 52; 8 × 302 + 3 × 52 = 2572.
-    amount: 2572,
+    // What the sample match itself collects (engine/calc.ts): one
+    // ceiling over 2560 / 11 + 750 / 11 = 300.9 → riders 301, the
+    // three drivers 301 − 250 = 51; 8 × 301 + 3 × 51 = 2561.
+    amount: 2561,
   },
   {
     id: "l2",

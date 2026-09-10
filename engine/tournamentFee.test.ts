@@ -52,7 +52,9 @@ const p = (n: number) => `p${n}`;
 const players = (n: number) => Array.from({ length: n }, (_, i) => p(i + 1));
 
 describe("calculateTournamentFees (per-match model)", () => {
-  it("canonical single match: 2560 fee, 11 players, 3 drivers @250, all shared → 233 + 69, riders 302, drivers 52, surplus 12", () => {
+  it("canonical single match: 2560 fee, 11 players, 3 drivers @250, all shared → CEIL(3310/11) = 301, drivers 51, surplus 1", () => {
+    // Same single ceiling as engine/calc.ts: 232.73 + 68.18 → 301, not
+    // 233 + 69 = 302 (which left surplus 12 from 11 heads).
     const result = calculateTournamentFees({
       joiningFee: 2560,
       matches: [
@@ -61,13 +63,13 @@ describe("calculateTournamentFees (per-match model)", () => {
     });
     expect(result.matches[0].share).toBe(233); // CEIL(2560 / 11)
     expect(result.matches[0].sharers).toBe(11);
-    expect(result.matches[0].carSharePerSharer).toBe(69); // CEIL(750 / 11)
+    expect(result.matches[0].carSharePerSharer).toBe(68); // 301 − 233
     const rowOf = (id: string) => result.rows.find((r) => r.playerId === id);
-    expect(rowOf(p(1))?.charge).toBe(52);
+    expect(rowOf(p(1))?.charge).toBe(51);
     expect(rowOf(p(1))?.driverCredit).toBe(250);
-    expect(rowOf(p(4))?.charge).toBe(302);
-    expect(result.collected).toBe(2572);
-    expect(result.surplus).toBe(12);
+    expect(rowOf(p(4))?.charge).toBe(301);
+    expect(result.collected).toBe(2561);
+    expect(result.surplus).toBe(1);
     expectInvariants(result, 2560);
   });
 

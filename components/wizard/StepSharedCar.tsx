@@ -59,7 +59,7 @@ export function StepSharedCar({
     <div className="flex flex-col gap-3">
       <p className="text-xs text-text-muted">
         {carPool > 0
-          ? `₹${formatRupees(carPool)} of car allowance split ${sharerCount} ways — ₹${formatRupees(carSharePerSharer)} each, on top of the base share. Untick anyone who made their own way.`
+          ? `₹${formatRupees(carPool)} of car allowance split ${sharerCount} ways on top of the base share — about ₹${formatRupees(carSharePerSharer)} each. Untick anyone who made their own way.`
           : "No car money this match — nobody brought a car."}
       </p>
 

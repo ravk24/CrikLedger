@@ -14,7 +14,8 @@ import { MatchAdminActions } from "@/components/matches/MatchAdminActions";
 import { MatchFeeCard } from "@/components/matches/MatchFeeCard";
 import { DeleteScheduledMatch } from "@/components/matches/DeleteScheduledMatch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { calculateMatchFees } from "@/engine/calc";
+import type { MatchFeeResult } from "@/engine/calc";
+import { reconstructMatchFees } from "@/engine/reconstruct";
 import { pool } from "@/lib/db";
 import {
   formatDate,
@@ -236,24 +237,28 @@ async function MatchDetailData({
     participants.find((p) => Number(p.guest_fee_share) !== 0) ?? null;
   const updatedStamp = match.updated_at ?? null;
 
-  // Every figure on the sheet and in the footer is ONE engine run on the
-  // stored inputs (costs + attendance). completeMatch wrote exactly this
-  // output, so it matches the ledger rows in FeeTable by construction —
-  // and there is no second formula anywhere on this page to drift.
+  // Every figure on the sheet and in the footer is read back from the
+  // fee rows completeMatch stored, so this page always agrees with its
+  // own FeeTable — including matches completed before the rounding rule
+  // changed on 2026-09-10 (engine/reconstruct.ts). Nothing here rounds
+  // a rupee of its own.
   let sheetPayload: MatchSheetPayload | null = null;
-  let calc: ReturnType<typeof calculateMatchFees> | null = null;
+  let calc: MatchFeeResult | null = null;
   if (match.status === "completed") {
     const playing = participants.filter((p) => p.is_playing);
     const guestShared = match.guest_shared_cars ?? [];
-    calc = calculateMatchFees({
+    calc = reconstructMatchFees({
       groundFee: Number(match.ground_fee),
       ballFee: Number(match.ball_fee),
       otherFee: Number(match.other_fee),
       carAllowancePerCar: Number(match.car_allowance_per_car),
-      attendees: playing.map((p) => ({
-        playerId: p.player_name,
+      participants: participants.map((p) => ({
+        name: p.player_name,
+        isPlaying: p.is_playing,
         broughtCar: p.brought_car,
         sharedCar: p.shared_car,
+        feeAmount: Number(p.fee_amount),
+        guestFeeShare: Number(p.guest_fee_share),
       })),
       guests: guests.map((g, i) => ({
         name: g.name,

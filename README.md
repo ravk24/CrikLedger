@@ -10,23 +10,23 @@ A mobile-first web app that manages a **cricket team's money** — match fee spl
 
 ### Match fee engine
 
-When a match is completed, an admin enters the costs (ground fee, ball cost, other/misc cost, car allowance per car), selects the participating players, records any guest names, tags who brought cars (guest cars included), and unticks anyone who made their own way. The rule (`engine/calc.ts`, locked 2026-08-25):
+When a match is completed, an admin enters the costs (ground fee, ball cost, other/misc cost, car allowance per car), selects the participating players, records any guest names, tags who brought cars (guest cars included), and unticks anyone who made their own way. The rule (`engine/calc.ts`, locked 2026-08-25; rounding revised 2026-09-10):
 
 ```
 Heads        = Players + Guests
 Base         = Ground Fee + Ball Cost + Other Cost
 Car pot      = Car Allowance × Cars
 Sharers      = everyone who rode in a car — DRIVERS INCLUDED (only "own way" people are left out)
-Base share   = CEILING(Base ÷ Heads)                       ← rounded UP to whole rupee
-Car share    = CEILING(Car pot ÷ Sharers)                   ← ONE pot, split evenly; never per car
-Rider        = Base share + Car share
+Base share   = CEILING(Base ÷ Heads)                       ← own-way fee, rounded UP to whole rupee
+Sharer fee   = CEILING(Base ÷ Heads + Car pot ÷ Sharers)   ← ONE pot split evenly (never per car), ONE ceiling
+Rider        = Sharer fee
 Own way      = Base share
-Driver       = Base share + Car share − Car Allowance      ← can be negative: "gets ₹x"
+Driver       = Sharer fee − Car Allowance                  ← can be negative: "gets ₹x"
 Total shown  = Base + Car pot
-Surplus      = Collected − Base                             ← the two ceiling remainders, always ≥ 0
+Surplus      = Collected − Base                             ← each head's round-up; always ≥ 0 and below Heads
 ```
 
-Worked: ground 2,500 + balls 60, 3 cars @ ₹250, 11 players + 2 guests, everyone shared → base 197, car CEIL(750 ÷ 13) = 58, riders **₹255**, drivers **₹5**, surplus ₹5. Same match with the two guests unticked → 11 sharers, car 69, riders ₹266, drivers ₹16, guests ₹197, surplus ₹10.
+Worked: ground 2,500 + balls 60, 3 cars @ ₹250, 11 players + 2 guests, everyone shared → base 197, sharer CEIL(2560 ÷ 13 + 750 ÷ 13) = **₹255** for riders, drivers **₹5**, surplus ₹5. Same match with the two guests unticked → 11 sharers, riders CEIL(2560 ÷ 13 + 750 ÷ 11) = ₹266, drivers ₹16, guests ₹197, surplus ₹10. Eleven players, 3 cars, cash ₹3,565 → CEIL(4315 ÷ 11) = ₹393, surplus ₹8 (rounding base and cars separately gave ₹394 and a ₹19 surplus, which is why the rule changed).
 
 - Rounding always favors the pool — the small ceiling surplus is auto-credited to the team fund. Match fees themselves stay on player balances; besides this credit and the away-match ground-fee flow (below), every pool credit/debit is entered manually by an admin.
 - Fees are computed server-side from attendance; the wizard preview runs the same engine in the browser and nothing is editable by hand.

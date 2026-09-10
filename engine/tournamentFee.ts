@@ -8,18 +8,23 @@ import { ceilRupees } from "./split";
 // Canonical: fee 15000, N 5 → 3000/match; 12 players → CEIL(3000/12) =
 // 250; 11 players → CEIL(3000/11) = 273.
 //
-// Car money follows THE team rule (engine/calc.ts, locked 2026-08-25):
-// that match's cars × allowance is one pooled pot split CEIL(pool /
-// sharers) across everyone who rode in a car — DRIVERS INCLUDED — on
-// top of their base share, and each driver gets the allowance off their
-// total (may go negative). Someone who made their own way pays only the
-// base share. A driver who carried nobody is the sole sharer of their
-// own car: pays the pool, gets it back, nets the base share.
+// Car money follows THE team rule (engine/calc.ts, locked 2026-08-25,
+// rounding revised 2026-09-10): that match's cars × allowance is one
+// pooled pot shared across everyone who rode in a car — DRIVERS
+// INCLUDED — and a sharer pays ONE ceiling over base + pot share,
+// CEIL(costPerMatch / attendees + pool / sharers), never a ceiling per
+// part. Each driver gets the allowance off their total (may go
+// negative). Someone who made their own way pays only the base share
+// CEIL(costPerMatch / attendees). A driver who carried nobody is the
+// sole sharer of their own car: pays the pool, gets it back, nets the
+// base share.
 //
-// Both shares CEIL and are the only rounding sites, so per match
-// Σ shares ≥ costPerMatch + carPool ≥ costPerMatch + Σ driver credits;
-// summing over matches gives collected ≥ joiningFee and surplus is never
-// negative.
+// The two ceilings are the only rounding sites and each rounds a head's
+// exact share up, so per match Σ shares ≥ costPerMatch + carPool ≥
+// costPerMatch + Σ driver credits; summing over matches gives collected
+// ≥ joiningFee, surplus is never negative, and a match's surplus stays
+// below its head count. (Until 2026-09-10 base and car shares CEILed
+// separately, so the two remainders added — same fix as calc.ts.)
 
 export type TournamentFeeAttendee = {
   playerId: string;
@@ -53,7 +58,7 @@ export type TournamentFeeMatchBreakdown = {
   cars: number;
   sharers: number;
   share: number; // base share per head: CEIL(costPerMatch / attendees)
-  carSharePerSharer: number; // 0 when there are no cars
+  carSharePerSharer: number; // sharer share − base share; 0 when there are no cars
 };
 
 export type TournamentFeeRow = {
@@ -97,9 +102,19 @@ export function calculateTournamentFees(
     const cars = match.attendees.filter((a) => a.broughtCar).length;
     const sharers = match.attendees.filter(isSharer).length;
     const carPool = cars * match.carAllowancePerCar;
-    const share = ceilRupees(costPerMatch / match.attendees.length);
-    const carSharePerSharer =
-      carPool > 0 && sharers > 0 ? ceilRupees(carPool / sharers) : 0;
+    const attendeeCount = match.attendees.length;
+    const share = ceilRupees(costPerMatch / attendeeCount);
+    // costPerMatch = joiningFee / matchCount is fractional, so the
+    // sharer ceiling is taken over integers: joiningFee/(N·att) +
+    // pool/sharers = (joiningFee·sharers + pool·N·att) / (N·att·sharers).
+    const sharerShare =
+      carPool > 0 && sharers > 0
+        ? ceilRupees(
+            (input.joiningFee * sharers + carPool * matchCount * attendeeCount) /
+              (matchCount * attendeeCount * sharers),
+          )
+        : share;
+    const carSharePerSharer = sharerShare - share;
     matches.push({
       matchId: match.matchId,
       attendeeCount: match.attendees.length,

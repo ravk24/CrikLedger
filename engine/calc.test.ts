@@ -126,14 +126,32 @@ describe("calculateMatchFees — THE rule (drivers always share the car pot)", (
     expect(r.surplusToPool).toBe(8);
   });
 
-  it("canonical 6 (demo sample): 2560 + 3 cars, 11 players all shared → 233 + 69, riders 302, drivers 52, surplus 12", () => {
+  it("canonical 6 (demo sample): 2560 + 3 cars, 11 players all shared → CEIL(3310/11) = 301, drivers 51, surplus 1", () => {
+    // One ceiling over 232.73 + 68.18 = 300.9 → 301. Two separate
+    // ceilings (233 + 69 = 302) would leave surplus 12 from 11 heads.
     const r = calculateMatchFees({ ...sample, attendees: people(11, 3) });
     expect(r.perPlayerFee).toBe(233);
-    expect(r.carSharePerSharer).toBe(69); // CEIL(750 / 11)
-    expect(fees(r, "p1")).toBe(52);
-    expect(fees(r, "p4")).toBe(302);
-    expect(r.collectedTotal).toBe(2572); // 8×302 + 3×52
-    expect(r.surplusToPool).toBe(12);
+    expect(r.carSharePerSharer).toBe(68); // 301 − 233
+    expect(fees(r, "p1")).toBe(51);
+    expect(fees(r, "p4")).toBe(301);
+    expect(r.collectedTotal).toBe(2561); // 8×301 + 3×51
+    expect(r.surplusToPool).toBe(1);
+  });
+
+  it("the owner's case: cash 3565 + 3 cars @250, 11 players all shared → 393, surplus 8 (not 394 / 19)", () => {
+    const r = calculateMatchFees({
+      groundFee: 3500,
+      ballFee: 65,
+      otherFee: 0,
+      carAllowancePerCar: 250,
+      attendees: people(11, 3),
+    });
+    expect(r.totalCost).toBe(4315);
+    expect(r.perPlayerFee + r.carSharePerSharer).toBe(393); // CEIL(4315 / 11)
+    expect(fees(r, "p4")).toBe(393);
+    expect(fees(r, "p1")).toBe(143);
+    expect(r.collectedTotal).toBe(3573); // 8×393 + 3×143
+    expect(r.surplusToPool).toBe(8);
   });
 
   it("ticking a driver as shared changes nothing — they are a sharer either way", () => {
@@ -213,7 +231,7 @@ describe("calculateMatchFees — THE rule (drivers always share the car pot)", (
 
   it("a guest who drove is a sharer and gets the rebate, reducing the captain charge", () => {
     // 3350 cash + guest car 250 = 3600; 12 heads all shared:
-    // base CEIL(3350/12) = 280, car CEIL(250/12) = 21.
+    // base CEIL(3350/12) = 280, sharer CEIL(3600/12) = 300 exactly.
     const r = calculateMatchFees({
       groundFee: 3350,
       ballFee: 0,
@@ -229,13 +247,13 @@ describe("calculateMatchFees — THE rule (drivers always share the car pot)", (
     expect(r.carCount).toBe(1);
     expect(r.sharerCount).toBe(12);
     expect(r.perPlayerFee).toBe(280);
-    expect(r.carSharePerSharer).toBe(21);
-    expect(r.rows.every((x) => x.fee === 301)).toBe(true);
-    expect(r.guestRows.map((g) => g.fee)).toEqual([51, 301]);
+    expect(r.carSharePerSharer).toBe(20);
+    expect(r.rows.every((x) => x.fee === 300)).toBe(true);
+    expect(r.guestRows.map((g) => g.fee)).toEqual([50, 300]);
     expect(r.guestRows[0].sharedCar).toBe(true);
-    expect(r.captainCharge).toBe(352);
-    expect(r.collectedTotal).toBe(3362);
-    expect(r.surplusToPool).toBe(12);
+    expect(r.captainCharge).toBe(350);
+    expect(r.collectedTotal).toBe(3350);
+    expect(r.surplusToPool).toBe(0);
   });
 
   it("a guest driver can go net-negative, and that reduces the captain charge", () => {
@@ -302,7 +320,7 @@ describe("calculateMatchFees — THE rule (drivers always share the car pot)", (
     expect(r.rows.every((x) => x.fee === 233)).toBe(true);
   });
 
-  it("invariants hold across drivers × riders × guests: surplus ≥ 0 and is exactly the two ceil remainders", () => {
+  it("invariants hold across drivers × riders × guests: surplus ≥ 0, below the head count, one ceiling per head", () => {
     for (const drivers of [0, 1, 3, 5]) {
       for (const riders of [0, 1, 4, 6]) {
         for (const guestCount of [0, 2]) {
@@ -321,10 +339,21 @@ describe("calculateMatchFees — THE rule (drivers always share the car pot)", (
             r.rows.reduce((s, x) => s + x.fee, 0) + r.captainCharge,
           );
           expect(r.surplusToPool).toBeGreaterThanOrEqual(0);
-          expect(r.surplusToPool).toBe(
-            r.headCount * r.perPlayerFee -
-              r.cashCosts +
-              (r.sharerCount * r.carSharePerSharer - cars),
+          // Every head rounds up by less than a rupee, so the surplus
+          // can never reach the head count.
+          expect(r.surplusToPool).toBeLessThan(r.headCount);
+          const sharerFee = r.perPlayerFee + r.carSharePerSharer;
+          expect(r.perPlayerFee).toBe(Math.ceil(r.cashCosts / r.headCount));
+          expect(sharerFee).toBe(
+            cars > 0 && r.sharerCount > 0
+              ? Math.ceil(
+                  (r.cashCosts * r.sharerCount + cars * r.headCount) /
+                    (r.headCount * r.sharerCount),
+                )
+              : r.perPlayerFee,
+          );
+          expect(r.collectedTotal).toBe(
+            r.sharerCount * sharerFee + r.ownWayCount * r.perPlayerFee - cars,
           );
         }
       }

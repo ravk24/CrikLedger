@@ -1,6 +1,7 @@
 import { ceilRupees } from "./split";
 
-// THE match fee rule (Ravi, locked 2026-08-25). One model, no options.
+// THE match fee rule (Ravi, locked 2026-08-25; rounding revised
+// 2026-09-10). One model, no options.
 //
 //   H          = players + guests            (guests are heads; their
 //                                             fees land on the captain)
@@ -10,29 +11,38 @@ import { ceilRupees } from "./split";
 //   S          = heads with (sharedCar OR broughtCar)
 //                — A DRIVER IS ALWAYS A SHARER, so S >= C
 //   baseShare  = CEIL(base / H)
-//   carShare   = S > 0 ? CEIL(C × A / S) : 0
+//   sharerFee  = CEIL(base / H + C × A / S)   (= baseShare when no pot)
 //                — ONE pooled pot split evenly across every sharer,
-//                  never per car (500 across 9 people, not 250/5 + 250/4)
-//   fee(rider)   = baseShare + carShare
+//                  never per car (500 across 9 people, not 250/5 + 250/4),
+//                  and ONE ceiling over the whole share, not one per part
+//   carShare   = sharerFee − baseShare        (what a sharer adds on top)
+//   fee(rider)   = sharerFee
 //   fee(own way) = baseShare
-//   fee(driver)  = baseShare + carShare − A   (may be negative: the team
+//   fee(driver)  = sharerFee − A              (may be negative: the team
 //                                              owes them, shown "gets ₹x")
 //   totalCost    = base + C × A                (what the sheet prints)
 //   surplusToPool = collected − base
-//                 = (H·baseShare − base) + (S·carShare − C·A)  ≥ 0
+//                 = Σ per-head round-ups, so 0 ≤ surplus < H
 //
 // Canonical: ground 2500 + balls 60, A 250, 11 players (3 drivers) +
-// 2 guests, everyone shared → base 197, car CEIL(750/13) = 58, riders
-// 255, drivers 5, surplus 5. Same with the guests unticked → S 11, car
-// 69, riders 266, drivers 16, guests 197, surplus 10.
+// 2 guests, everyone shared → base 197, sharer CEIL(3310/13) = 255,
+// drivers 5, surplus 5. Same with the guests unticked → S 11, sharer
+// CEIL(2560/13 + 750/11) = 266, drivers 16, guests 197, surplus 10.
+// Eleven players, 3 cars, cash 3565 → CEIL(3565/11 + 750/11) = 393,
+// surplus 8.
 //
 // Rounding happens here and nowhere else (engine/split.ts ceilRupees).
-// Two separate ceils are canonical; they can exceed CEIL((base+cars)/H)
-// by a rupee when everyone shares, and that is the agreed behaviour.
+// The sharer ceiling is taken over integers ((base·S + pot·H) / (H·S))
+// so an exact whole-rupee share never drifts up by float error.
 //
 // History: 2026-08-20 to 2026-08-25 the engine excluded drivers from
 // the sharers ("a driver never funds cars") and paid no rebate when
 // nobody ticked shared. That was wrong. Do not reinstate it.
+// 2026-08-25 to 2026-09-10 baseShare and carShare were CEILed
+// separately, so the two remainders added up: 11 heads could leave a
+// surplus of 19. Ravi: "once it reaches 11, take ₹1 off everyone" —
+// hence the single ceiling. Matches completed under the old rule keep
+// their stored fees; engine/reconstruct.ts reads those back.
 
 export type Attendee = {
   playerId: string;
@@ -74,8 +84,8 @@ export type MatchFeeResult = {
   cashCosts: number; // base: ground + balls + other
   headCount: number;
   carCount: number;
-  perPlayerFee: number; // baseShare = CEIL(base / heads)
-  carSharePerSharer: number; // CEIL(carPool / sharers), 0 with no cars
+  perPlayerFee: number; // baseShare = CEIL(base / heads) — the own-way fee
+  carSharePerSharer: number; // sharerFee − baseShare, 0 with no cars
   sharerCount: number; // drivers included
   ownWayCount: number; // heads − sharers
   rows: FeeRow[];
@@ -105,8 +115,16 @@ export function calculateMatchFees(input: MatchFeeInput): MatchFeeResult {
   const totalCost = cashCosts + carPool;
 
   const perPlayerFee = ceilRupees(cashCosts / headCount);
-  const carSharePerSharer =
-    carPool > 0 && sharerCount > 0 ? ceilRupees(carPool / sharerCount) : 0;
+  // One ceiling over base/H + pot/S, computed on integers so an exact
+  // whole-rupee share can't creep up through float addition.
+  const sharerFee =
+    carPool > 0 && sharerCount > 0
+      ? ceilRupees(
+          (cashCosts * sharerCount + carPool * headCount) /
+            (headCount * sharerCount),
+        )
+      : perPlayerFee;
+  const carSharePerSharer = sharerFee - perPlayerFee;
 
   const feeFor = (h: { broughtCar: boolean; sharedCar?: boolean }) =>
     perPlayerFee +
