@@ -1,10 +1,10 @@
 # Memory — session 30: abandon writes a locked AUTO · CANCELLED refund (migration 54)
 
-Last updated: 2026-09-13, late morning
+Last updated: 2026-09-13, midday
 
 ## What was built
 
-Four commits, all on `main` and pushed (Vercel deploys from `main`):
+Six commits, all on `main` and pushed (Vercel deploys from `main`):
 
 - `e6ca349` — dashboard Team Pool card: removed the green "+₹N last match surplus" pill and its
   `pool_ledger_public` query. `components/dashboard/PoolSummaryCard.tsx` now takes only
@@ -27,7 +27,16 @@ Four commits, all on `main` and pushed (Vercel deploys from `main`):
   context/ui-registry LedgerRow, context/architecture).
 - `d8ab601` — **hotfix:** the abandon route 500'd in prod ("Something went wrong") because it
   used `SELECT SUM(amount) … FOR UPDATE`; Postgres rejects FOR UPDATE with aggregates (0A000).
-  Now locks rows plainly and sums in JS.
+  Now locks rows plainly and sums in JS. Confirmed working: the retry abandoned the test match.
+- `09c4dd6` — mid-session notes save.
+- `d06367b` — **superadmin Delete on abandoned team matches** (`MatchAdminActions.tsx`, tournament
+  pattern; dialog says the fee debit and its refund go together so the pool balance does not
+  change — the API already removed all three linked entries). Match page (`app/matches/[id]/
+  page.tsx`) does one pg read of the refund row for abandoned matches; the abandoned card now says
+  "₹N ground fee credited back to the pool — see the ledger" (legacy abandons with no refund row:
+  "The match fee was returned to the pool."; no fee: unchanged "No fees were charged"), and the
+  fee line says "returned when the match was abandoned". `matches_public` (m36) does NOT expose
+  `refund_entry_id` — that is why the page reads it via pg.
 
 ## Decisions made
 
@@ -57,18 +66,21 @@ Four commits, all on `main` and pushed (Vercel deploys from `main`):
 - Prod DB: **54 migrations applied** (verified: enum has `match_refund`, `matches.refund_entry_id`
   + FK present, `sign_matches_kind` updated, `pool_ledger_public` keeps `security_invoker=true`).
   Old column `admins.viewer_session_started_at` is gone (53 applied).
-- **Not yet confirmed end-to-end**: at last DB read the test match vs "Fearless Fighters"
-  (id `4cfa8a7d…`, 13 Sept, fee debit −₹3,500, entry `8c274143…`) was still `scheduled` and zero
-  `match_refund` rows existed — the owner's retry after the hotfix deploy hadn't happened yet.
+- **Refund confirmed end-to-end in prod**: test match vs "Fearless Fighters" (id `4cfa8a7d…`,
+  13 Sept) is `abandoned` with debit `8c274143…` −₹3,500 and refund `e8d95c8e…` +₹3,500 (the only
+  `match_refund` row). Team pool balance ₹15,319 (`pool_balance` slug `ravi-kant-sgsa`).
+- **Owner intends to DELETE that duplicate test match** via the new Delete button (`d06367b`);
+  at last DB read it had not happened yet. Three Fearless Fighter matches exist: 12 Sept completed
+  (`50a12095…`), 13 Sept legacy abandon "Fearless Fighter" (`cea7a915…`, no ledger rows), and the
+  13 Sept test "Fearless Fighters" (to be deleted).
 - Real viewer `sg_viewer` exists on LR-SuperGiants; ten-seat viewer login live since session 29.
 
 ## Next session starts with
 
-1. Ask whether the abandon retry on the "Fearless Fighters" match succeeded. Verify in DB
-   (read-only): match `status='abandoned'`, `refund_entry_id` non-null, linked row
-   `kind='match_refund'`, amount +3500; ledger on phone shows the debit + locked AUTO · CANCELLED
-   credit; pool balance back to pre-scheduling. If it failed again, get the screenshot and check
-   Vercel deploy of `d8ab601` went live.
+1. Verify the owner deleted the "Fearless Fighters" test match (`4cfa8a7d…`): match gone,
+   entries `8c274143…` and `e8d95c8e…` gone, `pool_balance` still ₹15,319. If the Delete button
+   did not appear, check the `d06367b` deploy went live. Then confirm the legacy "Fearless
+   Fighter" abandon page reads "The match fee was returned to the pool." with a Delete button.
 2. Owner's phone test of viewer seats (carried from 29): sign in as `sg_viewer` on two devices →
    Manage admins shows two seats → per-seat Sign out bounces one → Sign out all bounces both →
    optional 11th sign-in shows "All 10 viewer seats are in use".
