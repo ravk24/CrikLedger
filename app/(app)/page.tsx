@@ -34,7 +34,7 @@ async function DashboardData() {
   // Still superadmin-gated: phone is view-absent by design (migration 43).
   const wantsHowTo =
     !!admin && !admin.mustChangePassword && admin.activeTeamRole === "superadmin";
-  const [poolRes, playersRes, countRes, lastMatchRes, phoneRes] = await Promise.all([
+  const [poolRes, playersRes, countRes, phoneRes] = await Promise.all([
     supabaseServer
       .from("pool_balance")
       .select("balance")
@@ -52,18 +52,6 @@ async function DashboardData() {
       .from("pool_entries")
       .select("id", { count: "exact", head: true })
       .eq("team_id", team.id),
-    supabaseServer
-      .from("pool_ledger_public")
-      .select("amount")
-      .eq("team_id", team.id)
-      .eq("kind", "match_collection")
-      // Explicit — the view's internal ORDER BY isn't guaranteed to
-      // survive a filtered LIMIT pushdown. created_at breaks
-      // same-day ties (migration 42).
-      .order("entry_date", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
     wantsHowTo
       ? pool.query<{ phone: string | null }>(
           `SELECT phone FROM players WHERE team_id = $1 AND is_captain LIMIT 1`,
@@ -83,9 +71,6 @@ async function DashboardData() {
       return Number(a.balance) - Number(b.balance);
     return a.name.localeCompare(b.name);
   });
-  const lastCollection = lastMatchRes.data
-    ? Number(lastMatchRes.data.amount)
-    : null;
 
   return (
     <>
@@ -106,7 +91,6 @@ async function DashboardData() {
       <PoolSummaryCard
         balance={balance}
         entryCount={countRes.count ?? 0}
-        lastCollection={lastCollection}
       />
       <InstallNudge />
       <PlayerGrid
