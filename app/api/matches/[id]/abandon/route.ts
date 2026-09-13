@@ -44,12 +44,12 @@ export async function POST(
         // Lock the fee rows: their amounts are baked into the refund
         // from here on (the ledger routes refuse to edit them once the
         // match is abandoned, same as completed).
-        const feeRes = await client.query<{ total: string }>(
-          `SELECT COALESCE(SUM(amount), 0) AS total
-           FROM pool_entries WHERE id = ANY($1::uuid[]) FOR UPDATE`,
+        // (Postgres refuses FOR UPDATE on an aggregate, so sum here.)
+        const feeRes = await client.query<{ amount: string }>(
+          `SELECT amount FROM pool_entries WHERE id = ANY($1::uuid[]) FOR UPDATE`,
           [feeIds],
         );
-        const total = Number(feeRes.rows[0]?.total ?? 0);
+        const total = feeRes.rows.reduce((sum, r) => sum + Number(r.amount), 0);
         if (total !== 0) {
           const refund = await client.query<{ id: string }>(
             `INSERT INTO pool_entries (kind, message, amount, created_by, team_id)
