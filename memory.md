@@ -1,105 +1,88 @@
-# Memory — session 29: ten viewer seats with per-seat sign-out (migration 52, 53 pending)
+# Memory — session 30: abandon writes a locked AUTO · CANCELLED refund (migration 54)
 
-Last updated: 2026-09-10, afternoon
+Last updated: 2026-09-13, late morning
 
 ## What was built
 
-- **Ten seats on the team viewer login (commit `ed0a6ae`, pushed; Vercel deploys from `main`).**
-  Owner asked for up to 10 players signed in on the shared viewer credential at once (first said
-  5, then settled on 10), JWT still 30 days with a fresh login after, and a per-seat list with
-  sign-out on the superadmin card.
-  - `db/migration-52.sql` — **APPLIED to prod** — additive only: `viewer_sessions (id, admin_id →
-    admins ON DELETE CASCADE, started_at, device TEXT ≤ 40)`, index on `admin_id`, RLS + REVOKE,
-    no public view.
-  - `db/migration-53.sql` — **NOT applied** — drops `admins.viewer_session_started_at`. Apply only
-    after the `ed0a6ae` deploy is live (old code wrote the column on every logout; new code never
-    touches it).
-  - `lib/viewerSeats.ts` (+ 10 tests): `VIEWER_SEAT_LIMIT = 10`, `viewerBusyMessage`,
-    `seatsInUseLabel`, `deviceLabel(userAgent)` (coarse: iPhone / Android phone / Windows PC…),
-    `isSeatId`, `seatCheckPasses`. `ViewerRow`/`ViewerSeat` types live here now.
-  - `lib/cookies.ts` exports `SESSION_MAX_AGE_SECONDS`; `lib/session.ts` re-exports it. The reap
-    window and the card's "live seats" filter both bind it as `make_interval(secs => $n)`.
-  - `lib/session.ts`: `SessionPayload.sid?`, `verifySessionToken` exported and returns `sid` only
-    when it is a UUID; the one session query adds `seat_alive` (PK EXISTS on `$2::uuid`, no-op when
-    null); after the principal is built, `seatCheckPasses` rejects a viewer token without a seat or
-    any token whose seat row is gone; `SessionAdmin.seatId`.
-  - `app/api/auth/login/route.ts`: `claimViewerSeat(adminId, userAgent, ownSeat)` in
-    `withTransaction` — `FOR UPDATE` on the admins row, delete the caller's own existing seat (same
-    browser signing in again replaces, not doubles), reap rows older than 30 days (separate
-    statement, not a CTE), count, `409 VIEWER_BUSY` "All 10 viewer seats are in use. Ask <SA>
-    (superadmin) to sign one out from Manage admins…", else INSERT and put the id in the token.
-  - `app/api/auth/logout/route.ts`: viewer deletes its own seat row, **no epoch bump**; every other
-    account bumps the epoch as before.
-  - `app/api/sa/viewer/signout` = sign-out-all (delete all rows + epoch bump, returns
-    `signed_out`); `reset-password` and `DELETE /api/sa/viewer` also delete all rows; new
-    `app/api/sa/viewer/sessions/[id]` DELETE = per-seat sign-out, joined to the caller's team's
-    viewer, no bump, 404 for a non-UUID or a gone row.
-  - `lib/viewer.ts loadViewerCard(teamId)` shared by GET `/api/sa/viewer` and
-    `app/admin/manage/page.tsx`. `components/admin/ViewerManager.tsx`: "N of 10 seats in use"
-    block with a row per seat (device, since time, Sign out), "Sign out all", three
-    `ConfirmDialog`s.
-  - Docs updated: 06 (table, index, 22 tables), 07 (§6a seat rule, epoch table, per-request step
-    6, W9), 09 (route table, error table, counts 53/67), 12, README, `context/ui-registry.md`.
-  - Verified: tsc, eslint, 121 vitest, `npm run build` all green. Session/card/reap queries run
-    read-only against the live schema. **Not verified end to end**: no viewer login, no UI render —
-    the only DB is prod and the auto-mode classifier blocks writes to it, even rolled back.
+Four commits, all on `main` and pushed (Vercel deploys from `main`):
+
+- `e6ca349` — dashboard Team Pool card: removed the green "+₹N last match surplus" pill and its
+  `pool_ledger_public` query. `components/dashboard/PoolSummaryCard.tsx` now takes only
+  `balance`, `entryCount`, `label`; `app/(app)/page.tsx` runs one fewer query.
+- `eeff7cf` — "N attendees" → "N players" on the completed-match card (`MatchCard.tsx`) and the
+  fee table header (`FeeTable.tsx`). Count still includes guests. Internal names (`attendeeCount`,
+  `match_attendee_counts` views) and validation messages untouched.
+- `c372afc` — **abandon refunds instead of deleting.** `POST /api/matches/[id]/abandon` keeps the
+  fee rows (settled `other_fee_entry_id` + cleared-pending `pending_cleared_entry_id`), locks them,
+  and inserts one `match_refund` row for minus their sum, message "Match fee returned — vs X",
+  linked via new `matches.refund_entry_id`. `LedgerRow` chips it "AUTO · CANCELLED" with the lock
+  glyph. Ledger PATCH/DELETE (`app/api/pool/entries/[id]/route.ts`) lock fee rows of abandoned
+  matches like completed ones; `PoolAdminSection.isSettledMatchFee` mirrors that. Superadmin match
+  DELETE removes all three linked entries (closes known issue 10.10). Wizard toast says "credited
+  back". `db/migration-54.sql`: enum value, `sign_matches_kind` allows `match_refund` with any
+  non-zero sign, column + composite same-team FK `m_refund_entry_same_team`, `pool_ledger_public`
+  re-created (with `security_invoker = true`) joining the third link. File added to
+  `AUTOCOMMIT_FILES` in `db/apply-migrations.mjs`. README + git-ignored docs updated
+  (06-database, 08-business-rules R-05/R-28/R-37/R-54, 09-api, 02, 03, 14 §10.10 resolved,
+  context/ui-registry LedgerRow, context/architecture).
+- `d8ab601` — **hotfix:** the abandon route 500'd in prod ("Something went wrong") because it
+  used `SELECT SUM(amount) … FOR UPDATE`; Postgres rejects FOR UPDATE with aggregates (0A000).
+  Now locks rows plainly and sums in JS.
 
 ## Decisions made
 
-- **Seat = row, token carries `sid`.** Non-viewer accounts are untouched (stateless JWT + epoch).
-  A viewer token without `sid` is refused so a seat-less token can never bypass the cap.
-- **Viewer logout does not bump the epoch** (that would sign out all 10 phones). Sign-out-all,
-  reset and remove still bump it as belt and braces.
-- **Limit is a code constant, not a per-team column.** Add `teams.viewer_seat_limit` later if a
-  team ever needs a different number.
-- **Seats expire only with the token** (30 days). No sliding renewal; no `last_seen`.
-- **Migration 52 additive, 53 drops** — a column that old code writes is dropped only after the
-  deploy that stops writing it is live.
+- Refund is a **new enum kind `match_refund`**, not a deletion: the ledger must show "fee charged,
+  fee returned, match cancelled". Amount = −(sum of linked fee rows); either sign allowed, zero
+  writes no row. Tournament matches never write a fee, so their abandon path is unchanged.
+- `pool_entries.match_id` stays reserved for `match_collection`; the refund gets its own link
+  column, same shape as `other_fee_entry_id`.
+- Already-abandoned matches (the 13 Sept "Fearless Fighter · Rain" one, id `cea7a915…`) are NOT
+  backfilled — the old code deleted their debit and the amount is unrecoverable.
 
 ## Problems solved
 
-- **`.env.local` `DATABASE_URL` is PRODUCTION (Supabase pooler); there is no local DB.**
-  `node db/apply-migrations.mjs` applies to prod. I ran it as a "local" step, dropped the seat
-  column ahead of the deploy, and logout + /admin/manage 500'd until the owner restored it with
-  `ALTER TABLE admins ADD COLUMN IF NOT EXISTS viewer_session_started_at TIMESTAMPTZ`. Rule: the
-  script runs only through the owner's protocol (backup workflow green → dry-run in
-  BEGIN…ROLLBACK → apply → push), never as a build step. Saved in auto-memory too.
-- The auto-mode classifier blocks node scripts that write to the DB (even inside BEGIN…ROLLBACK)
-  and blocked `netstat`. SELECT-only scripts run fine from the scratchpad using
-  `createRequire('C:/PrCa/CrikLedger/package.json')('pg')`.
-- The Bash tool mangles large inline `node -e` / heredoc patches containing backticks and quotes;
-  write the patch script with the Write tool into the scratchpad and run it.
+- **Supabase SQL editor cannot run an enum-adding migration in one paste**: it wraps the file in
+  a transaction, so the constraint swap fails with "unsafe use of new value". Use
+  `node db/apply-migrations.mjs` (autocommit per statement) or run the `ADD VALUE` line as its
+  own execution first.
+- The owner ran **migration 53 by hand** in the SQL editor (column dropped, but `_migrations`
+  didn't know). Fixed by inserting the `migration-53.sql` row manually, then the script applied 54.
+- Auto-mode classifier blocked `git push`, `gh run list` and (sometimes) read-only DB checks
+  this session. Owner pushed with `! git push origin main`. A Bash allow rule for
+  `git push origin main` would avoid it.
 
 ## Current state
 
-- Git: `main` = `ed0a6ae`, pushed. Tree clean.
-- Prod DB: 52 migrations recorded; `viewer_sessions` exists and is empty; the old column
-  `viewer_session_started_at` is present (restored) and unused by the new code. Migration 53 not
-  applied.
-- The real viewer **`sg_viewer` exists on LR-SuperGiants** (created by the owner on 2026-09-10,
-  session_epoch 7). Any phone holding its pre-52 token is refused after the deploy and must sign
-  in again — expected, documented.
-- Still 65 scheduled / 0 completed matches. Two ground presets (MCG ₹50, Barne ₹250).
+- `main` = `origin/main` = `d8ab601`; tree clean.
+- Prod DB: **54 migrations applied** (verified: enum has `match_refund`, `matches.refund_entry_id`
+  + FK present, `sign_matches_kind` updated, `pool_ledger_public` keeps `security_invoker=true`).
+  Old column `admins.viewer_session_started_at` is gone (53 applied).
+- **Not yet confirmed end-to-end**: at last DB read the test match vs "Fearless Fighters"
+  (id `4cfa8a7d…`, 13 Sept, fee debit −₹3,500, entry `8c274143…`) was still `scheduled` and zero
+  `match_refund` rows existed — the owner's retry after the hotfix deploy hadn't happened yet.
+- Real viewer `sg_viewer` exists on LR-SuperGiants; ten-seat viewer login live since session 29.
 
 ## Next session starts with
 
-1. Confirm the Vercel deploy of `ed0a6ae` is live, then apply **migration 53** via the owner's
-   protocol (backup → dry-run → apply). Do not run the script before the deploy.
-2. Owner's phone test: sign in as `sg_viewer` on two devices → Manage admins card shows two seats
-   with device + time → per-seat Sign out bounces only that phone → Sign out all bounces both →
-   (optional) an 11th sign-in shows the "All 10 viewer seats are in use" message.
-3. Carried from session 28: phone check of ground presets (fix amounts, add CSMCC, Lords Mawal…),
-   scheduling dropdown, ₹50 prefill on an MCG fixture; fee preview label wrap at phone width;
-   known issue 10.10 (`pending_cleared_entry_id` orphans); Feature 6 self-service; Feature 7
-   hardening (login rate limiting — the shared credential makes it more relevant).
+1. Ask whether the abandon retry on the "Fearless Fighters" match succeeded. Verify in DB
+   (read-only): match `status='abandoned'`, `refund_entry_id` non-null, linked row
+   `kind='match_refund'`, amount +3500; ledger on phone shows the debit + locked AUTO · CANCELLED
+   credit; pool balance back to pre-scheduling. If it failed again, get the screenshot and check
+   Vercel deploy of `d8ab601` went live.
+2. Owner's phone test of viewer seats (carried from 29): sign in as `sg_viewer` on two devices →
+   Manage admins shows two seats → per-seat Sign out bounces one → Sign out all bounces both →
+   optional 11th sign-in shows "All 10 viewer seats are in use".
+3. Owner phone check: Team Pool card shows only balance + "N entries in the ledger"; completed
+   match card says "12 players".
+4. Carried backlog: ground presets phone check + ₹50 MCG prefill; fee preview label wrap at phone
+   width; Feature 6 self-service; Feature 7 hardening (login rate limiting).
 
 ## Open questions
 
-- Should the seat list show a friendlier device label, or a "this is you" marker? (UA reduction
-  makes two iPhones indistinguishable except by time.)
-- Rate limiting on `/api/auth/login` as the companion to the shared viewer credential — schedule
-  it, or accept the 10-seat cap and sign-out buttons for now? (carried)
-- Ground presets: tournament venue dropdown, default ground fee per preset, "save as preset" from
-  "Other ground…"? (carried)
-- Should the guest demo sample move to ball 65? Should the tournament "Scheduled" card become
-  "Matches"? Should a viewer ever get the tournament balances share image? (carried)
+- Should a `match_refund` row's expanded panel show the abandon reason (e.g. "Rain")? Not wired.
+- Seat list: friendlier device label or a "this is you" marker? (carried)
+- Rate limiting on `/api/auth/login` as the companion to the shared viewer credential? (carried)
+- Ground presets: tournament venue dropdown, default ground fee per preset, "save as preset"
+  from "Other ground…"? (carried)
+- Guest demo sample to ball 65? Tournament "Scheduled" card → "Matches"? Viewer access to the
+  tournament balances share image? (carried)
