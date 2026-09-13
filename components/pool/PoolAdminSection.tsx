@@ -38,11 +38,15 @@ type LedgerChange =
   | { type: "delete"; id: string }
   | { type: "add"; row: PoolLedgerRow };
 
-// A fee row of a completed match is locked: its amount is already
-// baked into the match's stored collection, so only the match's own
-// delete may remove it (the server refuses with 409 as the backstop).
+// A fee row of a completed or abandoned match is locked: its amount is
+// already baked into the match's stored collection (completed) or its
+// refund row (abandoned), so only the match's own delete may remove it
+// (the server refuses with 409 as the backstop).
 function isSettledMatchFee(entry: PoolLedgerRow | null) {
-  return entry?.match_id != null && entry.match_status === "completed";
+  return (
+    entry?.match_id != null &&
+    (entry.match_status === "completed" || entry.match_status === "abandoned")
+  );
 }
 
 function deleteDescription(entry: PoolLedgerRow | null): string {

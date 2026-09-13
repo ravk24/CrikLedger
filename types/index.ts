@@ -18,6 +18,7 @@ export type PoolEntryKind =
   | "ground_booking"
   | "equipment"
   | "match_collection"
+  | "match_refund" // AUTO on abandon: reverses the match's fee rows (migration 54)
   | "plain_debit"
   | "common_debit"
   | "opening_due"; // season carryforward — player debt, not pool money
@@ -32,7 +33,8 @@ export type PoolLedgerRow = {
   player_name: string | null; // linked player, deposit / opening_due only
   created_at: string; // same-day tiebreak; entry_date alone is just a DATE
   // Owning match when this row is a match fee (settled or cleared-
-  // pending slice, migration 48); null for every other row.
+  // pending slice, migration 48) or an abandon refund (migration 54);
+  // null for every other row.
   match_id: string | null;
   match_opponent: string | null; // raw; render via opponentLabel()
   match_status: MatchStatus | null;

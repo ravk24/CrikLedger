@@ -57,20 +57,22 @@ export async function PATCH(
         throw new ApiError(422, "MESSAGE_REQUIRED", "Message cannot be empty");
       }
       // An Other match's ground-fee debit is baked into its stored
-      // match_collection at completion — changing the amount afterwards
+      // match_collection at completion, and into its match_refund row
+      // on abandon (migration 54) — changing the amount afterwards
       // would silently drift the pool by the difference (§3 reads the
       // CURRENT amount only while the match's own flows run).
       if (body.amount !== undefined && entry.kind === "plain_debit") {
         const linked = await client.query(
           `SELECT id FROM matches
-           WHERE other_fee_entry_id = $1 AND status = 'completed'`,
+           WHERE (other_fee_entry_id = $1 OR pending_cleared_entry_id = $1)
+             AND status IN ('completed', 'abandoned')`,
           [id],
         );
         if (linked.rows[0]) {
           throw new ApiError(
             409,
             "AUTO_ENTRY",
-            "This ground fee is settled inside its completed match — edit the match instead",
+            "This ground fee is settled inside its completed or abandoned match — edit the match instead",
           );
         }
       }
@@ -153,13 +155,14 @@ export async function DELETE(
       );
       const match = linked.rows[0];
 
-      if (match?.status === "completed") {
-        // The fee is baked into the stored collection (R-38): removing
-        // it would silently drift the pool by the recouped amount.
+      if (match?.status === "completed" || match?.status === "abandoned") {
+        // The fee is baked into the stored collection (R-38) or into
+        // the abandon refund row (migration 54): removing it would
+        // silently drift the pool by that amount.
         throw new ApiError(
           409,
           "AUTO_ENTRY",
-          "This fee is settled inside its completed match — delete the match instead",
+          "This fee is settled inside its completed or abandoned match — delete the match instead",
         );
       }
       if (match?.status === "scheduled") {
@@ -172,9 +175,8 @@ export async function DELETE(
         return { match_deleted: true, match_id: match.id, fee_reverted };
       }
 
-      // No link, or an abandoned match (abandon already returned the
-      // settled fee; a leftover cleared-pending link just SET NULLs).
-      // Common-debit deletes cascade their shares and recovery row via FKs.
+      // No owning match. Common-debit deletes cascade their shares and
+      // recovery row via FKs.
       await client.query(
         `DELETE FROM pool_entries WHERE id = $1 AND team_id = $2`,
         [id, admin.scopeId],

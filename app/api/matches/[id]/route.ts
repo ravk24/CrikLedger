@@ -32,7 +32,7 @@ export async function DELETE(
 
     await withTransaction(async (client) => {
       const cur = await client.query(
-        `SELECT other_fee_entry_id
+        `SELECT other_fee_entry_id, pending_cleared_entry_id, refund_entry_id
          FROM matches WHERE id = $1 FOR UPDATE`,
         [id],
       );
@@ -42,12 +42,19 @@ export async function DELETE(
       }
       await client.query(`DELETE FROM matches WHERE id = $1`, [id]);
       // Participants and the collection credit cascade with the match;
-      // deleting the linked fee entry completes the full reversal in
-      // either direction — the pool ends where it was before scheduling.
-      if (match.other_fee_entry_id) {
-        await client.query(`DELETE FROM pool_entries WHERE id = $1`, [
-          match.other_fee_entry_id,
-        ]);
+      // deleting every linked entry — settled fee, cleared-pending fee,
+      // and an abandoned match's refund — completes the full reversal
+      // in either direction: the pool ends where it was before scheduling.
+      const entryIds = [
+        match.other_fee_entry_id,
+        match.pending_cleared_entry_id,
+        match.refund_entry_id,
+      ].filter((x): x is string => Boolean(x));
+      if (entryIds.length > 0) {
+        await client.query(
+          `DELETE FROM pool_entries WHERE id = ANY($1::uuid[])`,
+          [entryIds],
+        );
       }
     });
 

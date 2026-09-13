@@ -308,7 +308,7 @@ export function MatchWizard({
       const feeReverted = Number(body.data?.fee_reverted ?? 0);
       setSuccess(
         feeReverted > 0
-          ? `Match marked abandoned — ₹${formatRupees(feeReverted)} ground fee returned to the ${fundLabel}.`
+          ? `Match marked abandoned — ₹${formatRupees(feeReverted)} ground fee credited back to the ${fundLabel}.`
           : "Match marked abandoned — no fees charged.",
       );
       startTransition(() => router.refresh());

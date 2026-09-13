@@ -33,7 +33,7 @@ Worked: ground 2,500 + balls 60, 3 cars @ ₹250, 11 players + 2 guests, everyon
 - **Ground presets** (superadmin, `/admin/grounds`): each ground carries its car allowance. Scheduling picks the ground from a dropdown ("Other ground…" still types a name), and completing a match there prefills that allowance — editable, and snapshotted on the match, so later edits to the list never change history.
 - **Guests** count in the split like players, and their charges land on the **standing captain's balance** — merged into the captain's own fee row when they play, or a charge-only row when they don't. Guests hand the captain cash offline; the app never bills a guest directly. Guest drivers get the same car-allowance credit, which reduces the captain's charge.
 - On submit, one database transaction updates the match, writes the final fee rows, and auto-credits the pool with the rounding surplus (collected − cash costs). If admin edits erase the surplus, no pool entry is created.
-- **Away (Other) matches**: the pool fronts the team's ground-fee contribution when the match is scheduled (a linked debit), and the completion credit recoups it on top of the surplus (collected − cash costs + contribution). Abandoning, cancelling, or deleting the match returns the fee to the pool. Barne matches never touch money at scheduling — the season's slots were block-paid up front.
+- **Away (Other) matches**: the pool fronts the team's ground-fee contribution when the match is scheduled (a linked debit), and the completion credit recoups it on top of the surplus (collected − cash costs + contribution). Abandoning the match credits the fee back with a locked **AUTO · CANCELLED** ledger row (the debit stays, so the ledger tells the story); cancelling or deleting removes the debit. Barne matches never touch money at scheduling — the season's slots were block-paid up front.
 
 ### Pool (team fund) ledger
 
@@ -45,7 +45,8 @@ One unified, chronological ledger with a running balance:
 | Credit — ground booking | Admin | Pool ↑ by the amount paid; records team, captain, slots, and pending amount, and schedules one match per booked date in the same transaction. Deleting a booked match returns that slot's share to the pool automatically |
 | Credit — other income | Admin | Pool ↑ |
 | Credit — match collection | **App, automatically** on match submit | Pool ↑ by the rounding surplus — plus, for an away (Other) match, the ground fee the pool fronted at scheduling (recouped from player fees) |
-| Debit — away-match ground fee | **App** when an Other match is scheduled | Pool ↓ by the team's contribution (a linked `plain_debit`); returns to the pool automatically if the match is abandoned, cancelled, or deleted |
+| Debit — away-match ground fee | **App** when an Other match is scheduled | Pool ↓ by the team's contribution (a linked `plain_debit`); removed if the match is cancelled or deleted |
+| Credit — match fee returned | **App, automatically** when a match is abandoned | Pool ↑ by the fee the pool fronted (the debit stays; this locked AUTO · CANCELLED row reverses it) |
 | Debit — plain (ground booking, misc) | Admin | Pool ↓ |
 | Debit — common (team gear: bats, stumps…) | Admin | Pool ↓, each active player charged `CEILING(amount ÷ active players)` on their balance — nothing auto-credited back |
 | Debit — season opening due | Admin | Pool ↓ and that player's balance ↓ (season-1 debt carryforward; a later settling deposit cancels it). Entered from the Credit sheet as "Last season due" |

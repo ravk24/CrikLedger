@@ -17,7 +17,11 @@ if (!url) throw new Error("DATABASE_URL not found in .env.local");
 
 // These files contain ALTER TYPE ... ADD VALUE and must run in autocommit, one
 // statement at a time (their headers say "run statement-by-statement").
-const AUTOCOMMIT_FILES = new Set(["migration-4.sql", "migration-8.sql"]);
+const AUTOCOMMIT_FILES = new Set([
+  "migration-4.sql",
+  "migration-8.sql",
+  "migration-54.sql",
+]);
 
 // Split SQL into statements on top-level semicolons (tracks quotes, dollar-quotes
 // and line comments — enough for this repo's plain-DDL migrations).
