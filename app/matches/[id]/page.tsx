@@ -214,7 +214,7 @@ async function MatchDetailData({
   // for a visitor who has no active team at all. The captain is scoped by
   // the match's own team. The admin props depend on nothing below, so
   // they load in the same round.
-  const [team, captainRes, adminProps] = await Promise.all([
+  const [team, captainRes, adminProps, refundRes] = await Promise.all([
     // A member's own team row already arrived with the session; only a
     // visitor (or a megaadmin on a foreign team) pays the lookup.
     admin?.activeTeam?.id === match.team_id
@@ -227,9 +227,22 @@ async function MatchDetailData({
       .eq("is_captain", true)
       .maybeSingle(),
     buildAdminProps(match),
+    // An abandoned match's refund row (migration 54) is not on
+    // matches_public; one pg read tells the card what came back.
+    match.status === "abandoned"
+      ? pool.query<{ amount: string }>(
+          `SELECT pe.amount
+           FROM matches m
+           JOIN pool_entries pe ON pe.id = m.refund_entry_id
+           WHERE m.id = $1`,
+          [match.id],
+        )
+      : Promise.resolve({ rows: [] as { amount: string }[] }),
   ]);
 
   const teamCaptain = (captainRes.data as { name: string } | null)?.name ?? null;
+  const refundAmount =
+    refundRes.rows[0] != null ? Number(refundRes.rows[0].amount) : null;
 
   const participants = (participantsRes.data ?? []) as MatchParticipantPublic[];
   participants.sort((a, b) => a.player_name.localeCompare(b.player_name));
@@ -343,9 +356,13 @@ async function MatchDetailData({
         {match.fee_direction ? (
           <p className="text-xs text-text-muted">
             Match fee{" "}
-            {match.fee_direction === "credit"
-              ? "credited to the pool"
-              : "debited from the pool — recouped from match fees on completion"}
+            {match.status === "abandoned"
+              ? match.fee_direction === "credit"
+                ? "credited to the pool — reversed when the match was abandoned"
+                : "debited from the pool — returned when the match was abandoned"
+              : match.fee_direction === "credit"
+                ? "credited to the pool"
+                : "debited from the pool — recouped from match fees on completion"}
             {Number(match.fee_pending) > 0 &&
               ` · ₹${formatRupees(Number(match.fee_pending))} still pending`}
           </p>
@@ -423,7 +440,13 @@ async function MatchDetailData({
             Match abandoned{match.abandoned_reason ? ` — ${match.abandoned_reason}` : ""}.
           </p>
           <p className="mt-1 text-xs text-text-muted">
-            No fees were charged for this match.
+            {refundAmount != null && refundAmount > 0
+              ? `₹${formatRupees(refundAmount)} ground fee credited back to the pool — see the ledger.`
+              : refundAmount != null && refundAmount < 0
+                ? `₹${formatRupees(Math.abs(refundAmount))} match fee taken back out of the pool — see the ledger.`
+                : match.fee_direction
+                  ? "The match fee was returned to the pool."
+                  : "No fees were charged for this match."}
           </p>
         </section>
       )}

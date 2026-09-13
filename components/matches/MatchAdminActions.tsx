@@ -68,7 +68,8 @@ export function MatchAdminActions({
         setError(body.error?.message ?? "Could not delete the match.");
         return;
       }
-      // Delete only exists on completed matches, so back to that list.
+      // Delete exists on completed and abandoned matches, both listed
+      // under Completed — back to that list.
       router.push("/schedule/completed");
       startTransition(() => router.refresh());
     } catch {
@@ -97,8 +98,42 @@ export function MatchAdminActions({
 
   // Keep the wizard mounted while its success pane is open — abandoning
   // refreshes the page into this state, and unmounting would destroy
-  // the "ground fee returned" message before it can be read.
-  if (status === "abandoned") return wizardOpen ? wizard : null;
+  // the "ground fee credited back" message before it can be read.
+  if (status === "abandoned") {
+    if (!isSuperadmin) return wizardOpen ? wizard : null;
+    // Superadmin may remove an abandoned match. The API deletes the
+    // fee rows and the refund that reversed them together, so the
+    // pool balance is unchanged (migration 54).
+    return (
+      <section className="flex flex-col gap-2">
+        {wizardOpen && wizard}
+        <button
+          type="button"
+          onClick={() => setConfirmDelete(true)}
+          className="h-11 rounded-md border border-debit-light px-4 text-sm font-medium text-debit"
+        >
+          Delete match
+        </button>
+        {error && <p className="text-sm text-debit">{error}</p>}
+        <ConfirmDialog
+          open={confirmDelete}
+          onOpenChange={setConfirmDelete}
+          title="Delete this match?"
+          description={
+            feeAmount > 0 && feeDirection === "debit"
+              ? "Superadmin only. The abandoned match is removed together with its match-fee debit and the refund that reversed it — the pool balance does not change."
+              : feeAmount > 0 && feeDirection === "credit"
+                ? "Superadmin only. The abandoned match is removed together with its match-fee credit and the reversal that took it back out — the pool balance does not change."
+                : "Superadmin only. The abandoned match is removed — it never charged any fees."
+          }
+          confirmLabel="Delete match"
+          destructive
+          pending={pending}
+          onConfirm={handleDelete}
+        />
+      </section>
+    );
+  }
 
   // Completion is locked until the opponent is known and the booking's
   // pending fee is cleared.
