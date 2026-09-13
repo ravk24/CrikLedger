@@ -42,7 +42,7 @@ export function MatchCard({ match, attendeeCount }: Props) {
         {match.status === "completed" && (
           <>
             {" · "}
-            {attendeeCount} {attendeeCount === 1 ? "attendee" : "attendees"}
+            {attendeeCount} {attendeeCount === 1 ? "player" : "players"}
           </>
         )}
         {match.status === "abandoned" && match.abandoned_reason && (
