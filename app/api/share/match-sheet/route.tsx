@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { SHARE_WIDTH } from "@/lib/share-image";
+import { SHARE_BRAND, SHARE_WIDTH } from "@/lib/share-image";
 import { SITE_HOST } from "@/lib/site";
 
 // Renders a match sheet as a PNG for the share sheet / WhatsApp.
@@ -238,7 +238,7 @@ export async function POST(req: NextRequest) {
         }}
       >
         <div style={{ display: "flex", fontSize: 17, color: "#38bdf8", letterSpacing: 1 }}>
-          CRIKLEDGER
+          {SHARE_BRAND}
         </div>
 
         <div style={{ display: "flex", fontSize: 37, fontWeight: 700, marginTop: 8 }}>
