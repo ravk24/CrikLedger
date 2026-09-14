@@ -233,7 +233,7 @@ export function GuestMatchSheet({
 
         <dl className="mt-4 space-y-1 border-t border-border pt-3 text-sm">
           <Line label="Ground" value={Number(costs.ground) || 0} />
-          <Line label="Balls" value={Number(costs.ball) || 0} />
+          <Line label="Ball" value={Number(costs.ball) || 0} />
           {Number(costs.other) > 0 && (
             <Line label="Other" value={Number(costs.other)} />
           )}

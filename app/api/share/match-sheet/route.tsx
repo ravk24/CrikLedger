@@ -290,7 +290,7 @@ export async function POST(req: NextRequest) {
         </div>
 
         <div style={{ display: "flex", marginTop: "auto", fontSize: 16, color: "#94a3b8" }}>
-          Ground ₹{rupees(data.groundFee)} · Balls ₹{rupees(data.ballFee)}
+          Ground ₹{rupees(data.groundFee)} · Ball ₹{rupees(data.ballFee)}
           {data.otherFee > 0 ? ` · Other ₹${rupees(data.otherFee)}` : ""}
           {data.carCount > 0 && data.carAllowancePerCar > 0
             ? ` · Cars ${data.carCount} × ₹${rupees(data.carAllowancePerCar)}`

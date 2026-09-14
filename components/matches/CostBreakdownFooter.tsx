@@ -26,7 +26,7 @@ type Props = {
   fundLabel?: string; // "pool" (SG) or "fund" (tournaments)
 };
 
-// Ground · Balls · Cars, then Total / Per head / Collected / Surplus.
+// Ground · Ball · Cars, then Total / Per head / Collected / Surplus.
 // Deliberately no "Own way" or "guest fees via the captain" lines (Ravi
 // 2026-08-25): the rows say who paid what, and guests paying the captain
 // is a standing team rule.
@@ -41,7 +41,7 @@ export function CostBreakdownFooter({
   return (
     <section className="rounded-lg border border-border bg-surface-secondary p-4 text-sm">
       <p className="text-xs text-text-secondary">
-        Ground ₹{formatRupees(Number(match.ground_fee))} · Balls ₹
+        Ground ₹{formatRupees(Number(match.ground_fee))} · Ball ₹
         {formatRupees(Number(match.ball_fee))}
         {Number(match.other_fee) > 0 &&
           ` · Other ₹${formatRupees(Number(match.other_fee))}`}
