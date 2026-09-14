@@ -220,12 +220,13 @@ async function MatchDetailData({
     admin?.activeTeam?.id === match.team_id
       ? Promise.resolve(admin.activeTeam)
       : getTeamById(match.team_id),
+    // Captain and vice-captain in one round; at most one of each per
+    // team (players_one_captain / players_one_vice_captain indexes).
     supabaseServer
       .from("players_public")
-      .select("name")
+      .select("name, is_captain, is_vice_captain")
       .eq("team_id", match.team_id)
-      .eq("is_captain", true)
-      .maybeSingle(),
+      .or("is_captain.eq.true,is_vice_captain.eq.true"),
     buildAdminProps(match),
     // An abandoned match's refund row (migration 54) is not on
     // matches_public; one pg read tells the card what came back.
@@ -240,7 +241,13 @@ async function MatchDetailData({
       : Promise.resolve({ rows: [] as { amount: string }[] }),
   ]);
 
-  const teamCaptain = (captainRes.data as { name: string } | null)?.name ?? null;
+  const roleRows = (captainRes.data ?? []) as {
+    name: string;
+    is_captain: boolean;
+    is_vice_captain: boolean;
+  }[];
+  const teamCaptain = roleRows.find((r) => r.is_captain)?.name ?? null;
+  const teamViceCaptain = roleRows.find((r) => r.is_vice_captain)?.name ?? null;
   const refundAmount =
     refundRes.rows[0] != null ? Number(refundRes.rows[0].amount) : null;
 
@@ -312,11 +319,15 @@ async function MatchDetailData({
           fee: r.fee,
           broughtCar: r.broughtCar,
           isCaptain: isCaptain.has(r.playerId),
+          // calc.rows is the playing squad, so the vice-captain is marked
+          // only when he actually played.
+          isViceCaptain: r.playerId === teamViceCaptain,
         })),
         ...calc.guestRows.map((g) => ({
-          name: `${g.name} (guest)`,
+          name: g.name,
           fee: g.fee,
           broughtCar: g.broughtCar,
+          isGuest: true,
         })),
       ].slice(0, 30),
     };

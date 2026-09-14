@@ -67,6 +67,7 @@ export function GuestMatchSheet({
         name: g.name,
         fee: g.fee,
         broughtCar: g.broughtCar,
+        isGuest: true,
       })),
     ],
   };

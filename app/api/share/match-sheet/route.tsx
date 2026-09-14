@@ -15,6 +15,8 @@ const rowSchema = z.object({
   fee: z.number().finite(),
   broughtCar: z.boolean(),
   isCaptain: z.boolean().default(false),
+  isViceCaptain: z.boolean().default(false),
+  isGuest: z.boolean().default(false),
 });
 
 const payloadSchema = z.object({
@@ -98,6 +100,76 @@ function CaptainMark() {
         C
       </div>
     </div>
+  );
+}
+
+// Medal + silver "VC", the same mark components/shared/ViceCaptainMark
+// draws on screen (lucide <Medal> path, app/globals.css silver tokens).
+// The medal stroke is one step lighter than the --color-silver token:
+// #6b7280 vanishes against the navy card.
+function ViceCaptainMark() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", marginLeft: 5 }}>
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#9ca3af"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M7.21 15 2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15" />
+        <path d="M11 12 5.12 2.2" />
+        <path d="m13 12 5.88-9.8" />
+        <path d="M8 7h8" />
+        <circle cx="12" cy="17" r="5" />
+        <path d="M12 18v-2h-.5" />
+      </svg>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: 16,
+          minWidth: 16,
+          padding: "0 4px",
+          borderRadius: 8,
+          marginLeft: 3,
+          backgroundColor: "#e5e7eb",
+          color: "#374151",
+          fontSize: 8,
+          fontWeight: 700,
+        }}
+      >
+        VC
+      </div>
+    </div>
+  );
+}
+
+// A guest is "an added person": lucide <UserRoundPlus> in the footer's
+// muted slate. No word after the name — "(guest)" read badly in the
+// group (Ravi 2026-09-14).
+function GuestMark() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#94a3b8"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ marginLeft: 5 }}
+    >
+      <path d="M2 21a8 8 0 0 1 13.292-6" />
+      <circle cx="10" cy="8" r="5" />
+      <path d="M19 16v6" />
+      <path d="M22 19h-6" />
+    </svg>
   );
 }
 
@@ -199,7 +271,9 @@ export async function POST(req: NextRequest) {
                   >
                     {r.name}
                     {r.isCaptain ? <CaptainMark /> : null}
+                    {r.isViceCaptain ? <ViceCaptainMark /> : null}
                     {r.broughtCar ? <CarMark /> : null}
+                    {r.isGuest ? <GuestMark /> : null}
                   </div>
                   <div
                     style={{
