@@ -1,4 +1,4 @@
-# Memory — session 32: share image footer credits "by Ravi Kant"
+# Memory — session 32: share image footer credits "· by Ravi Kant"
 
 Last updated: 2026-09-14, morning (after session 31)
 
@@ -17,6 +17,10 @@ Two commits on `main`, both pushed (`d561e50..57671aa`; Vercel deploys from `mai
   - `app/api/share/match-sheet/route.tsx`: imports `SHARE_FOOTER, SHARE_WIDTH` from
     `@/lib/share-image` (its `SITE_HOST` import from `@/lib/site` was dropped); bottom link line
     renders `{SHARE_FOOTER}`. Styles untouched (17 px, `#38bdf8`).
+- Follow-up (same morning) — **footer reads "crik-ledger.vercel.app · by Ravi Kant"**, gap
+  tightened. `SHARE_FOOTER` string replaced by a `ShareFooterLink({ marginTop })` component in
+  `lib/share-image.tsx`, used by `ShareFrame` (`marginTop={footer ? 11 : "auto"}`) and the match
+  sheet route (`marginTop={11}`). Two flex children, no gap: `{SITE_HOST}` and `· by Ravi Kant`.
 
 Prompted by the owner's WhatsApp screenshot of the 12 Sept LR-SuperGiants vs Fearless Fighter
 sheet (the same one session 31 worked from).
@@ -31,13 +35,20 @@ sheet (the same one session 31 worked from).
 
 ## Problems solved
 
-- Nothing new. Route-level check reused session 31's method: `curl -X POST
+- **satori over-measures narrow glyphs.** Words full of i/l/r/k (the host, "LR-SuperGiants")
+  end in a phantom gap about one space wide; "aaaa…" shows none; splitting the word into flex
+  children just moves the gap; font size and weight do not change it. Prod shows the same (see
+  the owner's screenshot title). Fix used: the separator sits in a second flex child with no gap
+  and no leading space, so the phantom width *is* the space. Probe scripts render through
+  `file:///C:/PrCa/CrikLedger/node_modules/next/og.js` with plain `{type, props}` trees — a quick
+  way to A/B satori layouts without the app.
+- Otherwise nothing new. Route-level check reused session 31's method: `curl -X POST
   /api/share/match-sheet` against the already-running dev server on :3000, sample rows rendered
   with `CRIKLEDGER` on top and "crik-ledger.vercel.app  by Ravi Kant" at the bottom.
 
 ## Current state
 
-- `main` = `origin/main` = `57671aa`; only `memory.md` (these notes) uncommitted.
+- `main` = `origin/main` = the "footer gap" commit after `57671aa`; only `memory.md` (these notes) uncommitted.
 - tsc clean after both commits. Vitest not run this session (no logic touched; session 31 baseline
   was 121 passing).
 - Prod DB unchanged: still **54 migrations applied**.
@@ -48,9 +59,9 @@ sheet (the same one session 31 worked from).
 
 ## Next session starts with
 
-1. Owner phone check after the `57671aa` deploy: open the 12 Sept LR-SuperGiants vs Fearless
+1. Owner phone check after the footer-gap deploy: open the 12 Sept LR-SuperGiants vs Fearless
    Fighter match → Share match sheet → confirm the bottom line reads
-   "crik-ledger.vercel.app by Ravi Kant", the top eyebrow is `CRIKLEDGER`, guests show the
+   "crik-ledger.vercel.app · by Ravi Kant" with a single-space-wide gap, the top eyebrow is `CRIKLEDGER`, guests show the
    person-plus glyph with no "(guest)", the VC has medal+VC, and the footer says "Ball ₹65". If the
    page errors, suspect the `.or(...)` filter on `players_public` in `app/matches/[id]/page.tsx`.
 2. Also share one ledger or balances image (uses `ShareFrame`) to confirm the same footer line.
@@ -64,8 +75,6 @@ sheet (the same one session 31 worked from).
 
 ## Open questions
 
-- Footer spacing: satori renders a visibly wide gap between the host and "by Ravi Kant" (plain
-  single space in the string). Acceptable, or tighten with a " · " separator? Not asked.
 - Should the on-screen `FeeTable` / match header also show the VC mark for parity with the image?
   (carried, not asked)
 - Should the guest demo fixtures include a vice-captain so the sample image shows the VC mark?
