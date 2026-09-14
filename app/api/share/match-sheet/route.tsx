@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { SHARE_FOOTER, SHARE_WIDTH } from "@/lib/share-image";
+import { SHARE_WIDTH, ShareFooterLink } from "@/lib/share-image";
 
 // Renders a match sheet as a PNG for the share sheet / WhatsApp.
 //
@@ -303,16 +303,7 @@ export async function POST(req: NextRequest) {
 
         {/* The image gets forwarded far past the team group — this is how
             someone who receives it can find the app. */}
-        <div
-          style={{
-            display: "flex",
-            marginTop: 11,
-            fontSize: 17,
-            color: "#38bdf8",
-          }}
-        >
-          {SHARE_FOOTER}
-        </div>
+        <ShareFooterLink marginTop={11} />
       </div>
     ),
     { width: SHARE_WIDTH, height },

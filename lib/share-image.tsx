@@ -15,7 +15,21 @@ export const SHARE_WIDTH = 720;
 
 // Footer link on every share image: the address plus the author's name,
 // so a forwarded picture credits him (Ravi 2026-09-14).
-export const SHARE_FOOTER = `${SITE_HOST} by Ravi Kant`;
+//
+// Two flex children with NO gap and no space before the "·". satori
+// measures narrow glyphs (i, l, r, k…) wider than it draws them, so a
+// long word like the host ends in a phantom gap about one space wide —
+// the same quirk shows after "LR-SuperGiants" in the title. A real space
+// or a gap on top of it read as a double space. Re-check the render if
+// satori (next/og) is upgraded.
+export function ShareFooterLink({ marginTop }: { marginTop: number | "auto" }) {
+  return (
+    <div style={{ display: "flex", marginTop, fontSize: 17, color: "#38bdf8" }}>
+      <div style={{ display: "flex" }}>{SITE_HOST}</div>
+      <div style={{ display: "flex" }}>· by Ravi Kant</div>
+    </div>
+  );
+}
 
 export const rupees = (n: number) =>
   Math.abs(Math.round(n)).toLocaleString("en-IN");
@@ -98,17 +112,8 @@ export function ShareFrame({ title, subtitle, highlight, children, footer }: Fra
       ) : null}
       {/* The image gets forwarded far past the team group — this is how
           someone who receives it can find the app. */}
-      <div
-        style={{
-          display: "flex",
-          // Without a footer this line is what pins to the bottom edge.
-          marginTop: footer ? 11 : "auto",
-          fontSize: 17,
-          color: "#38bdf8",
-        }}
-      >
-        {SHARE_FOOTER}
-      </div>
+      {/* Without a footer this line is what pins to the bottom edge. */}
+      <ShareFooterLink marginTop={footer ? 11 : "auto"} />
     </div>
   );
 }
