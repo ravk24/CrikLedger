@@ -13,9 +13,9 @@ import { SITE_HOST } from "@/lib/site";
 
 export const SHARE_WIDTH = 720;
 
-// Eyebrow on every share image. Ravi 2026-09-14: carry the author's name
-// so a forwarded picture credits him, like CopyrightBar does on screen.
-export const SHARE_BRAND = "CrikLedger - by Ravi Kant";
+// Footer link on every share image: the address plus the author's name,
+// so a forwarded picture credits him (Ravi 2026-09-14).
+export const SHARE_FOOTER = `${SITE_HOST} by Ravi Kant`;
 
 export const rupees = (n: number) =>
   Math.abs(Math.round(n)).toLocaleString("en-IN");
@@ -55,7 +55,7 @@ export function ShareFrame({ title, subtitle, highlight, children, footer }: Fra
       }}
     >
       <div style={{ display: "flex", fontSize: 17, color: "#38bdf8", letterSpacing: 1 }}>
-        {SHARE_BRAND}
+        CRIKLEDGER
       </div>
       <div style={{ display: "flex", fontSize: 35, fontWeight: 700, marginTop: 8 }}>
         {title}
@@ -107,7 +107,7 @@ export function ShareFrame({ title, subtitle, highlight, children, footer }: Fra
           color: "#38bdf8",
         }}
       >
-        {SITE_HOST}
+        {SHARE_FOOTER}
       </div>
     </div>
   );
