@@ -27,8 +27,8 @@ sheet (the same one session 31 worked from).
 
 ## Decisions made
 
-- The credit lives on the footer link line, not the eyebrow. One `SHARE_FOOTER` constant feeds
-  both the match sheet and `ShareFrame` (ledger / balances) so every share image reads the same.
+- The credit lives on the footer link line, not the eyebrow. One `ShareFooterLink` component
+  feeds both the match sheet and `ShareFrame` (ledger / balances) so every share image reads the same.
 - `lib/site.ts` `SITE_HOST` is unchanged: `SITE_URL` is built from it, so the "by Ravi Kant"
   suffix must never be added there. `SITE_HOST` is now referenced only from `lib/share-image.tsx`.
 - No revert commit for `bcd7a0c`; `57671aa` simply undoes it.
@@ -48,12 +48,12 @@ sheet (the same one session 31 worked from).
 
 ## Current state
 
-- `main` = `origin/main` = the "footer gap" commit after `57671aa`; only `memory.md` (these notes) uncommitted.
-- tsc clean after both commits. Vitest not run this session (no logic touched; session 31 baseline
+- `main` = `origin/main` = `885edc4` (footer gap fix) + notes commits; tree clean.
+- tsc clean after every commit. Vitest not run this session (no logic touched; session 31 baseline
   was 121 passing).
 - Prod DB unchanged: still **54 migrations applied**.
 - **Unverified in prod** (now stacked): session 31's guest glyph / VC mark / "Ball ₹65", plus this
-  session's footer credit — one phone check after the `57671aa` deploy covers all of it.
+  session's footer credit — one phone check after the `885edc4` deploy covers all of it.
 - Carried from session 30, status unknown: whether the owner deleted the duplicate test match
   "Fearless Fighters" (13 Sept, id `4cfa8a7d…`) via the superadmin Delete button.
 
