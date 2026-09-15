@@ -1,31 +1,31 @@
-# Memory — session 32: share image footer credits "· by Ravi Kant"
+# Memory — session 33: deposit caption for guest-free match sheets
 
-Last updated: 2026-09-14, morning (after session 31)
+Last updated: 2026-09-15, evening (after session 32)
 
 ## What was built
 
-Two commits on `main`, both pushed (`d561e50..57671aa`; Vercel deploys from `main`):
+Session 33 (2026-09-15), one commit on `main`, pushed — `25e20b7`
+**feat(share): deposit caption when the sheet has no guests**:
 
-- `bcd7a0c` — first pass, **superseded**: eyebrow on the share images changed from `CRIKLEDGER`
-  to "CrikLedger - by Ravi Kant" via a `SHARE_BRAND` constant. Owner changed direction before
-  the deploy was checked.
-- `57671aa` — **final**: eyebrow back to the literal `CRIKLEDGER`; the footer link line on every
-  share image now reads **"crik-ledger.vercel.app by Ravi Kant"**.
-  - `lib/share-image.tsx`: `SHARE_BRAND` replaced by
-    `export const SHARE_FOOTER = \`${SITE_HOST} by Ravi Kant\`` (next to `SHARE_WIDTH`);
-    `ShareFrame` renders `{SHARE_FOOTER}` in the bottom link line.
-  - `app/api/share/match-sheet/route.tsx`: imports `SHARE_FOOTER, SHARE_WIDTH` from
-    `@/lib/share-image` (its `SITE_HOST` import from `@/lib/site` was dropped); bottom link line
-    renders `{SHARE_FOOTER}`. Styles untouched (17 px, `#38bdf8`).
-- Follow-up (same morning) — **footer reads "crik-ledger.vercel.app · by Ravi Kant"**, gap
-  tightened. `SHARE_FOOTER` string replaced by a `ShareFooterLink({ marginTop })` component in
-  `lib/share-image.tsx`, used by `ShareFrame` (`marginTop={footer ? 11 : "auto"}`) and the match
-  sheet route (`marginTop={11}`). Two flex children, no gap: `{SITE_HOST}` and `· by Ravi Kant`.
+- `lib/feeMessage.ts`: new `buildDepositFeeMessage()` →
+  "Refer the match sheet above — mentioned fee will be deducted from your deposit."; new
+  `MatchSheetMessage` union (`{kind:"guests"} & ShareFeeMessage | {kind:"deposit"}`) and
+  `buildMatchSheetMessage()` dispatcher. Guest text and `buildDuesMessage` unchanged.
+- `components/matches/ShareMatchSheetButton.tsx`: prop is now `feeMessage?: MatchSheetMessage`,
+  calls the dispatcher; "Fee message copied — paste it below the image." notice unchanged.
+- `app/matches/[id]/page.tsx`: caption gate is three-way (completed + admin required):
+  no guests → `{kind:"deposit"}`; guests + captain phone → `{kind:"guests", …}`; guests but no
+  phone → `undefined` (as before; deposit line must never reach a group with guests to pay).
+- `lib/feeMessage.test.ts` (new, 5 tests): exact text of all three builders + dispatcher.
+- `components/guest/GuestMatchSheet.tsx` demo untouched (sample always has guests).
 
-Prompted by the owner's WhatsApp screenshot of the 12 Sept LR-SuperGiants vs Fearless Fighter
-sheet (the same one session 31 worked from).
+Previous session (32) for reference: share image footer "crik-ledger.vercel.app · by Ravi Kant"
+via `ShareFooterLink` in `lib/share-image.tsx` (`885edc4`).
 
 ## Decisions made
+
+- Session 33: two captions, one per case (owner chose this over a combined message when guests
+  exist). Deposit caption is admin-only, same gate as the guest one, even though it has no phone.
 
 - The credit lives on the footer link line, not the eyebrow. One `ShareFooterLink` component
   feeds both the match sheet and `ShareFrame` (ledger / balances) so every share image reads the same.
@@ -48,17 +48,22 @@ sheet (the same one session 31 worked from).
 
 ## Current state
 
-- `main` = `origin/main` = `885edc4` (footer gap fix) + notes commits; tree clean.
-- tsc clean after every commit. Vitest not run this session (no logic touched; session 31 baseline
-  was 121 passing).
+- `main` = `origin/main` = `25e20b7` (deposit caption) + notes commit; tree clean.
+- tsc, eslint clean; vitest 126 passing (121 + 5 new in `lib/feeMessage.test.ts`).
+- Session 33 NOT browser-checked (dev server was down, admin login needed): the page-gate logic is
+  covered by tsc + unit tests only.
 - Prod DB unchanged: still **54 migrations applied**.
-- **Unverified in prod** (now stacked): session 31's guest glyph / VC mark / "Ball ₹65", plus this
-  session's footer credit — one phone check after the `885edc4` deploy covers all of it.
+- **Unverified in prod** (now stacked): session 31's guest glyph / VC mark / "Ball ₹65", session 32's
+  footer credit, session 33's deposit caption — one phone session after the `25e20b7` deploy covers all.
 - Carried from session 30, status unknown: whether the owner deleted the duplicate test match
   "Fearless Fighters" (13 Sept, id `4cfa8a7d…`) via the superadmin Delete button.
 
 ## Next session starts with
 
+0. Owner phone check, session 33: as admin open a completed match with NO guests → Share match
+   sheet → "Fee message copied" shows and the paste reads the deposit line. Then a match WITH
+   guests → paste is the unchanged captain-transfer text + ✅ list. As `sg_viewer` on the no-guest
+   match: image shares, no "copied" notice.
 1. Owner phone check after the footer-gap deploy: open the 12 Sept LR-SuperGiants vs Fearless
    Fighter match → Share match sheet → confirm the bottom line reads
    "crik-ledger.vercel.app · by Ravi Kant" with a single-space-wide gap, the top eyebrow is `CRIKLEDGER`, guests show the
