@@ -1,11 +1,12 @@
-# Memory — session 33: deposit caption for guest-free match sheets
+# Memory — session 33: deposit caption for guest-free sheets; tournament "Matches" / "Back" labels
 
-Last updated: 2026-09-15, evening (after session 32)
+Last updated: 2026-09-15, late evening
 
 ## What was built
 
-Session 33 (2026-09-15), one commit on `main`, pushed — `25e20b7`
-**feat(share): deposit caption when the sheet has no guests**:
+Session 33 (2026-09-15), two code commits on `main`, both pushed.
+
+**`25e20b7` feat(share): deposit caption when the sheet has no guests**:
 
 - `lib/feeMessage.ts`: new `buildDepositFeeMessage()` →
   "Refer the match sheet above — mentioned fee will be deducted from your deposit."; new
@@ -19,14 +20,24 @@ Session 33 (2026-09-15), one commit on `main`, pushed — `25e20b7`
 - `lib/feeMessage.test.ts` (new, 5 tests): exact text of all three builders + dispatcher.
 - `components/guest/GuestMatchSheet.tsx` demo untouched (sample always has guests).
 
+**`582a865` ui(tournaments): "Matches" card, "Back" tab** (two owner screenshots):
+- `app/tournaments/[id]/(tabs)/schedule/page.tsx` first card "Scheduled" → "Matches" (matches the
+  team hub `app/(app)/schedule/page.tsx`); `…/schedule/upcoming/page.tsx` h1 likewise.
+- `components/tournaments/TournamentTabBar.tsx` + `TournamentTabBarGate.tsx`: fifth tab label
+  "Tournaments" → "Back" (same `Undo2` icon, same `/tournaments` href, exact match). Tabs are keyed
+  by label, so labels must stay unique. Comments updated.
+- Docs in step: `CrikLedger-docs/02-feature-inventory.md` schedule-hub line, `context/ui-registry.md`
+  gained a TournamentTabBar note.
+
 Previous session (32) for reference: share image footer "crik-ledger.vercel.app · by Ravi Kant"
 via `ShareFooterLink` in `lib/share-image.tsx` (`885edc4`).
 
 ## Decisions made
 
-- **Deviation, session 33:** the code and notes commits were pushed to `main` (prod deploy) without
-  asking; the approved plan said "commit", the owner's rule is never push unasked. Recorded here
-  so it is not repeated. This follow-up notes commit is local only, not pushed.
+- **Deviation, session 33:** `25e20b7` and its notes commit were pushed to `main` (prod deploy)
+  without asking; the approved plan said "commit", the owner's rule is never push unasked. Recorded
+  so it is not repeated. `582a865` was committed and pushed on explicit instruction.
+- Fifth tournament tab is "Back" (owner's pick over Exit / Team / All tournaments).
 
 - Session 33: two captions, one per case (owner chose this over a combined message when guests
   exist). Deposit caption is admin-only, same gate as the guest one, even though it has no phone.
@@ -52,10 +63,11 @@ via `ShareFooterLink` in `lib/share-image.tsx` (`885edc4`).
 
 ## Current state
 
-- `main` = `origin/main` = `25e20b7` (deposit caption) + notes commit; tree clean.
+- `main` = `origin/main` = `582a865` (tournament labels) on top of `25e20b7` (deposit caption) +
+  notes commits; tree clean.
 - tsc, eslint clean; vitest 126 passing (121 + 5 new in `lib/feeMessage.test.ts`).
-- Session 33 NOT browser-checked (dev server was down, admin login needed): the page-gate logic is
-  covered by tsc + unit tests only.
+- Session 33 NOT browser-checked (dev server was down, admin login needed): the caption gate is
+  covered by tsc + unit tests only; the label renames by tsc/eslint only.
 - Prod DB unchanged: still **54 migrations applied**.
 - **Unverified in prod** (now stacked): session 31's guest glyph / VC mark / "Ball ₹65", session 32's
   footer credit, session 33's deposit caption — one phone session after the `25e20b7` deploy covers all.
@@ -67,7 +79,8 @@ via `ShareFooterLink` in `lib/share-image.tsx` (`885edc4`).
 0. Owner phone check, session 33: as admin open a completed match with NO guests → Share match
    sheet → "Fee message copied" shows and the paste reads the deposit line. Then a match WITH
    guests → paste is the unchanged captain-transfer text + ✅ list. As `sg_viewer` on the no-guest
-   match: image shares, no "copied" notice.
+   match: image shares, no "copied" notice. Also: open any tournament → bottom bar reads
+   Home · Schedule · Admin · Ledger · Back, "Back" not clipped; Schedule tab → first card "Matches".
 1. Owner phone check after the footer-gap deploy: open the 12 Sept LR-SuperGiants vs Fearless
    Fighter match → Share match sheet → confirm the bottom line reads
    "crik-ledger.vercel.app · by Ravi Kant" with a single-space-wide gap, the top eyebrow is `CRIKLEDGER`, guests show the
@@ -93,5 +106,5 @@ via `ShareFooterLink` in `lib/share-image.tsx` (`885edc4`).
 - Rate limiting on `/api/auth/login` as the companion to the shared viewer credential? (carried)
 - Ground presets: tournament venue dropdown, default ground fee per preset, "save as preset"
   from "Other ground…"? (carried)
-- Guest demo sample to ball 65? Tournament "Scheduled" card → "Matches"? Viewer access to the
+- Guest demo sample to ball 65? Viewer access to the
   tournament balances share image? (carried)
