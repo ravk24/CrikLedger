@@ -10,7 +10,8 @@ type Props = {
 };
 
 // Per-tournament bottom navigation — the tournament mini-app's TabBar.
-// The Tournaments tab leaves the mini-app for /tournaments; Admin
+// The Back tab leaves the mini-app for /tournaments (the team's
+// Tournaments list — "Back", not "Tournaments", Ravi 2026-09-15); Admin
 // renders disabled (not hidden) for non-admins so the bar is always
 // 5 slots and Admin stays centered with no post-stream layout jump.
 // The tournament id comes from the pathname, not a server prop — under
@@ -49,7 +50,7 @@ export function TournamentTabBar({ isAdmin }: Props) {
     // /tournaments, so this tab would always render active.
     {
       href: "/tournaments",
-      label: "Tournaments",
+      label: "Back",
       icon: Undo2,
       exact: true,
       disabled: false,
@@ -78,7 +79,7 @@ export function TournamentTabBar({ isAdmin }: Props) {
           return (
             // Keyed by label, not href: while exiting to /tournaments the
             // pathname flips before this bar unmounts, making base equal
-            // the Tournaments tab's href — href keys would collide there.
+            // the Back tab's href — href keys would collide there.
             <Link
               key={label}
               href={href}
@@ -90,8 +91,9 @@ export function TournamentTabBar({ isAdmin }: Props) {
               <Icon size={20} strokeWidth={active ? 2.25 : 2} />
               <span
                 className={cn(
-                  // nowrap — "Tournaments" barely fits a fifth of a
-                  // 360px screen; wrapping would grow the bar height.
+                  // nowrap — a label must never wrap: it would grow the
+                  // bar height ("Tournaments" once barely fit a fifth of
+                  // a 360px screen).
                   "whitespace-nowrap text-center text-[11px] leading-tight",
                   active ? "font-bold" : "font-semibold",
                 )}

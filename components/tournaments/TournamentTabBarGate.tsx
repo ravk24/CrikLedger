@@ -23,15 +23,15 @@ async function Gate() {
 // Components, so the hook-reading bar must stream in via Suspense).
 function TabBarShell() {
   // Same 5 slots/order as the real bar (Home, Schedule, Admin, Ledger,
-  // Tournaments) so the streamed bar replaces this one with zero width
-  // jump. The Tournaments href is static — no pathname, no cookies —
+  // Back) so the streamed bar replaces this one with zero width
+  // jump. The Back href is static — no pathname, no cookies —
   // so it can be a real Link even in the prerendered shell.
   const tabs = [
     { label: "Home", icon: Home, href: null },
     { label: "Schedule", icon: CalendarDays, href: null },
     { label: "Admin", icon: Settings, href: null },
     { label: "Ledger", icon: Wallet, href: null },
-    { label: "Tournaments", icon: Undo2, href: "/tournaments" },
+    { label: "Back", icon: Undo2, href: "/tournaments" },
   ];
   return (
     <nav className="fixed inset-x-0 bottom-[calc(24px+env(safe-area-inset-bottom))] z-10 border-t border-border bg-surface">

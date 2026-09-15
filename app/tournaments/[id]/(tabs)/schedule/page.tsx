@@ -44,7 +44,7 @@ async function TournamentScheduleData({
 
   const options = [
     {
-      label: "Scheduled",
+      label: "Matches",
       href: `/tournaments/${id}/schedule/upcoming`,
       icon: Swords,
       iconClass: "bg-accent-light text-accent",
