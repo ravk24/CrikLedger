@@ -2,6 +2,11 @@
 // that rides alongside files, so callers copy this to the clipboard
 // first (inside the tap's user activation) and pass it to
 // navigator.share only as best effort.
+//
+// The match sheet has two captions, chosen by whether the match had
+// guests: with guests, the guest-fee message (captain's number + a
+// tick-off list); without, a one-liner reminding players that the fee
+// comes off their deposit (Ravi 2026-09-15).
 
 export type ShareFeeMessage = {
   captainName: string;
@@ -21,6 +26,22 @@ export function buildGuestFeeMessage({
     `Put a ✅ next to your name once you've paid:`,
     ...guests.map((name, i) => `${i + 1}. ${name}`),
   ].join("\n");
+}
+
+// Match sheet without guests: nobody owes the captain cash, every fee
+// is debited from the player's pool deposit.
+export function buildDepositFeeMessage() {
+  return "Refer the match sheet above — mentioned fee will be deducted from your deposit.";
+}
+
+export type MatchSheetMessage =
+  | ({ kind: "guests" } & ShareFeeMessage)
+  | { kind: "deposit" };
+
+export function buildMatchSheetMessage(message: MatchSheetMessage) {
+  return message.kind === "guests"
+    ? buildGuestFeeMessage(message)
+    : buildDepositFeeMessage();
 }
 
 export type DuesMessage = {

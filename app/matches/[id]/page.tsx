@@ -7,6 +7,7 @@ import { ResultBadge } from "@/components/shared/ResultBadge";
 import { FeeTable } from "@/components/matches/FeeTable";
 import {
   ShareMatchSheetButton,
+  type MatchSheetMessage,
   type MatchSheetPayload,
 } from "@/components/matches/ShareMatchSheetButton";
 import { CostBreakdownFooter } from "@/components/matches/CostBreakdownFooter";
@@ -333,21 +334,28 @@ async function MatchDetailData({
     };
   }
 
-  // Companion text for the WhatsApp share: guests reimburse the standing
-  // captain directly (their fees are charged to his balance), so the
-  // message names the captain's number and lists the guests to tick off.
-  // The phone rides adminProps only — an anonymous visitor of this
-  // publicly link-readable page never receives it.
-  const feeMessage =
-    match.status === "completed" &&
-    adminProps?.captainPhone &&
-    guestNames.length > 0
-      ? {
-          captainName: teamCaptain ?? captainRow?.player_name ?? "the captain",
-          captainPhone: adminProps.captainPhone,
-          guests: guestNames,
-        }
-      : undefined;
+  // Companion text for the WhatsApp share, admins only. With guests:
+  // they reimburse the standing captain directly (their fees are charged
+  // to his balance), so the message names the captain's number and lists
+  // the guests to tick off. Without guests: a one-line reminder that the
+  // fee comes off each player's deposit (Ravi 2026-09-15). Guests but no
+  // captain phone → no text at all; the deposit line must not reach a
+  // group that has guests to pay. The phone rides adminProps only — an
+  // anonymous visitor of this publicly link-readable page never receives it.
+  const feeMessage: MatchSheetMessage | undefined =
+    match.status !== "completed" || !adminProps
+      ? undefined
+      : guestNames.length === 0
+        ? { kind: "deposit" }
+        : adminProps.captainPhone
+          ? {
+              kind: "guests",
+              captainName:
+                teamCaptain ?? captainRow?.player_name ?? "the captain",
+              captainPhone: adminProps.captainPhone,
+              guests: guestNames,
+            }
+          : undefined;
 
   return (
     <>
