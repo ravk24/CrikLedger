@@ -20,7 +20,8 @@ export type StatementRow = {
     | "match_fee"
     | "guest_fee"
     | "expense_share"
-    | "opening_due";
+    | "opening_due"
+    | "withdrawal";
   description: string;
   delta: number;
   match_id: string | null;
@@ -41,13 +42,18 @@ const KIND_SUFFIX: Partial<Record<StatementRow["kind"], string>> = {
   guest_fee: "guest fees",
   expense_share: "common expense",
   opening_due: "last season due",
+  withdrawal: "withdrawal",
 };
 
-// deposit/opening_due rows: source_id IS the pool_entries id, so the
-// pool entry edit API applies directly. expense_share rows show a
-// per-player slice of a common debit — editing that re-splits every
-// player, so the Ledger page stays the edit venue for those.
-const EDITABLE_KINDS: StatementRow["kind"][] = ["deposit", "opening_due"];
+// deposit/opening_due/withdrawal rows: source_id IS the pool_entries
+// id, so the pool entry edit API applies directly. expense_share rows
+// show a per-player slice of a common debit — editing that re-splits
+// every player, so the Ledger page stays the edit venue for those.
+const EDITABLE_KINDS: StatementRow["kind"][] = [
+  "deposit",
+  "opening_due",
+  "withdrawal",
+];
 
 function StatementRowItem({
   row,
@@ -62,7 +68,11 @@ function StatementRowItem({
   // this page, so a plain kind label is title enough.
   const title =
     row.description ||
-    (row.kind === "opening_due" ? "Season due" : "Deposit");
+    (row.kind === "opening_due"
+      ? "Season due"
+      : row.kind === "withdrawal"
+        ? "Withdrawal"
+        : "Deposit");
 
   return (
     <div>

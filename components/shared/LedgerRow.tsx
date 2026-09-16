@@ -5,6 +5,7 @@ import { ChevronDown, Lock } from "lucide-react";
 import { Money } from "@/components/shared/Money";
 import { cn } from "@/lib/utils";
 import { formatDate, formatDateShort } from "@/lib/format";
+import { ledgerRowTitle } from "@/lib/poolKinds";
 import type { PoolLedgerRow } from "@/types";
 
 // Structural row — PoolLedgerRow and TournamentLedgerRow both satisfy
@@ -36,17 +37,9 @@ const KIND_CHIPS: Record<string, string> = {
   opening_due: "SEASON DUE", // player debt carryforward — subtracts from the pool total
 };
 
-// Player-linked rows are titled by who they belong to; the admin's
+// Player-linked rows are titled by who they belong to (lib/poolKinds
+// ledgerRowTitle, shared with the ledger share image); the admin's
 // free-text message becomes the expanded panel's detail instead.
-function rowTitle(entry: LedgerEntry): string {
-  if (entry.player_name) {
-    if (entry.kind === "deposit") return `Deposit by ${entry.player_name}`;
-    if (entry.kind === "opening_due")
-      return `Season due — ${entry.player_name}`;
-  }
-  return entry.message;
-}
-
 export function LedgerRow({ entry, onEdit }: Props) {
   const [expanded, setExpanded] = useState(false);
   const autoChip = AUTO_CHIPS[entry.kind];
@@ -69,7 +62,7 @@ export function LedgerRow({ entry, onEdit }: Props) {
                 expanded ? "break-words" : "truncate",
               )}
             >
-              {rowTitle(entry)}
+              {ledgerRowTitle(entry)}
             </span>
             {autoChip && (
               <span className="flex shrink-0 items-center gap-1 rounded-[4px] bg-inactive-light px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-inactive-foreground">

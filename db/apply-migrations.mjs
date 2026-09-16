@@ -21,6 +21,7 @@ const AUTOCOMMIT_FILES = new Set([
   "migration-4.sql",
   "migration-8.sql",
   "migration-54.sql",
+  "migration-55.sql",
 ]);
 
 // Split SQL into statements on top-level semicolons (tracks quotes, dollar-quotes

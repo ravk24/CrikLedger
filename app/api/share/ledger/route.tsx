@@ -5,6 +5,7 @@ import { requireTeamAdmin } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getTeamById } from "@/lib/team";
 import { formatDateShort } from "@/lib/format";
+import { ledgerRowTitle } from "@/lib/poolKinds";
 import {
   ShareFrame,
   SHARE_WIDTH,
@@ -16,14 +17,8 @@ import type { PoolLedgerRow } from "@/types";
 
 const LIMIT = 20;
 
-// Same titling rule as components/shared/LedgerRow.
-function rowTitle(entry: PoolLedgerRow): string {
-  if (entry.player_name) {
-    if (entry.kind === "deposit") return `Deposit by ${entry.player_name}`;
-    if (entry.kind === "opening_due") return `Season due — ${entry.player_name}`;
-  }
-  return entry.message;
-}
+// Row titles come from lib/poolKinds ledgerRowTitle — the same rule
+// components/shared/LedgerRow uses, so the image matches the page.
 
 // The team ledger's newest 20 entries as a PNG, for an admin to drop in
 // the team group. Reads the DB itself — nothing about the rows comes
@@ -94,7 +89,7 @@ export async function GET() {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {rowTitle(e).slice(0, 48)}
+                  {ledgerRowTitle(e).slice(0, 48)}
                 </div>
                 <div
                   style={{

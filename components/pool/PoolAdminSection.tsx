@@ -11,6 +11,7 @@ import { CreditSheet } from "@/components/pool/CreditSheet";
 import { DebitSheet } from "@/components/pool/DebitSheet";
 import { DownloadImageButton } from "@/components/shared/DownloadImageButton";
 import { opponentLabel } from "@/lib/format";
+import { isManualKind, isPlayerLinked } from "@/lib/poolKinds";
 import type { PoolLedgerRow } from "@/types";
 
 type PlayerOption = { id: string; name: string };
@@ -20,16 +21,6 @@ type Props = {
   players: PlayerOption[];
   activePlayerCount: number;
 };
-
-const MANUAL_KINDS: PoolLedgerRow["kind"][] = [
-  "deposit",
-  "other_income",
-  "equipment",
-  "ground_booking",
-  "plain_debit",
-  "common_debit",
-  "opening_due",
-];
 
 // Admin mode for P4: manual rows tap-to-edit, locked auto rows inert,
 // Credit/Debit buttons in a row above the ledger.
@@ -55,6 +46,9 @@ function deleteDescription(entry: PoolLedgerRow | null): string {
   }
   if (entry?.match_id && entry.match_status === "scheduled") {
     return `This is the match fee vs ${opponentLabel(entry.match_opponent)}. Deleting it also deletes that scheduled match.`;
+  }
+  if (isPlayerLinked(entry?.kind) && entry?.player_name) {
+    return `This removes the entry and its effect on the pool and on ${entry.player_name}'s balance.`;
   }
   return "This removes the entry and its effect on the pool balance.";
 }
@@ -207,9 +201,7 @@ export function PoolAdminSection({
             key={entry.id}
             entry={entry}
             onEdit={
-              MANUAL_KINDS.includes(entry.kind)
-                ? () => openEdit(entry)
-                : undefined
+              isManualKind(entry.kind) ? () => openEdit(entry) : undefined
             }
           />
         ))}
@@ -224,6 +216,7 @@ export function PoolAdminSection({
       <DebitSheet
         open={debitOpen}
         onOpenChange={setDebitOpen}
+        players={players}
         activePlayerCount={activePlayerCount}
         onOptimisticAdd={(row) => changeLedger({ type: "add", row })}
       />
@@ -242,17 +235,13 @@ export function PoolAdminSection({
           <MoneyInput label="Amount" value={amount} onChange={setAmount} required />
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-text-secondary">
-              {editing?.kind === "deposit" || editing?.kind === "opening_due"
-                ? "Message (optional)"
-                : "Message"}
+              {isPlayerLinked(editing?.kind) ? "Message (optional)" : "Message"}
             </span>
             <input
               type="text"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              required={
-                editing?.kind !== "deposit" && editing?.kind !== "opening_due"
-              }
+              required={!isPlayerLinked(editing?.kind)}
               className="h-11 w-full rounded-md border border-border bg-surface-secondary px-3 text-base text-text-primary focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
             />
           </label>

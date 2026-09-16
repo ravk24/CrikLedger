@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pool, withTransaction } from "@/lib/db";
 import { buildBookingMessage } from "@/lib/bookings";
+import { isPlayerLinked } from "@/lib/poolKinds";
 import { requireAdmin } from "@/lib/session";
 import {
   ApiError,
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
 
     const body = poolCreditSchema.parse(raw);
 
-    const playerLinked = body.kind === "deposit" || body.kind === "opening_due";
+    const playerLinked = isPlayerLinked(body.kind);
     if (playerLinked) {
       const player = await pool.query(
         `SELECT 1 FROM players WHERE id = $1 AND team_id = $2 AND is_active`,

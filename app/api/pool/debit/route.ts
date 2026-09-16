@@ -10,6 +10,57 @@ export async function POST(req: NextRequest) {
     const body = poolDebitSchema.parse(await req.json());
     const teamId = admin.scopeId;
 
+    if (body.kind === "withdrawal") {
+      // A player takes part of their deposit back. Player-linked like a
+      // deposit (active players only, same team), stored negative so it
+      // lowers the pool and the player's balance together (migration 55).
+      // Locking the player row serialises two concurrent withdrawals so
+      // the balance check below cannot be raced past.
+      const result = await withTransaction(async (client) => {
+        const playerRes = await client.query(
+          `SELECT p.name, b.balance
+           FROM players p
+           JOIN player_balances b ON b.id = p.id AND b.team_id = p.team_id
+           WHERE p.id = $1 AND p.team_id = $2 AND p.is_active
+           FOR UPDATE OF p`,
+          [body.player_id, teamId],
+        );
+        const player = playerRes.rows[0] as
+          | { name: string; balance: string | number }
+          | undefined;
+        if (!player) {
+          throw new ApiError(422, "INACTIVE_PLAYER", "Player not found or inactive");
+        }
+        // Owner's rule: a player cannot take out more than they hold. The
+        // pool itself is not guarded — like any plain debit it may dip
+        // below zero (R-40: the pool runs ahead of the cash box).
+        const balance = Math.round(Number(player.balance));
+        if (body.amount > balance) {
+          throw new ApiError(
+            422,
+            "EXCEEDS_BALANCE",
+            `${player.name}'s balance is ₹${balance.toLocaleString("en-IN")} — a withdrawal cannot exceed it`,
+          );
+        }
+        const res = await client.query(
+          `INSERT INTO pool_entries (entry_date, kind, message, amount, player_id, created_by, team_id)
+           VALUES (COALESCE($1::date, CURRENT_DATE), 'withdrawal', $2, $3, $4, $5, $6)
+           RETURNING id, entry_date, kind, message, amount`,
+          [
+            body.entry_date ?? null,
+            // Titles itself from the player; the column is NOT NULL.
+            body.message ?? "",
+            -body.amount,
+            body.player_id,
+            admin.id,
+            teamId,
+          ],
+        );
+        return res.rows[0];
+      });
+      return NextResponse.json({ success: true, data: result }, { status: 201 });
+    }
+
     if (!body.common) {
       const res = await pool.query(
         `INSERT INTO pool_entries (entry_date, kind, message, amount, created_by, team_id)

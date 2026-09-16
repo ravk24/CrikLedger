@@ -3,18 +3,13 @@ import { withTransaction } from "@/lib/db";
 import { ceilSplit } from "@/engine/split";
 import { deleteScheduledMatchWithFees } from "@/lib/matches";
 import { requireAdmin } from "@/lib/session";
+import {
+  isManualKind,
+  isNegativeManual,
+  isPlayerLinked,
+} from "@/lib/poolKinds";
 import { ApiError, handleRouteError, poolEntryEditSchema } from "@/lib/validate";
 import type { PoolClient } from "pg";
-
-const MANUAL_KINDS = [
-  "deposit",
-  "other_income",
-  "equipment",
-  "ground_booking",
-  "plain_debit",
-  "common_debit",
-  "opening_due",
-];
 
 // Scoped to the caller's team: an entry id from another team reads as
 // "not found", never as editable.
@@ -28,7 +23,7 @@ async function loadManualEntry(client: PoolClient, id: string, teamId: string) {
   if (!row) {
     throw new ApiError(404, "NOT_FOUND", "Ledger entry not found");
   }
-  if (!MANUAL_KINDS.includes(row.kind)) {
+  if (!isManualKind(row.kind)) {
     throw new ApiError(
       409,
       "AUTO_ENTRY",
@@ -51,9 +46,7 @@ export async function PATCH(
       const entry = await loadManualEntry(client, id, admin.scopeId);
       // Player-linked rows derive their ledger title from the player, so
       // an empty message is fine there; every other kind titles from it.
-      const playerLinked =
-        entry.kind === "deposit" || entry.kind === "opening_due";
-      if (body.message === "" && !playerLinked) {
+      if (body.message === "" && !isPlayerLinked(entry.kind)) {
         throw new ApiError(422, "MESSAGE_REQUIRED", "Message cannot be empty");
       }
       // An Other match's ground-fee debit is baked into its stored
@@ -76,13 +69,11 @@ export async function PATCH(
           );
         }
       }
-      const isDebit =
-        entry.kind === "plain_debit" ||
-        entry.kind === "common_debit" ||
-        entry.kind === "opening_due";
+      // Negative kinds (debits, dues, withdrawals) keep their sign: the
+      // admin types a positive amount and the server flips it.
       const newAmount =
         body.amount !== undefined
-          ? isDebit
+          ? isNegativeManual(entry.kind)
             ? -body.amount
             : body.amount
           : Number(entry.amount);

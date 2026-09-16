@@ -52,7 +52,8 @@ const entryDate = z
 export const poolCreditSchema = z
   .object({
     // opening_due: season-carryforward debt — entered positive, stored
-    // negative against the player, excluded from the pool balance.
+    // negative against the player. It counts in the pool's signed sum
+    // like every other row (migration 9).
     kind: z.enum(["deposit", "other_income", "opening_due"]),
     amount: z.number().int().positive(),
     // Player-linked rows derive their ledger title from the player, so
@@ -89,12 +90,29 @@ export const groundBookingSchema = z.object({
   entry_date: entryDate,
 });
 
-export const poolDebitSchema = z.object({
-  common: z.boolean(),
-  amount: z.number().int().positive(),
-  message: z.string().trim().min(1).max(200),
-  entry_date: entryDate,
-});
+// Two things leave the pool from the Debit sheet: an expense (plain or
+// common) and a withdrawal — a player taking part of their deposit
+// back. A withdrawal is player-linked like a deposit, stored negative,
+// and titles itself from the player, so its message is optional.
+export const poolDebitSchema = z
+  .object({
+    kind: z.enum(["expense", "withdrawal"]).default("expense"),
+    common: z.boolean().default(false),
+    amount: z.number().int().positive(),
+    message: z.string().trim().min(1).max(200).optional(),
+    player_id: z.string().uuid().optional(),
+    entry_date: entryDate,
+  })
+  .refine(
+    (body) => body.kind !== "withdrawal" || body.player_id !== undefined,
+    { message: "player_id is required for withdrawals" },
+  )
+  .refine((body) => body.kind !== "withdrawal" || !body.common, {
+    message: "A withdrawal cannot be common",
+  })
+  .refine((body) => body.kind !== "expense" || body.message !== undefined, {
+    message: "Message is required",
+  });
 
 export const poolEntryEditSchema = z
   .object({
