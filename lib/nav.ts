@@ -97,6 +97,7 @@ const MORE_ALSO = [
   "/car-count",
   "/about-us",
   "/share-app",
+  "/feedback",
   "/about",
   "/contact",
   "/terms",

@@ -11,25 +11,24 @@ import {
   Smartphone,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SUPPORT_EMAIL, WHATSAPP_NUMBER } from "@/lib/contact";
 import { getNavState, type NavState } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
-const FEEDBACK_PREFILL = encodeURIComponent(
-  "Hi CrikLedger, I have a suggestion: ",
-);
-
 type Feature = {
   label: string;
-  href: string | null; // null = not built yet, renders disabled
+  href: string | null; // null = not available to this visitor, renders disabled
   icon: React.ComponentType<{ size?: number; className?: string }>;
   iconClass: string;
 };
 
-// The app drawer. A tile with href: null renders greyed and inert
-// rather than vanishing — the app-wide disabled-not-hidden rule.
-// Matches and Car Counter read team data, so they need a Team Ledger;
-// the two calculators are pure and work for everyone.
+// The app drawer: one 2-column grid of equal tiles, nothing else. A tile
+// with href: null renders greyed and inert rather than vanishing — the
+// app-wide disabled-not-hidden rule — which also keeps the count at
+// eight for every visitor, so the grid is always four even rows.
+// Car Counter reads team data, so it needs a Team Ledger; Purchases
+// needs a signed-in admin; everything else is public. A tile that needs
+// copy or actions links to its own page (/share-app, /feedback) — never
+// a differently shaped card under the grid.
 function buildFeatures(nav: NavState): Feature[] {
   return [
     // Public and entitlement-free: the app is a PWA and anyone can put it
@@ -54,23 +53,19 @@ function buildFeatures(nav: NavState): Feature[] {
       iconClass: "bg-scheduled-light text-scheduled-foreground",
     },
     // Pricing is public; Purchases needs a session. A guest must still be
-    // able to see what things cost, so Pricing is always shown.
+    // able to see what things cost, so Pricing is always live.
     {
       label: "Pricing",
       href: "/pricing",
       icon: Receipt,
       iconClass: "bg-credit-light text-credit-foreground",
     },
-    ...(nav.signedIn && !nav.isViewer
-      ? [
-          {
-            label: "Purchases",
-            href: "/purchases",
-            icon: ShoppingBag,
-            iconClass: "bg-gold-light text-gold-foreground",
-          } satisfies Feature,
-        ]
-      : []),
+    {
+      label: "Purchases",
+      href: nav.signedIn && !nav.isViewer ? "/purchases" : null,
+      icon: ShoppingBag,
+      iconClass: "bg-gold-light text-gold-foreground",
+    },
     {
       label: "About us",
       href: "/about-us",
@@ -81,6 +76,12 @@ function buildFeatures(nav: NavState): Feature[] {
       label: "Share with a friend",
       href: "/share-app",
       icon: Share2,
+      iconClass: "bg-accent-light text-accent",
+    },
+    {
+      label: "Suggest a feature",
+      href: "/feedback",
+      icon: MessageSquarePlus,
       iconClass: "bg-accent-light text-accent",
     },
   ];
@@ -141,36 +142,6 @@ export default function More() {
       <Suspense fallback={<Skeleton className="h-64 rounded-lg" />}>
         <MoreData />
       </Suspense>
-
-      {/* Session-free, so it sits outside the boundary and stays in the
-          prerendered shell. Plain <a>s — no client JS. */}
-      <section className="flex flex-col gap-3 rounded-lg border border-border bg-surface shadow-card p-4">
-        <div className="flex items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-accent-light text-accent">
-            <MessageSquarePlus size={18} />
-          </span>
-          <h2 className="text-sm font-semibold text-text-primary">
-            Help us make CrikLedger better
-          </h2>
-        </div>
-        <p className="text-sm text-text-secondary">
-          Think a feature could work better, or have an idea for how
-          something should be built? Send it straight to us — it goes to
-          the person who builds the app.
-        </p>
-        <a
-          href={`https://wa.me/${WHATSAPP_NUMBER}?text=${FEEDBACK_PREFILL}`}
-          className="flex h-11 w-full items-center justify-center rounded-md bg-accent text-sm font-medium text-accent-foreground"
-        >
-          WhatsApp your idea
-        </a>
-        <a
-          href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("CrikLedger feedback")}`}
-          className="flex h-11 w-full items-center justify-center rounded-md border border-border text-sm font-medium text-text-primary"
-        >
-          Email us
-        </a>
-      </section>
     </>
   );
 }
