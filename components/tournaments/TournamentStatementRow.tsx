@@ -36,8 +36,14 @@ type Props = {
 // expand, nobody edits here; edits happen from the tournament ledger).
 export function StatementRow({ row, feeDetail }: Props) {
   const [expanded, setExpanded] = useState(false);
-  // Deposit messages live in the expanded panel, not the title.
-  const title = row.kind === "deposit" ? "Deposit" : row.description;
+  // Player-linked rows (deposit, withdrawal) keep their message in the
+  // expanded panel, not the title.
+  const playerLinked = row.kind === "deposit" || row.kind === "withdrawal";
+  const title = playerLinked
+    ? row.kind === "deposit"
+      ? "Deposit"
+      : "Withdrawal"
+    : row.description;
 
   return (
     <div>
@@ -140,7 +146,7 @@ export function StatementRow({ row, feeDetail }: Props) {
             </>
           ) : (
             <>
-              {row.kind === "deposit" && row.description && (
+              {playerLinked && row.description && (
                 <p className="break-words text-sm text-text-primary">
                   {row.description}
                 </p>

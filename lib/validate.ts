@@ -339,19 +339,30 @@ export const addTournamentPlayerSchema = z.object({
   name: z.string().trim().min(1).max(80),
 });
 
-export const tournamentDepositSchema = z.object({
-  player_id: z.string().uuid(),
-  amount: z.number().int().positive(),
-  // Deposits are titled by player name — free text optional (stored "").
-  message: z.string().trim().min(1).max(200).optional(),
-  entry_date: entryDate,
-});
+// Tournament money entry mirrors the team pool (2026-09-16): the same
+// Credit sheet, and the Debit sheet minus the season due (a tournament
+// has no "last season"). Credits are identical, so the schema is shared.
+export const tournamentCreditSchema = poolCreditSchema;
 
-export const tournamentExpenseSchema = z.object({
-  amount: z.number().int().positive(),
-  message: z.string().trim().min(1).max(200),
-  entry_date: entryDate,
-});
+export const tournamentDebitSchema = z
+  .object({
+    kind: z.enum(["expense", "withdrawal"]).default("expense"),
+    common: z.boolean().default(false),
+    amount: z.number().int().positive(),
+    message: z.string().trim().min(1).max(200).optional(),
+    player_id: z.string().uuid().optional(),
+    entry_date: entryDate,
+  })
+  .refine(
+    (body) => body.kind !== "withdrawal" || body.player_id !== undefined,
+    { message: "player_id is required for withdrawals" },
+  )
+  .refine((body) => body.kind === "expense" || !body.common, {
+    message: "Only an expense can be common",
+  })
+  .refine((body) => body.kind !== "expense" || body.message !== undefined, {
+    message: "Message is required",
+  });
 
 // Tournament matches: time is REQUIRED — tournaments run all day in
 // slots (Ravi). Ground comes from the tournament's venue, never here.

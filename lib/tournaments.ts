@@ -7,14 +7,15 @@ import {
   type TournamentFeeMatch,
 } from "@/engine/tournamentFee";
 import { formatRupees } from "@/lib/format";
+import { isManualKind, isNegativeManual, isPlayerLinked } from "@/lib/poolKinds";
 import {
   ApiError,
   addTournamentPlayerSchema,
   createTournamentSchema,
   editTournamentSchema,
-  tournamentDepositSchema,
+  tournamentCreditSchema,
+  tournamentDebitSchema,
   tournamentEntryEditSchema,
-  tournamentExpenseSchema,
 } from "@/lib/validate";
 
 // Tournaments are FULLY ISOLATED ledgers: every query in this file is
@@ -580,37 +581,59 @@ export async function clearViceCaptain(tournamentId: string, playerId: string) {
   });
 }
 
-export async function addDeposit(
+// A player-linked entry (deposit, withdrawal) needs a player who is on
+// THIS tournament's roster and still active. Returns the name and the
+// current balance (tournament_player_balances) for the withdrawal guard.
+// Serialisation against a concurrent entry comes from lockTournament's
+// FOR UPDATE on the tournament row, which every money op takes first.
+async function loadActivePlayer(
+  client: PoolClient,
+  tournamentId: string,
+  playerId: string,
+): Promise<{ name: string; balance: number }> {
+  const res = await client.query(
+    `SELECT tp.name, tp.is_active, b.balance
+     FROM tournament_players tp
+     JOIN tournament_player_balances b
+       ON b.id = tp.id AND b.tournament_id = tp.tournament_id
+     WHERE tp.id = $1 AND tp.tournament_id = $2`,
+    [playerId, tournamentId],
+  );
+  const player = res.rows[0];
+  if (!player) throw new ApiError(404, "NOT_FOUND", "Player not found");
+  if (!player.is_active) {
+    throw new ApiError(
+      409,
+      "PLAYER_INACTIVE",
+      `${player.name} was removed from this tournament`,
+    );
+  }
+  return { name: player.name, balance: Math.round(Number(player.balance)) };
+}
+
+// Credits mirror the team pool's Credit sheet (2026-09-16): a player
+// deposit (raises the fund AND the player) or other income (fund only).
+export async function addCredit(
   adminId: string,
   tournamentId: string,
-  body: z.infer<typeof tournamentDepositSchema>,
+  body: z.infer<typeof tournamentCreditSchema>,
 ) {
   return withTransaction(async (client) => {
     await lockTournament(client, tournamentId);
-    const playerRes = await client.query(
-      `SELECT name, is_active FROM tournament_players
-       WHERE id = $1 AND tournament_id = $2`,
-      [body.player_id, tournamentId],
-    );
-    const player = playerRes.rows[0];
-    if (!player) throw new ApiError(404, "NOT_FOUND", "Player not found");
-    if (!player.is_active) {
-      throw new ApiError(
-        409,
-        "PLAYER_INACTIVE",
-        `${player.name} was removed from this tournament`,
-      );
-    }
+    const playerId = body.kind === "deposit" ? (body.player_id ?? null) : null;
+    if (playerId) await loadActivePlayer(client, tournamentId, playerId);
     const res = await client.query(
       `INSERT INTO tournament_entries
          (tournament_id, kind, message, amount, player_id, entry_date, created_by)
-       VALUES ($1, 'deposit', $2, $3, $4, COALESCE($5::date, CURRENT_DATE), $6)
-       RETURNING id, amount`,
+       VALUES ($1, $2, $3, $4, $5, COALESCE($6::date, CURRENT_DATE), $7)
+       RETURNING id, kind, amount`,
       [
         tournamentId,
+        body.kind,
+        // Deposits title themselves by player; the column is NOT NULL.
         body.message ?? "",
         body.amount,
-        body.player_id,
+        playerId,
         body.entry_date ?? null,
         adminId,
       ],
@@ -619,16 +642,70 @@ export async function addDeposit(
   });
 }
 
-// One expense, split equally across the tournament's CURRENT active
-// roster (ceilSplit — rounding favors the fund). The split freezes at
-// entry time: players added later owe nothing for it.
-export async function addExpense(
+// Debits mirror the team pool's Debit sheet minus the season due:
+//   * withdrawal — a player takes part of their deposit back; lowers
+//     the fund AND the player, refused above the player's balance
+//     (owner's rule, same as the team ledger; the fund itself is not
+//     guarded, like any plain debit).
+//   * expense, plain — lowers the fund only.
+//   * expense, common — split equally across the tournament's CURRENT
+//     active roster (ceilSplit — rounding favors the fund). The split
+//     freezes at entry time: players added later owe nothing for it.
+export async function addDebit(
   adminId: string,
   tournamentId: string,
-  body: z.infer<typeof tournamentExpenseSchema>,
+  body: z.infer<typeof tournamentDebitSchema>,
 ) {
   return withTransaction(async (client) => {
     await lockTournament(client, tournamentId);
+
+    if (body.kind === "withdrawal") {
+      const player = await loadActivePlayer(
+        client,
+        tournamentId,
+        body.player_id as string,
+      );
+      if (body.amount > player.balance) {
+        throw new ApiError(
+          422,
+          "EXCEEDS_BALANCE",
+          `${player.name}'s balance is ₹${formatRupees(player.balance)} — a withdrawal cannot exceed it`,
+        );
+      }
+      const res = await client.query(
+        `INSERT INTO tournament_entries
+           (tournament_id, kind, message, amount, player_id, entry_date, created_by)
+         VALUES ($1, 'withdrawal', $2, $3, $4, COALESCE($5::date, CURRENT_DATE), $6)
+         RETURNING id, kind, amount`,
+        [
+          tournamentId,
+          body.message ?? "",
+          -body.amount,
+          body.player_id,
+          body.entry_date ?? null,
+          adminId,
+        ],
+      );
+      return res.rows[0];
+    }
+
+    if (!body.common) {
+      const res = await client.query(
+        `INSERT INTO tournament_entries
+           (tournament_id, kind, message, amount, entry_date, created_by)
+         VALUES ($1, 'plain_debit', $2, $3, COALESCE($4::date, CURRENT_DATE), $5)
+         RETURNING id, kind, amount`,
+        [
+          tournamentId,
+          body.message ?? "",
+          -body.amount,
+          body.entry_date ?? null,
+          adminId,
+        ],
+      );
+      return res.rows[0];
+    }
+
     const roster = await client.query(
       `SELECT id FROM tournament_players
        WHERE tournament_id = $1 AND is_active
@@ -648,7 +725,7 @@ export async function addExpense(
          (tournament_id, kind, message, amount, entry_date, created_by)
        VALUES ($1, 'common_debit', $2, $3, COALESCE($4::date, CURRENT_DATE), $5)
        RETURNING id`,
-      [tournamentId, body.message, -body.amount, body.entry_date ?? null, adminId],
+      [tournamentId, body.message ?? "", -body.amount, body.entry_date ?? null, adminId],
     );
     const entryId = entryRes.rows[0].id;
     await client.query(
@@ -679,7 +756,7 @@ export async function editEntry(
     );
     const entry = cur.rows[0];
     if (!entry) throw new ApiError(404, "NOT_FOUND", "Entry not found");
-    if (AUTO_KINDS.includes(entry.kind)) {
+    if (!isManualKind(entry.kind)) {
       throw new ApiError(
         409,
         "AUTO_ENTRY",
@@ -687,16 +764,20 @@ export async function editEntry(
       );
     }
 
+    // Player-linked rows (deposit, withdrawal) title themselves from the
+    // player; every other manual kind titles from its message.
     const message = body.message ?? entry.message;
-    if (entry.kind === "common_debit" && message.trim() === "") {
+    if (!isPlayerLinked(entry.kind) && message.trim() === "") {
       throw new ApiError(
         422,
         "MESSAGE_REQUIRED",
-        "Shared expenses need a message — it is the ledger row's title",
+        "This entry needs a message — it is the ledger row's title",
       );
     }
+    // Negative kinds (debits, withdrawals) keep their sign: the admin
+    // types a positive amount and the server flips it (lib/poolKinds).
     const newAbs = body.amount ?? Math.abs(Number(entry.amount));
-    const signed = entry.kind === "deposit" ? newAbs : -newAbs;
+    const signed = isNegativeManual(entry.kind) ? -newAbs : newAbs;
 
     await client.query(
       `UPDATE tournament_entries SET

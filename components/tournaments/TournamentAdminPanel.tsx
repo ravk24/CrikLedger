@@ -2,20 +2,12 @@
 
 import { startTransition, useOptimistic, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  FileText,
-  Flag,
-  MinusCircle,
-  PlusCircle,
-  Users,
-} from "lucide-react";
+import { FileText, Flag, Users } from "lucide-react";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { SheetShell } from "@/components/shared/SheetShell";
 import { CaptainMark } from "@/components/shared/CaptainMark";
 import { ViceCaptainMark } from "@/components/shared/ViceCaptainMark";
-import { TournamentDepositSheet } from "@/components/tournaments/TournamentDepositSheet";
-import { TournamentExpenseSheet } from "@/components/tournaments/TournamentExpenseSheet";
 import { TournamentCaptainTile } from "@/components/tournaments/TournamentCaptainTile";
 import { TournamentViceCaptainTile } from "@/components/tournaments/TournamentViceCaptainTile";
 import { cn } from "@/lib/utils";
@@ -37,9 +29,17 @@ const inputClass =
 const tileClass =
   "flex min-h-28 flex-col items-start justify-between gap-2 rounded-lg border border-border bg-surface shadow-card p-4 text-left text-text-primary disabled:cursor-not-allowed disabled:text-text-muted disabled:opacity-70";
 
-// The tournament's Admin console tab: SG-style card grid (money entry
-// lives HERE, not on the Ledger tab — Ravi 2026-08-15), then details
-// and lifecycle. The page gates this to admins.
+// Five tiles is an odd count for a 2-column grid, so the last one
+// (Details) spans both columns as a horizontal card — the schedule
+// hub's ACTION_CLASS recipe (app/(app)/schedule/page.tsx). No empty cell.
+const wideTileClass =
+  "col-span-2 flex min-h-16 w-full flex-row items-center gap-3 rounded-lg border border-border bg-surface shadow-card p-4 text-left text-text-primary";
+
+// The tournament's Admin console tab: SG-style card grid for the
+// roster, roles, lifecycle and details. Money entry (Credit / Debit)
+// lives on the Ledger tab since 2026-09-16, exactly like the team
+// /pool page — this console has no money tiles. The page gates this
+// to admins.
 export function TournamentAdminPanel({
   tournament,
   players,
@@ -56,8 +56,6 @@ export function TournamentAdminPanel({
   const readOnly = optimisticStatus === "completed";
   const activePlayers = players.filter((p) => p.is_active);
 
-  const [depositOpen, setDepositOpen] = useState(false);
-  const [expenseOpen, setExpenseOpen] = useState(false);
   const [rosterOpen, setRosterOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
@@ -210,42 +208,9 @@ export function TournamentAdminPanel({
   return (
     <>
       <section className="grid grid-cols-2 gap-3">
-        <button
-          type="button"
-          disabled={readOnly}
-          onClick={() => setDepositOpen(true)}
-          className={tileClass}
-        >
-          <span className="flex size-9 items-center justify-center rounded-md bg-credit-light text-credit-foreground">
-            <PlusCircle size={18} />
-          </span>
-          <span className="text-sm font-semibold">
-            Credit
-            <span className="block text-[11px] font-normal text-text-muted">
-              Player Deposit
-            </span>
-          </span>
-        </button>
-
-        <button
-          type="button"
-          disabled={readOnly}
-          onClick={() => setExpenseOpen(true)}
-          className={tileClass}
-        >
-          <span className="flex size-9 items-center justify-center rounded-md bg-debit-light text-debit-foreground">
-            <MinusCircle size={18} />
-          </span>
-          <span className="text-sm font-semibold">
-            Debit
-            <span className="block text-[11px] font-normal text-text-muted">
-              Shared Expense
-            </span>
-          </span>
-        </button>
-
-        {/* Match creation moved to the Schedule tab's hub — one entry
-            point, mirroring the SG /schedule layout. */}
+        {/* Match creation lives on the Schedule tab's hub and money
+            entry on the Ledger tab — one entry point each, mirroring
+            the SG /schedule and /pool layouts. */}
         <button
           type="button"
           disabled={readOnly}
@@ -304,7 +269,7 @@ export function TournamentAdminPanel({
             setDetailsSaved(false);
             setDetailsOpen(true);
           }}
-          className={tileClass}
+          className={wideTileClass}
         >
           <span className="flex size-9 items-center justify-center rounded-md bg-accent-light text-accent">
             <FileText size={18} />
@@ -458,19 +423,6 @@ export function TournamentAdminPanel({
           {statusError && <p className="text-sm text-debit">{statusError}</p>}
         </div>
       </SheetShell>
-
-      <TournamentDepositSheet
-        open={depositOpen}
-        onOpenChange={setDepositOpen}
-        tournamentId={tournament.id}
-        players={activePlayers.map((p) => ({ id: p.id, name: p.name }))}
-      />
-      <TournamentExpenseSheet
-        open={expenseOpen}
-        onOpenChange={setExpenseOpen}
-        tournamentId={tournament.id}
-        activePlayerCount={activePlayers.length}
-      />
 
       <SheetShell
         open={rosterOpen}

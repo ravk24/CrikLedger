@@ -1,9 +1,14 @@
 import type { PoolEntryKind } from "@/types";
 
-// The one place that says which team-pool ledger kinds an admin may
-// hand-edit, which ones name a player, and which ones are stored
-// negative. Routes, sheets and the ledger row all read these lists so
-// a new kind (withdrawal, migration 55) is wired in once.
+// The one place that says which ledger kinds an admin may hand-edit,
+// which ones name a player, and which ones are stored negative. Routes,
+// sheets and the ledger row all read these lists so a new kind
+// (withdrawal, migration 55) is wired in once.
+//
+// The tournament ledger (tournament_entries, migration 56) uses the
+// same manual kinds minus opening_due, plus its own auto rows
+// joining_fee / tournament_collection — which are simply not in
+// MANUAL_KINDS, so these helpers serve both ledgers unchanged.
 
 // Rows an admin may edit or delete from the ledger. Everything else
 // (match_collection, match_refund, expense_recovery) changes only

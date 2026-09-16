@@ -6,8 +6,6 @@ import {
   Home,
   KeyRound,
   MapPin,
-  MinusCircle,
-  PlusCircle,
   DatabaseBackup,
   ShieldCheck,
   Users,
@@ -33,19 +31,9 @@ type Tile = {
   superadminOnly?: boolean;
 };
 
+// Money entry (Credit / Debit) lives on the /pool ledger page, not here
+// (the two shortcut tiles were removed 2026-09-16).
 const TILES: Tile[] = [
-  {
-    label: "Pool credit",
-    href: "/pool",
-    icon: PlusCircle,
-    iconClass: "bg-credit-light text-credit-foreground",
-  },
-  {
-    label: "Pool debit",
-    href: "/pool",
-    icon: MinusCircle,
-    iconClass: "bg-debit-light text-debit-foreground",
-  },
   {
     label: "Manage players",
     href: "/admin/players",

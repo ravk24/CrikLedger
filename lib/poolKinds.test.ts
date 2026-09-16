@@ -36,6 +36,16 @@ describe("kind lists", () => {
     expect(isManualKind("expense_recovery")).toBe(false);
   });
 
+  // The tournament ledger (migration 56) reuses these helpers: its own
+  // settlement rows must stay locked, its manual kinds editable.
+  it("tournament auto kinds are not manual; its manual kinds are", () => {
+    expect(isManualKind("joining_fee")).toBe(false);
+    expect(isManualKind("tournament_collection")).toBe(false);
+    for (const kind of ["deposit", "other_income", "plain_debit", "common_debit", "withdrawal"]) {
+      expect(isManualKind(kind)).toBe(true);
+    }
+  });
+
   it("negative manual kinds are exactly the four", () => {
     expect([...NEGATIVE_MANUAL_KINDS].sort()).toEqual(
       ["common_debit", "opening_due", "plain_debit", "withdrawal"].sort(),

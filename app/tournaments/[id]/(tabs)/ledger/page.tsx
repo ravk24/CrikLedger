@@ -19,7 +19,7 @@ async function TournamentLedgerData({
 }) {
   const [{ id }, admin] = await Promise.all([params, getSessionAdmin()]);
   const signedInAdmin = !!admin && !admin.mustChangePassword;
-  const [tRes, entriesRes] = await Promise.all([
+  const [tRes, entriesRes, playersRes] = await Promise.all([
     supabaseServer
       .from("tournaments_public")
       .select("*")
@@ -34,6 +34,13 @@ async function TournamentLedgerData({
       .order("entry_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(200),
+    // Active roster for the Credit / Debit sheets' player pickers.
+    supabaseServer
+      .from("tournament_players_public")
+      .select("id, name, is_captain")
+      .eq("tournament_id", id)
+      .eq("is_active", true)
+      .order("name"),
   ]);
 
   const tournament = tRes.data as TournamentPublic | null;
@@ -49,6 +56,11 @@ async function TournamentLedgerData({
       ? canWriteScope(admin, "team", tournament.team_id)
       : canWriteScope(admin, "tournament", tournament.id));
   const entries = (entriesRes.data ?? []) as TournamentLedgerRow[];
+  const players = (playersRes.data ?? []) as {
+    id: string;
+    name: string;
+    is_captain: boolean;
+  }[];
   const canWrite = isAdmin && tournament.status === "active";
 
   return (
@@ -62,12 +74,17 @@ async function TournamentLedgerData({
       )}
 
       {canWrite ? (
-        <TournamentLedgerSection tournamentId={id} entries={entries} />
+        <TournamentLedgerSection
+          tournamentId={id}
+          entries={entries}
+          players={players}
+          activePlayerCount={players.length}
+        />
       ) : entries.length === 0 ? (
         <p className="rounded-lg border border-border bg-surface shadow-card p-4 text-sm text-text-muted">
           {tournament.status === "completed"
             ? "The ledger is empty."
-            : "The ledger is empty — deposits and shared expenses will appear here."}
+            : "The ledger is empty — deposits, expenses and withdrawals will appear here."}
         </p>
       ) : (
         <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">

@@ -117,22 +117,26 @@ export type TournamentPlayerPublic = {
   is_vice_captain: boolean;
 };
 
-// Shape-compatible with PoolLedgerRow so <LedgerRow> renders it as-is;
-// tournament kinds are a strict subset of PoolEntryKind.
+// Shape-compatible with PoolLedgerRow so <LedgerRow> renders it as-is.
+// Manual kinds are the team pool's minus opening_due (migration 56);
+// joining_fee / tournament_collection are the tournament's own auto rows.
 export type TournamentLedgerRow = {
   id: string;
   tournament_id: string;
   entry_date: string;
   kind:
     | "deposit"
+    | "other_income"
+    | "plain_debit"
     | "common_debit"
+    | "withdrawal"
     | "match_collection" // legacy per-match model
     | "joining_fee"
     | "tournament_collection";
   message: string;
   amount: number;
   edited_by: string | null;
-  player_name: string | null; // deposits only
+  player_name: string | null; // deposit / withdrawal only
   created_at: string; // same-day tiebreak; entry_date alone is just a DATE
 };
 
@@ -141,6 +145,7 @@ export type TournamentStatementRow = {
   entry_date: string;
   kind:
     | "deposit"
+    | "withdrawal" // migration 56
     | "expense_share"
     | "match_fee" // legacy per-match model
     | "driver_rebate" // legacy per-match model

@@ -13,11 +13,11 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   players: PlayerOption[]; // active players only
-  // Reuse from other entry points: preselect a kind, hide the kind
-  // picker, and retitle the sheet.
+  // The same sheet serves the team pool (/api/pool/credit, "pool") and
+  // a tournament fund (/api/tournaments/<id>/credit, "fund").
+  endpoint?: string;
   title?: string;
-  initialKind?: CreditKind;
-  lockKind?: boolean;
+  fundNoun?: string;
   // Lets the ledger list show the new row before the write lands.
   onOptimisticAdd?: (row: PoolLedgerRow) => void;
 };
@@ -37,13 +37,13 @@ export function CreditSheet({
   open,
   onOpenChange,
   players,
+  endpoint = "/api/pool/credit",
   title = "Pool credit",
-  initialKind = "deposit",
-  lockKind = false,
+  fundNoun = "pool",
   onOptimisticAdd,
 }: Props) {
   const router = useRouter();
-  const [kind, setKind] = useState<CreditKind>(initialKind);
+  const [kind, setKind] = useState<CreditKind>("deposit");
   const [playerId, setPlayerId] = useState("");
   const [amount, setAmount] = useState("");
   const [message, setMessage] = useState("");
@@ -65,7 +65,7 @@ export function CreditSheet({
     startTransition(async () => {
       if (optimisticRow && onOptimisticAdd) onOptimisticAdd(optimisticRow);
       try {
-        const res = await fetch("/api/pool/credit", {
+        const res = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -133,32 +133,30 @@ export function CreditSheet({
       open={open}
       onOpenChange={onOpenChange}
       title={title}
-      description="Deposits raise the player's balance too — other credits only raise the pool."
+      description={`Deposits raise the player's balance too — other credits only raise the ${fundNoun}.`}
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        {!lockKind && (
-          <div className="grid grid-cols-2 gap-2">
-            {KIND_OPTIONS.map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={kind === value}
-                onClick={() => {
-                  setKind(value);
-                  setError(null);
-                }}
-                className={cn(
-                  "h-11 rounded-md border text-sm font-medium",
-                  kind === value
-                    ? "border-accent bg-accent-light text-accent"
-                    : "border-border bg-surface text-text-secondary",
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-2 gap-2">
+          {KIND_OPTIONS.map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={kind === value}
+              onClick={() => {
+                setKind(value);
+                setError(null);
+              }}
+              className={cn(
+                "h-11 rounded-md border text-sm font-medium",
+                kind === value
+                  ? "border-accent bg-accent-light text-accent"
+                  : "border-border bg-surface text-text-secondary",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
         {isDeposit && (
           <label className="flex flex-col gap-1">

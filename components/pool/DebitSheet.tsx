@@ -12,60 +12,75 @@ import type { PoolLedgerRow } from "@/types";
 
 type PlayerOption = { id: string; name: string; is_captain?: boolean };
 
-type Props = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  players: PlayerOption[]; // active players only — withdrawal picker
-  activePlayerCount: number;
-  // Lets the ledger list show the row the moment it is sent (the owner's
-  // useOptimistic reconciles it on refresh). Mirrors CreditSheet.
-  onOptimisticAdd?: (row: PoolLedgerRow) => void;
-};
-
 // Three things leave the pool from here: an expense (plain, or common —
 // split across every active player), a withdrawal — a player taking
 // part of their deposit back — and a season due carried from last
 // season against a player. The two player-linked kinds lower the pool
 // and that player's balance together and are stored negative. Same
-// segmented kind control as CreditSheet, three columns.
-type DebitKind = "expense" | "withdrawal" | "opening_due";
+// segmented kind control as CreditSheet; two or three columns depending
+// on the kinds offered.
+export type DebitKind = "expense" | "withdrawal" | "opening_due";
 
-const KIND_OPTIONS: [DebitKind, string][] = [
-  ["expense", "Expense"],
-  ["withdrawal", "Withdrawal"],
-  ["opening_due", "Season due"],
-];
+const ALL_KINDS: DebitKind[] = ["expense", "withdrawal", "opening_due"];
+
+type Props = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  players: PlayerOption[]; // active players only — player-linked picker
+  activePlayerCount: number;
+  // The same sheet serves the team pool (/api/pool/debit, "pool", all
+  // three kinds) and a tournament fund (/api/tournaments/<id>/debit,
+  // "fund", no season due — a tournament has no last season).
+  endpoint?: string;
+  title?: string;
+  fundNoun?: string;
+  kinds?: DebitKind[];
+  // Lets the ledger list show the row the moment it is sent (the owner's
+  // useOptimistic reconciles it on refresh). Mirrors CreditSheet.
+  onOptimisticAdd?: (row: PoolLedgerRow) => void;
+};
+
+const KIND_LABELS: Record<DebitKind, string> = {
+  expense: "Expense",
+  withdrawal: "Withdrawal",
+  opening_due: "Season due",
+};
 
 // Per-kind copy for the two player-linked kinds.
-const PLAYER_KIND_COPY: Record<
+function playerKindCopy(fundNoun: string): Record<
   Exclude<DebitKind, "expense">,
   { description: string; pickPlayer: string; placeholder: string; submit: string }
-> = {
-  withdrawal: {
-    description:
-      "A withdrawal returns part of a player's deposit. It lowers the pool and that player's balance.",
-    pickPlayer: "Pick the player taking money out.",
-    placeholder: "Stake returned",
-    submit: "Record withdrawal",
-  },
-  opening_due: {
-    description:
-      "Season carryforward: deducted from the player's balance (shows red until they pay). It lowers the pool total like any debit.",
-    pickPlayer: "Pick the player who carries the due.",
-    placeholder: "Season 1 due",
-    submit: "Record due",
-  },
-};
+> {
+  return {
+    withdrawal: {
+      description: `A withdrawal returns part of a player's deposit. It lowers the ${fundNoun} and that player's balance.`,
+      pickPlayer: "Pick the player taking money out.",
+      placeholder: "Stake returned",
+      submit: "Record withdrawal",
+    },
+    opening_due: {
+      description: `Season carryforward: deducted from the player's balance (shows red until they pay). It lowers the ${fundNoun} total like any debit.`,
+      pickPlayer: "Pick the player who carries the due.",
+      placeholder: "Season 1 due",
+      submit: "Record due",
+    },
+  };
+}
 
 export function DebitSheet({
   open,
   onOpenChange,
   players,
   activePlayerCount,
+  endpoint = "/api/pool/debit",
+  title = "Pool debit",
+  fundNoun = "pool",
+  kinds = ALL_KINDS,
   onOptimisticAdd,
 }: Props) {
   const router = useRouter();
   const [kind, setKind] = useState<DebitKind>("expense");
+  const PLAYER_KIND_COPY = playerKindCopy(fundNoun);
   const [playerId, setPlayerId] = useState("");
   const [amount, setAmount] = useState("");
   const [message, setMessage] = useState("");
@@ -133,7 +148,7 @@ export function DebitSheet({
     startTransition(async () => {
       if (onOptimisticAdd) onOptimisticAdd(optimisticRow);
       try {
-        const res = await fetch("/api/pool/debit", {
+        const res = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -166,15 +181,20 @@ export function DebitSheet({
     <SheetShell
       open={open}
       onOpenChange={onOpenChange}
-      title="Pool debit"
+      title={title}
       description={
         copy?.description ??
-        "Plain debits only lower the pool. Common debits also charge every active player their share."
+        `Plain debits only lower the ${fundNoun}. Common debits also charge every active player their share.`
       }
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <div className="grid grid-cols-3 gap-2">
-          {KIND_OPTIONS.map(([option, label]) => (
+        <div
+          className={cn(
+            "grid gap-2",
+            kinds.length === 2 ? "grid-cols-2" : "grid-cols-3",
+          )}
+        >
+          {kinds.map((option) => (
             <button
               key={option}
               type="button"
@@ -190,7 +210,7 @@ export function DebitSheet({
                   : "border-border bg-surface text-text-secondary",
               )}
             >
-              {label}
+              {KIND_LABELS[option]}
             </button>
           ))}
         </div>
