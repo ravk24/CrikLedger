@@ -22,16 +22,40 @@ type Props = {
   onOptimisticAdd?: (row: PoolLedgerRow) => void;
 };
 
-// Two things leave the pool from here: an expense (plain, or common —
-// split across every active player) and a withdrawal — a player taking
-// part of their deposit back, which lowers the pool and that player's
-// balance together. Same 2-up kind control as CreditSheet.
-type DebitKind = "expense" | "withdrawal";
+// Three things leave the pool from here: an expense (plain, or common —
+// split across every active player), a withdrawal — a player taking
+// part of their deposit back — and a season due carried from last
+// season against a player. The two player-linked kinds lower the pool
+// and that player's balance together and are stored negative. Same
+// segmented kind control as CreditSheet, three columns.
+type DebitKind = "expense" | "withdrawal" | "opening_due";
 
 const KIND_OPTIONS: [DebitKind, string][] = [
   ["expense", "Expense"],
   ["withdrawal", "Withdrawal"],
+  ["opening_due", "Season due"],
 ];
+
+// Per-kind copy for the two player-linked kinds.
+const PLAYER_KIND_COPY: Record<
+  Exclude<DebitKind, "expense">,
+  { description: string; pickPlayer: string; placeholder: string; submit: string }
+> = {
+  withdrawal: {
+    description:
+      "A withdrawal returns part of a player's deposit. It lowers the pool and that player's balance.",
+    pickPlayer: "Pick the player taking money out.",
+    placeholder: "Stake returned",
+    submit: "Record withdrawal",
+  },
+  opening_due: {
+    description:
+      "Season carryforward: deducted from the player's balance (shows red until they pay). It lowers the pool total like any debit.",
+    pickPlayer: "Pick the player who carries the due.",
+    placeholder: "Season 1 due",
+    submit: "Record due",
+  },
+};
 
 export function DebitSheet({
   open,
@@ -50,11 +74,13 @@ export function DebitSheet({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  const isWithdrawal = kind === "withdrawal";
+  // Withdrawals and season dues name a player; expenses do not.
+  const playerKind = kind === "expense" ? null : kind;
+  const copy = playerKind ? PLAYER_KIND_COPY[playerKind] : null;
   const value = Number(amount);
   const validAmount = Number.isInteger(value) && value > 0;
   const preview =
-    !isWithdrawal && common && validAmount && activePlayerCount > 0
+    !playerKind && common && validAmount && activePlayerCount > 0
       ? ceilSplit(value, activePlayerCount)
       : null;
 
@@ -64,17 +90,17 @@ export function DebitSheet({
       setError("Enter a whole-rupee amount above zero.");
       return;
     }
-    if (isWithdrawal && !playerId) {
-      setError("Pick the player taking money out.");
+    if (copy && !playerId) {
+      setError(copy.pickPlayer);
       return;
     }
     setError(null);
     setPending(true);
-    const payload = isWithdrawal
+    const payload = playerKind
       ? {
           kind,
           amount: value,
-          // Withdrawals title themselves by player — message optional.
+          // Player-linked rows title themselves by player — message optional.
           message: message.trim() || undefined,
           player_id: playerId,
           entry_date: date || undefined,
@@ -92,15 +118,11 @@ export function DebitSheet({
     const optimisticRow: PoolLedgerRow = {
       id: `optimistic-${Date.now()}`,
       entry_date: payload.entry_date ?? todayIST(),
-      kind: isWithdrawal
-        ? "withdrawal"
-        : common
-          ? "common_debit"
-          : "plain_debit",
+      kind: playerKind ?? (common ? "common_debit" : "plain_debit"),
       message: message.trim(),
       amount: -value,
       edited_by: null,
-      player_name: isWithdrawal
+      player_name: playerKind
         ? (players.find((p) => p.id === playerId)?.name ?? null)
         : null,
       created_at: new Date().toISOString(),
@@ -146,13 +168,12 @@ export function DebitSheet({
       onOpenChange={onOpenChange}
       title="Pool debit"
       description={
-        isWithdrawal
-          ? "A withdrawal returns part of a player's deposit. It lowers the pool and that player's balance."
-          : "Plain debits only lower the pool. Common debits also charge every active player their share."
+        copy?.description ??
+        "Plain debits only lower the pool. Common debits also charge every active player their share."
       }
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {KIND_OPTIONS.map(([option, label]) => (
             <button
               key={option}
@@ -174,7 +195,7 @@ export function DebitSheet({
           ))}
         </div>
 
-        {isWithdrawal && (
+        {playerKind && (
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-text-secondary">
               Player
@@ -202,16 +223,14 @@ export function DebitSheet({
 
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-text-secondary">
-            {isWithdrawal ? "Message (optional)" : "Message"}
+            {copy ? "Message (optional)" : "Message"}
           </span>
           <input
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder={
-              isWithdrawal ? "Stake returned" : "What the money was spent on"
-            }
-            required={!isWithdrawal}
+            placeholder={copy?.placeholder ?? "What the money was spent on"}
+            required={!copy}
             className={inputClass}
           />
         </label>
@@ -228,7 +247,7 @@ export function DebitSheet({
               className={inputClass}
             />
           </label>
-          {!isWithdrawal && (
+          {!playerKind && (
             <label className="flex h-11 items-center gap-2">
               <span className="text-sm font-medium text-text-secondary">
                 Common?
@@ -238,7 +257,7 @@ export function DebitSheet({
           )}
         </div>
 
-        {!isWithdrawal && common && (
+        {!playerKind && common && (
           <div className="rounded-md border border-accent-light bg-accent-light/40 p-3">
             <p className="text-[11px] font-bold uppercase tracking-wider text-accent">
               Split preview
@@ -273,11 +292,7 @@ export function DebitSheet({
         >
           {pending
             ? "Saving…"
-            : isWithdrawal
-              ? "Record withdrawal"
-              : common
-                ? "Confirm common debit"
-                : "Add debit"}
+            : (copy?.submit ?? (common ? "Confirm common debit" : "Add debit"))}
         </button>
       </form>
     </SheetShell>

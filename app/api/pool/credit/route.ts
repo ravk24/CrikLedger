@@ -1,70 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { pool, withTransaction } from "@/lib/db";
-import { buildBookingMessage } from "@/lib/bookings";
+import { pool } from "@/lib/db";
 import { isPlayerLinked } from "@/lib/poolKinds";
 import { requireAdmin } from "@/lib/session";
-import {
-  ApiError,
-  handleRouteError,
-  groundBookingSchema,
-  poolCreditSchema,
-} from "@/lib/validate";
+import { ApiError, handleRouteError, poolCreditSchema } from "@/lib/validate";
 
+// Credits only: a player deposit or other income. Everything that lowers
+// the pool — expenses, withdrawals, season dues — goes through
+// /api/pool/debit. (The ground-booking branch was retired 2026-09-16;
+// old 'ground_booking' rows stay in the ledger as legacy.)
 export async function POST(req: NextRequest) {
   try {
     const admin = await requireAdmin();
-    // Already on the session row — never re-resolve it, and never from
-    // inside withTransaction (that opened a second pooled connection).
+    // Already on the session row — never re-resolve it.
     const teamId = admin.scopeId;
-    const raw = await req.json();
-
-    if (raw?.kind === "ground_booking") {
-      const body = groundBookingSchema.parse(raw);
-
-      // One transaction: credit -> booking. Since migration-35 a booking
-      // no longer creates matches; since migration 46 it records only
-      // what was actually paid (see dropped-home_match-feature.md).
-      const result = await withTransaction(async (client) => {
-        const message = buildBookingMessage(
-          body.team_name,
-          body.captain,
-          body.slots,
-        );
-
-        const entryRes = await client.query(
-          `INSERT INTO pool_entries (entry_date, kind, message, amount, created_by, team_id)
-           VALUES (COALESCE($1::date, CURRENT_DATE), 'ground_booking', $2, $3, $4, $5)
-           RETURNING id`,
-          [body.entry_date ?? null, message, body.amount_paid, admin.id, teamId],
-        );
-        const entryId: string = entryRes.rows[0].id;
-
-        const bookingRes = await client.query(
-          `INSERT INTO ground_bookings
-             (pool_entry_id, team_name, captain, slots, amount_paid, created_by, team_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
-           RETURNING id`,
-          [
-            entryId,
-            body.team_name,
-            body.captain,
-            body.slots,
-            body.amount_paid,
-            admin.id,
-            teamId,
-          ],
-        );
-
-        return {
-          booking_id: bookingRes.rows[0].id,
-          entry_id: entryId,
-        };
-      });
-
-      return NextResponse.json({ success: true, data: result }, { status: 201 });
-    }
-
-    const body = poolCreditSchema.parse(raw);
+    const body = poolCreditSchema.parse(await req.json());
 
     const playerLinked = isPlayerLinked(body.kind);
     if (playerLinked) {
@@ -87,9 +36,8 @@ export async function POST(req: NextRequest) {
         // Player-linked rows may omit the message — the column is NOT
         // NULL, and their ledger titles derive from the player anyway.
         body.message ?? "",
-        // Credits are positive by convention; an opening due is a debt
-        // carried from last season — stored negative against the player.
-        body.kind === "opening_due" ? -body.amount : body.amount,
+        // Credits are positive by convention (sign_matches_kind).
+        body.amount,
         playerLinked ? body.player_id : null,
         admin.id,
         teamId,

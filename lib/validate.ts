@@ -49,54 +49,33 @@ const entryDate = z
   .nullable()
   .optional();
 
+// Credits only — everything that lowers the pool is poolDebitSchema.
 export const poolCreditSchema = z
   .object({
-    // opening_due: season-carryforward debt — entered positive, stored
-    // negative against the player. It counts in the pool's signed sum
-    // like every other row (migration 9).
-    kind: z.enum(["deposit", "other_income", "opening_due"]),
+    kind: z.enum(["deposit", "other_income"]),
     amount: z.number().int().positive(),
-    // Player-linked rows derive their ledger title from the player, so
-    // the free-text message is optional there (stored as "").
+    // A deposit derives its ledger title from the player, so the
+    // free-text message is optional there (stored as "").
     message: z.string().trim().min(1).max(200).optional(),
     player_id: z.string().uuid().optional(),
     entry_date: entryDate,
   })
-  .refine(
-    (body) =>
-      (body.kind !== "deposit" && body.kind !== "opening_due") ||
-      body.player_id !== undefined,
-    { message: "player_id is required for deposits and opening dues" },
-  )
-  .refine(
-    (body) =>
-      body.kind === "deposit" ||
-      body.kind === "opening_due" ||
-      body.message !== undefined,
-    { message: "Message is required" },
-  );
+  .refine((body) => body.kind !== "deposit" || body.player_id !== undefined, {
+    message: "player_id is required for deposits",
+  })
+  .refine((body) => body.kind === "deposit" || body.message !== undefined, {
+    message: "Message is required",
+  });
 
-// Ground booking: an outside team books N slots on the ground. One
-// credit for the amount actually paid, plus one booking record.
-// It no longer creates matches (migration-35), and because clearing a
-// pending fee was match-scoped, the paid/pending split went with it —
-// see CrikLedger-docs/dropped-home_match-feature.md.
-export const groundBookingSchema = z.object({
-  kind: z.literal("ground_booking"),
-  team_name: z.string().trim().min(1).max(80),
-  captain: z.string().trim().min(1).max(80),
-  slots: z.number().int().positive().max(20),
-  amount_paid: z.number().int().positive(),
-  entry_date: entryDate,
-});
-
-// Two things leave the pool from the Debit sheet: an expense (plain or
-// common) and a withdrawal — a player taking part of their deposit
-// back. A withdrawal is player-linked like a deposit, stored negative,
-// and titles itself from the player, so its message is optional.
+// Three things leave the pool from the Debit sheet: an expense (plain or
+// common), a withdrawal — a player taking part of their deposit back —
+// and a season due carried from last season against a player. The two
+// player-linked kinds are stored negative and title themselves from the
+// player, so their message is optional and they are never "common".
+const PLAYER_LINKED_DEBIT_KINDS = ["withdrawal", "opening_due"] as const;
 export const poolDebitSchema = z
   .object({
-    kind: z.enum(["expense", "withdrawal"]).default("expense"),
+    kind: z.enum(["expense", "withdrawal", "opening_due"]).default("expense"),
     common: z.boolean().default(false),
     amount: z.number().int().positive(),
     message: z.string().trim().min(1).max(200).optional(),
@@ -104,11 +83,14 @@ export const poolDebitSchema = z
     entry_date: entryDate,
   })
   .refine(
-    (body) => body.kind !== "withdrawal" || body.player_id !== undefined,
-    { message: "player_id is required for withdrawals" },
+    (body) =>
+      !PLAYER_LINKED_DEBIT_KINDS.includes(
+        body.kind as (typeof PLAYER_LINKED_DEBIT_KINDS)[number],
+      ) || body.player_id !== undefined,
+    { message: "player_id is required for withdrawals and season dues" },
   )
-  .refine((body) => body.kind !== "withdrawal" || !body.common, {
-    message: "A withdrawal cannot be common",
+  .refine((body) => body.kind === "expense" || !body.common, {
+    message: "Only an expense can be common",
   })
   .refine((body) => body.kind !== "expense" || body.message !== undefined, {
     message: "Message is required",
@@ -267,7 +249,6 @@ export const editMatchSchema = FEE_RULES.reduce(
   z.object({
     match_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "yyyy-mm-dd"),
     venue: z.string().trim().min(1).max(80).optional(),
-    // Renames the linked ground booking's captain, when there is one.
     ...feeFields,
   }),
 );
@@ -276,7 +257,7 @@ export const abandonMatchSchema = z.object({
   reason: z.string().trim().min(1).max(200),
 });
 
-// Clearing a booking's pending fee: the client echoes the amount it
+// Clearing a match's pending fee: the client echoes the amount it
 // displayed so a stale page can't clear a different figure.
 export const clearPendingSchema = z.object({
   expected_pending: z.number().int().positive(),

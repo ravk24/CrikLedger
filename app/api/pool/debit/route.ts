@@ -10,12 +10,15 @@ export async function POST(req: NextRequest) {
     const body = poolDebitSchema.parse(await req.json());
     const teamId = admin.scopeId;
 
-    if (body.kind === "withdrawal") {
-      // A player takes part of their deposit back. Player-linked like a
-      // deposit (active players only, same team), stored negative so it
-      // lowers the pool and the player's balance together (migration 55).
-      // Locking the player row serialises two concurrent withdrawals so
-      // the balance check below cannot be raced past.
+    if (body.kind === "withdrawal" || body.kind === "opening_due") {
+      // The two player-linked debits. A withdrawal is a player taking part
+      // of their deposit back (migration 55); a season due is last
+      // season's debt carried against a player (migration 8; entered
+      // from the Debit sheet since 2026-09-16). Both need an active
+      // same-team player and are stored negative so they lower the pool
+      // and the player's balance together. Locking the player row
+      // serialises two concurrent withdrawals so the balance check below
+      // cannot be raced past.
       const result = await withTransaction(async (client) => {
         const playerRes = await client.query(
           `SELECT p.name, b.balance
@@ -33,9 +36,10 @@ export async function POST(req: NextRequest) {
         }
         // Owner's rule: a player cannot take out more than they hold. The
         // pool itself is not guarded — like any plain debit it may dip
-        // below zero (R-40: the pool runs ahead of the cash box).
+        // below zero (R-40: the pool runs ahead of the cash box). A season
+        // due records a debt, not cash leaving, so it skips the check.
         const balance = Math.round(Number(player.balance));
-        if (body.amount > balance) {
+        if (body.kind === "withdrawal" && body.amount > balance) {
           throw new ApiError(
             422,
             "EXCEEDS_BALANCE",
@@ -44,10 +48,11 @@ export async function POST(req: NextRequest) {
         }
         const res = await client.query(
           `INSERT INTO pool_entries (entry_date, kind, message, amount, player_id, created_by, team_id)
-           VALUES (COALESCE($1::date, CURRENT_DATE), 'withdrawal', $2, $3, $4, $5, $6)
+           VALUES (COALESCE($1::date, CURRENT_DATE), $2, $3, $4, $5, $6, $7)
            RETURNING id, entry_date, kind, message, amount`,
           [
             body.entry_date ?? null,
+            body.kind,
             // Titles itself from the player; the column is NOT NULL.
             body.message ?? "",
             -body.amount,

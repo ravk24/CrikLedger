@@ -15,8 +15,8 @@ export type PlayerPublic = {
 export type PoolEntryKind =
   | "deposit"
   | "other_income"
-  | "ground_booking"
-  | "equipment"
+  | "ground_booking" // LEGACY — credit retired from the sheet 2026-09-16; old rows keep the BOOKING chip
+  | "equipment" // LEGACY — removed from the sheet earlier; old rows keep the EQUIPMENT chip
   | "match_collection"
   | "match_refund" // AUTO on abandon: reverses the match's fee rows (migration 54)
   | "plain_debit"

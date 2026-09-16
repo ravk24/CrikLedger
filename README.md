@@ -42,16 +42,16 @@ One unified, chronological ledger with a running balance:
 | Entry | Created by | Effect |
 |---|---|---|
 | Credit — player deposit | Admin | Pool ↑ and that player's balance ↑ |
-| Credit — ground booking | Admin | Pool ↑ by the amount paid; records team, captain, slots, and pending amount, and schedules one match per booked date in the same transaction. Deleting a booked match returns that slot's share to the pool automatically |
-| Credit — other income | Admin | Pool ↑ |
+| Credit — other income | Admin | Pool ↑ (an outside team paying to use the ground goes here, or through a match scheduled with "Credit to Pool") |
 | Credit — match collection | **App, automatically** on match submit | Pool ↑ by the rounding surplus — plus, for an away (Other) match, the ground fee the pool fronted at scheduling (recouped from player fees) |
 | Debit — away-match ground fee | **App** when an Other match is scheduled | Pool ↓ by the team's contribution (a linked `plain_debit`); removed if the match is cancelled or deleted |
 | Credit — match fee returned | **App, automatically** when a match is abandoned | Pool ↑ by the fee the pool fronted (the debit stays; this locked AUTO · CANCELLED row reverses it) |
-| Debit — plain (ground booking, misc) | Admin | Pool ↓ |
+| Debit — plain (ground rent, misc) | Admin | Pool ↓ |
 | Debit — common (team gear: bats, stumps…) | Admin | Pool ↓, each active player charged `CEILING(amount ÷ active players)` on their balance — nothing auto-credited back |
-| Debit — season opening due | Admin | Pool ↓ and that player's balance ↓ (season-1 debt carryforward; a later settling deposit cancels it). Entered from the Credit sheet as "Last season due" |
+| Debit — withdrawal | Admin | Pool ↓ and that player's balance ↓ — a player takes part of their deposit back; refused above the player's balance |
+| Debit — season due | Admin | Pool ↓ and that player's balance ↓ (last season's debt carried forward; a later settling deposit cancels it) |
 
-The admin Credit sheet offers: Player deposit · Ground booking · Other income · Last season due. (An `equipment` credit kind existed earlier and was removed from the sheet; old rows still render with an EQUIPMENT chip.)
+The admin Credit sheet offers: Player deposit · Other income. The Debit sheet offers: Expense · Withdrawal · Season due. (`equipment` and `ground_booking` credit kinds existed earlier and were removed from the sheet; old rows still render with EQUIPMENT / BOOKING chips.)
 
 > **Note on the match surplus:** it is credited when fees are *charged* to player balances, not when the cash arrives, so the pool total can run slightly ahead of the physical cash box — bounded by the sum of all surpluses (a few rupees per match). This is intentional: the surplus is the team's small discretionary fund (gear, tea/coffee party), and exact cash reconciliation is not a goal.
 
@@ -129,7 +129,7 @@ The app is installable as a **PWA** (web manifest + install nudge) and designed 
 - **`engine/` owns all money math.** Pure TypeScript, zero app imports — the only place `Math.ceil` on money is allowed (`calc.ts` for match fees, `split.ts` for common-debit splits).
 - **The write path is sacred:** browser → route handler (cookie check → zod validation → role check) → `withTransaction()` → response. The supabase-js client is never used for writes.
 - **RLS keeps anonymous users out of base tables entirely** — public pages read only from purpose-built views (`players_public`, `pool_ledger_public`, `match_participants_public`, `player_statement`). The app stores no personal contact data: players are identified by a unique name.
-- **Deletion is superadmin-only and always money-safe.** Deactivated players keep their full history; match edits reverse and reapply fees transactionally, and the auto-generated pool credit adjusts with them. When a superadmin deletes a match, one transaction removes its fee rows, the auto surplus credit, and — for booking matches — returns that slot's share to the ledger (the last slot removes the booking and its credit entirely); the captain settles the opponent's cash offline.
+- **Deletion is superadmin-only and always money-safe.** Deactivated players keep their full history; match edits reverse and reapply fees transactionally, and the auto-generated pool credit adjusts with them. When a superadmin deletes a match, one transaction removes its fee rows, the auto surplus credit and any linked ground-fee entries; the captain settles the opponent's cash offline.
 
 ---
 

@@ -268,9 +268,8 @@ export async function completeMatch(
   });
 }
 
-// Clearing a match's own pending fee (migration 36). The counterpart of
-// lib/bookings.ts clearBookingPending, for matches that carry the fee
-// themselves rather than through a ground booking.
+// Clearing a match's own pending fee (migration 36). Matches carry the
+// fee themselves; the ground-booking path that once did this is gone.
 //
 // One-way by design: the outstanding slice is posted to the pool in the
 // SAME direction as the fee it belongs to — a debit we still owed is
