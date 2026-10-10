@@ -81,19 +81,6 @@ function buildSteps(ignoreAllowance: boolean): Step[] {
 // What the Next button points at. Derived from the step list rather than
 // hardcoded per screen, so dropping the cars step relabels Car fee's
 // button too — the paid wizard derives its labels the same way.
-const STEP_NAMES: Record<Step, string> = {
-  intro: "the match",
-  result: "result",
-  costs: "costs",
-  players: "players",
-  guests: "guests",
-  carFee: "car fee",
-  cars: "who brought the car",
-  shared: "who shared the car",
-  preview: "fee preview",
-  sheet: "the match sheet",
-};
-
 const CAPTAIN = DEMO_PLAYERS.find((p) => p.is_captain) ?? null;
 
 export function GuestMatchFlow() {
@@ -174,8 +161,6 @@ export function GuestMatchFlow() {
   const index = found === -1 ? steps.indexOf("preview") : found;
   const back = () => setStep(steps[Math.max(0, index - 1)]);
   const next = () => setStep(steps[Math.min(steps.length - 1, index + 1)]);
-  const nextStep = steps[Math.min(steps.length - 1, index + 1)];
-  const nextLabel = `Next — ${STEP_NAMES[nextStep]}`;
 
   function toggleCar(playerId: string) {
     setCars((prev) => {
@@ -314,7 +299,7 @@ export function GuestMatchFlow() {
           {abandonMode ? (
             <NextButton onClick={() => setAbandoned(true)} label="Abandon the match" />
           ) : (
-            <NextButton onClick={next} label={nextLabel} />
+            <NextButton onClick={next} />
           )}
         </>
       )}
@@ -329,7 +314,7 @@ export function GuestMatchFlow() {
             The sample&apos;s amounts are fixed so everyone sees the same
             split. In your own ledger you type them in.
           </p>
-          <NextButton onClick={next} label={nextLabel} />
+          <NextButton onClick={next} />
         </>
       )}
 
@@ -367,7 +352,7 @@ export function GuestMatchFlow() {
               })
             }
           />
-          <NextButton onClick={next} label={nextLabel} />
+          <NextButton onClick={next} />
         </>
       )}
 
@@ -399,7 +384,7 @@ export function GuestMatchFlow() {
               land on {CAPTAIN.name}&apos;s balance.
             </p>
           )}
-          <NextButton onClick={next} label={nextLabel} />
+          <NextButton onClick={next} />
         </>
       )}
 
@@ -419,7 +404,7 @@ export function GuestMatchFlow() {
             onIgnoredChange={setIgnoreAllowance}
             locked
           />
-          <NextButton onClick={next} label={nextLabel} />
+          <NextButton onClick={next} />
         </>
       )}
 
@@ -439,7 +424,7 @@ export function GuestMatchFlow() {
             onToggleCar={toggleCar}
             allowance={allowance}
           />
-          <NextButton onClick={next} label={nextLabel} />
+          <NextButton onClick={next} />
         </>
       )}
 
@@ -489,7 +474,7 @@ export function GuestMatchFlow() {
             carSharePerSharer={fees?.carSharePerSharer ?? 0}
             sharerCount={fees?.sharerCount ?? 0}
           />
-          <NextButton onClick={next} label={nextLabel} />
+          <NextButton onClick={next} />
         </>
       )}
 

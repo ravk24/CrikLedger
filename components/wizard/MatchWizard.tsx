@@ -64,7 +64,7 @@ type StepKey =
   | "shared"
   | "preview";
 
-// nextLabels are derived in buildSteps from whichever step follows.
+// The footer button reads plain "Next" on every step but the last.
 const ALL_STEPS: { key: StepKey; title: string }[] = [
   { key: "result", title: "How did it go?" },
   { key: "costs", title: "Costs" },
@@ -95,15 +95,7 @@ function buildSteps(
     dropped.add("cars");
     dropped.add("shared");
   }
-  const steps = ALL_STEPS.filter((s) => !dropped.has(s.key));
-  // Each step's label points at whichever step actually follows it.
-  return steps.map((s, i) => ({
-    ...s,
-    nextLabel:
-      i < steps.length - 1
-        ? `Next — ${steps[i + 1].title === "Who played?" ? "players" : steps[i + 1].title.toLowerCase()}`
-        : "",
-  }));
+  return ALL_STEPS.filter((s) => !dropped.has(s.key));
 }
 
 // Everyone shares a car unless unticked, so the wizard tracks the
@@ -460,8 +452,11 @@ export function MatchWizard({
             ? "Working…"
             : stepKey === "result" && abandonMode
               ? "Submit abandonment"
-              : steps[stepIndex].nextLabel ||
-                (mode === "edit" ? "Save match" : "Submit match")}
+              : stepIndex < steps.length - 1
+                ? "Next"
+                : mode === "edit"
+                  ? "Save match"
+                  : "Submit match"}
         </button>
       </div>
     </>
