@@ -1,14 +1,23 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import type { MatchResult } from "@/types";
 
 type Props = {
-  result: "won" | "lost" | null;
-  onResult: (result: "won" | "lost") => void;
+  result: MatchResult | null;
+  onResult: (result: MatchResult) => void;
   abandonReason: string;
   onAbandonReason: (reason: string) => void;
   abandonMode: boolean;
   onAbandonMode: (on: boolean) => void;
+};
+
+// Won = credit, Lost = debit, Tie = low (amber): a tie reads as neither
+// outcome, and grey already means Abandoned (ResultBadge).
+const SELECTED: Record<MatchResult, string> = {
+  won: "border-credit bg-credit-light text-credit-foreground",
+  lost: "border-debit bg-debit-light text-debit-foreground",
+  tie: "border-low bg-low-light text-low-foreground",
 };
 
 export function StepResult({
@@ -21,8 +30,8 @@ export function StepResult({
 }: Props) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-2">
-        {(["won", "lost"] as const).map((value) => (
+      <div className="grid grid-cols-3 gap-2">
+        {(["won", "lost", "tie"] as const).map((value) => (
           <button
             key={value}
             type="button"
@@ -33,9 +42,7 @@ export function StepResult({
             className={cn(
               "flex min-h-20 flex-col items-center justify-center gap-1 rounded-lg border text-base font-semibold capitalize",
               result === value && !abandonMode
-                ? value === "won"
-                  ? "border-credit bg-credit-light text-credit-foreground"
-                  : "border-debit bg-debit-light text-debit-foreground"
+                ? SELECTED[value]
                 : "border-border bg-surface text-text-secondary",
             )}
           >

@@ -1,3 +1,5 @@
+import type { MatchResult } from "@/types";
+
 export type WizardPlayer = { id: string; name: string; is_captain?: boolean };
 
 export type WizardGuest = {
@@ -43,7 +45,7 @@ export type WizardCosts = {
 };
 
 export type WizardInitial = {
-  result: "won" | "lost";
+  result: MatchResult;
   costs: WizardCosts;
   selected: string[];
   cars: string[];

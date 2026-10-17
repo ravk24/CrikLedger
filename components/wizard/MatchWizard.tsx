@@ -14,6 +14,7 @@ import { StepFeePreview } from "@/components/wizard/StepFeePreview";
 import { calculateMatchFees, type MatchFeeResult } from "@/engine/calc";
 import { formatRupees } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { MatchResult } from "@/types";
 import {
   type PreviewRow,
   type PreviewTotals,
@@ -132,7 +133,7 @@ export function MatchWizard({
 }: Props) {
   const router = useRouter();
   const base = apiBase ?? `/api/matches/${matchId}`;
-  const [result, setResult] = useState<"won" | "lost" | null>(
+  const [result, setResult] = useState<MatchResult | null>(
     initial?.result ?? null,
   );
   const [abandonMode, setAbandonMode] = useState(false);
@@ -381,7 +382,7 @@ export function MatchWizard({
         return;
       }
       if (!result) {
-        setError("Pick Won or Lost.");
+        setError("Pick Won, Lost or Tie.");
         return;
       }
       setStep(2);

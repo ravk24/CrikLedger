@@ -342,14 +342,17 @@ async function MatchDetailData({
   // captain phone → no text at all; the deposit line must not reach a
   // group that has guests to pay. The phone rides adminProps only — an
   // anonymous visitor of this publicly link-readable page never receives it.
+  // The result picks the opening line (completed_has_result makes it
+  // non-null here; the check only narrows the type).
   const feeMessage: MatchSheetMessage | undefined =
-    match.status !== "completed" || !adminProps
+    match.status !== "completed" || !adminProps || !match.result
       ? undefined
       : guestNames.length === 0
-        ? { kind: "deposit" }
+        ? { kind: "deposit", result: match.result }
         : adminProps.captainPhone
           ? {
               kind: "guests",
+              result: match.result,
               captainName:
                 teamCaptain ?? captainRow?.player_name ?? "the captain",
               captainPhone: adminProps.captainPhone,

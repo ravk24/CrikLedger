@@ -284,7 +284,7 @@ const guestSchema = z.object({
 });
 
 export const matchSubmitSchema = z.object({
-  result: z.enum(["won", "lost"]),
+  result: z.enum(["won", "lost", "tie"]),
   ground_fee: z.number().int().nonnegative(),
   ball_fee: z.number().int().nonnegative(),
   other_fee: z.number().int().nonnegative(),

@@ -11,6 +11,7 @@ import {
 } from "@/lib/demo/fixtures";
 import { buildGuestFeeMessage } from "@/lib/feeMessage";
 import type { MatchFeeResult } from "@/engine/calc";
+import type { MatchResult } from "@/types";
 import type { WizardCosts } from "@/components/wizard/wizardTypes";
 import { CaptainMark } from "@/components/shared/CaptainMark";
 
@@ -23,12 +24,14 @@ const NAME_BY_ID = new Map(DEMO_PLAYERS.map((p) => [p.id, p.name]));
 // rather than by discipline.
 export function GuestMatchSheet({
   result,
+  matchResult,
   costs,
   captainName,
   captainId,
   onBack,
 }: {
   result: MatchFeeResult;
+  matchResult: MatchResult; // picks the caption's opening line
   costs: WizardCosts;
   captainName: string | null;
   captainId: string | null;
@@ -83,6 +86,7 @@ export function GuestMatchSheet({
     const message =
       result.guestRows.length > 0 && captainName
         ? buildGuestFeeMessage({
+            result: matchResult,
             captainName,
             captainPhone: DEMO_CAPTAIN_PHONE,
             guests: result.guestRows.map((g) => g.name),

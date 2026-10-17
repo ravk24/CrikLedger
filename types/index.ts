@@ -42,7 +42,7 @@ export type PoolLedgerRow = {
 };
 
 export type MatchStatus = "scheduled" | "completed" | "abandoned";
-export type MatchResult = "won" | "lost";
+export type MatchResult = "won" | "lost" | "tie";
 
 export type Match = {
   id: string;

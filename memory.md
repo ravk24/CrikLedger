@@ -1,6 +1,49 @@
-# Memory — session 34: withdrawal kind (m55); sheets split by sign; More tidy; tournament ledger Credit/Debit (m56 applied)
+# Memory — session 36: Tie result (m57 applied) + result-aware share captions
 
-Last updated: 2026-09-16, evening (saved after migration 56 was applied)
+Last updated: 2026-10-17 (session 36; earlier sessions kept below)
+
+## Session 36 (2026-10-17) — Tie result + result-aware share captions
+
+Owner's ask: a third button "Tie" on the wizard's first step, and the match-sheet share caption
+should open with a result line (Congratulations 🎉 / Hard luck / tie) and then say either "fee has
+been deducted from all players" (no guests) or "the players below need to transfer their fee to
+the captain" (guests), grammar tidied.
+
+**Built (uncommitted at the time of writing):**
+- `db/migration-57.sql` (new, in `AUTOCOMMIT_FILES`): `ALTER TYPE match_result ADD VALUE 'tie'`;
+  `tournament_matches_result_check` dropped and re-added with `tie`. No view touched (they only
+  SELECT the column), so no `security_invoker` work. **Applied to prod by the owner 2026-10-17**
+  (`node db/apply-migrations.mjs`: "1 applied, 56 previously applied, 57 total"). Verified
+  read-only: `match_result` = won, lost, tie; `tournament_matches_result_check` admits tie; the
+  auto-name from migration 22 matched. Deploy is now safe.
+- `types/index.ts` `MatchResult` = won | lost | tie; `lib/validate.ts` `matchSubmitSchema.result`
+  enum widened (tournament schema derives from it). Wizard/demo state now typed `MatchResult`.
+- `components/wizard/StepResult.tsx`: three cards, `grid-cols-3`; Tie selected = `border-low
+  bg-low-light text-low-foreground` (amber; grey already means Abandoned). Error copy "Pick Won,
+  Lost or Tie." (`MatchWizard.tsx`). Guest demo renders the same component.
+- `components/shared/ResultBadge.tsx`: new `tie` state, label "Tie", `bg-low-light
+  text-low-foreground`. Before this a tie would have rendered as Lost.
+- `lib/feeMessage.ts`: `resultOpener(result)` + both builders take `result`; `MatchSheetMessage`
+  carries `result` on both variants. Texts: won "Congratulations team 🎉 on winning the match!",
+  lost "Hard luck team — we'll come back stronger next time 💪", tie "Well played team — a tie! 🤝";
+  blank line; no guests "Please refer to the match sheet above — the fee mentioned against each name
+  has been deducted from every player's deposit." ("has been", not "will be" — the debit lands on
+  submit); guests "Please refer to the match sheet above — the players listed below need to
+  transfer their fee to captain <Name>: <phone>." + tick-off list. Session-33 rule kept: guests
+  present with no captain phone → no caption. `app/matches/[id]/page.tsx` passes `match.result`
+  (guard `!match.result` only narrows the type; `completed_has_result` makes it non-null).
+- Guest demo: `GuestMatchSheet` takes `matchResult` (from the flow's chosen result) so the sample
+  caption gets the same opener; its no-guests behaviour (no caption) unchanged.
+- Tests: `lib/feeMessage.test.ts` rewritten (opener × body). Docs: 09 (submit input, share note),
+  06 (m57 row, enum, tournament CHECK), 08 R-26, 02 B4 + D2 (caption rule verbatim), ui-registry
+  (ResultBadge, wizard entry — also fixed its stale "6-step" wording to 8), ui-tokens (`low` row).
+
+**Rollout:** migration 57 is in (2026-10-17). Remaining: commit → push on the owner's word → phone
+check.
+
+**Not browser-checked** at the time of writing. Phone check list: wizard step 1 shows three cards,
+Tie selects amber, submit stores it, card + page badge read "Tie"; share caption on a no-guest
+match = opener + deposit line, with guests = opener + transfer list; guest demo step 1 same cards.
 
 ## What was built
 

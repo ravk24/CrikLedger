@@ -12,6 +12,7 @@ import { StepSharedCar } from "@/components/wizard/StepSharedCar";
 import { StepResult } from "@/components/wizard/StepResult";
 import { GuestMatchSheet } from "@/components/guest/GuestMatchSheet";
 import { calculateMatchFees } from "@/engine/calc";
+import type { MatchResult } from "@/types";
 import { formatRupees } from "@/lib/format";
 import {
   DEMO_COSTS,
@@ -85,7 +86,7 @@ const CAPTAIN = DEMO_PLAYERS.find((p) => p.is_captain) ?? null;
 
 export function GuestMatchFlow() {
   const [step, setStep] = useState<Step>("intro");
-  const [result, setResult] = useState<"won" | "lost" | null>("won");
+  const [result, setResult] = useState<MatchResult | null>("won");
   const [abandonMode, setAbandonMode] = useState(false);
   const [abandonReason, setAbandonReason] = useState("");
   const [abandoned, setAbandoned] = useState(false);
@@ -222,6 +223,7 @@ export function GuestMatchFlow() {
     return (
       <GuestMatchSheet
         result={fees}
+        matchResult={result ?? "won"}
         costs={costs}
         captainName={CAPTAIN?.name ?? null}
         captainId={CAPTAIN?.id ?? null}

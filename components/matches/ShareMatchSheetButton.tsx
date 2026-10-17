@@ -38,8 +38,8 @@ export type { MatchSheetMessage };
 // and share/download fallback the guest sample uses; the payload is
 // assembled by the server page from the stored rows, so the image shows
 // exactly what the ledger recorded. When feeMessage is present the
-// companion text (guest transfer list, or the deposit reminder when the
-// match had no guests) is copied to the clipboard (WhatsApp drops share-sheet
+// companion text (a won/lost/tie opener, then the guest transfer list,
+// or the deposit line when the match had no guests) is copied to the clipboard (WhatsApp drops share-sheet
 // text that rides alongside files, so paste-below-the-image is the
 // reliable channel) and passed to navigator.share as best effort.
 export function ShareMatchSheetButton({
