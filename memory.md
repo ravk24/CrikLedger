@@ -128,40 +128,39 @@ entries and lost two stale tile mentions.
 
 ## Current state
 
-- `main` = `0c6f5aa` (tournament ledger, NOT pushed) on top of `origin/main` = `0f98bc4`; only `memory.md` dirty. tsc clean; eslint 12 pre-existing warnings;
-  vitest **137** passing (126 + 11 in `lib/poolKinds.test.ts`).
-- **Prod DB: 56 migrations applied** (56 at 2026-09-16 10:15Z, via the script; deploy of `0c6f5aa` is now safe). Earlier: (55 at 2026-09-16 09:20Z, via the script). Verified
-  read-only: enum has `withdrawal`, constraints present, views keep `security_invoker=true`,
-  index widened, `_migrations` has 55.
-- LR-SuperGiants pool balance read ₹4,904 at the time (not ₹5,000). Abhishek's own balance could
-  not be read (classifier).
-- **Nothing from session 34 is browser-checked** (no dev server, no admin session). Sessions
-  31–34 are all unverified on the owner's phone.
-- Carried from session 30, status unknown: deletion of the duplicate "Fearless Fighters" test match.
+- `main` = `origin/main` = `da9558a` (session 36, pushed 2026-10-17 on the owner's "commit and
+  push"; this notes commit follows). tsc clean; eslint 12 pre-existing warnings; vitest **140**.
+- **Prod DB: 57 migrations applied** (57 at 2026-10-17 05:37Z, via the script, by the owner —
+  before the push, so the deploy is safe). Verified read-only: `match_result` = won, lost, tie;
+  `tournament_matches_result_check` admits tie (the migration-22 auto-name matched); no view touched.
+- Session 36 was built with no dev server and no admin session — **not browser-checked**.
+  Sessions 31–36 are all unverified on the owner's phone.
+- Earlier carried state: LR-SuperGiants pool read ₹4,904 on 2026-09-16; Abhishek Khare's ₹5,000
+  withdrawal still to be recorded; duplicate "Fearless Fighters" test-match deletion status unknown.
 
 ## Next session starts with
 
--1. Push `0c6f5aa` on the owner's word (migration 56 is already in). Then phone: team `/admin` has no money tiles (even grid); tournament Admin tab five tiles, Details full-width; tournament Ledger tab shows Credit / Debit for an admin on an active tournament — Credit = Player deposit · Other income, Debit = Expense · Withdrawal (2-up); a withdrawal above balance is refused; rows read "Withdrawal by X"; player page statement shows it; a completed tournament shows no buttons.
-
-0. Owner phone check after the `0f98bc4` deploy: `/more` shows 8 tiles in
-   4 even rows for admin and for `sg_viewer` (Purchases greyed for the viewer); "Suggest a feature"
-   opens `/feedback` with the two buttons. Then the sheets: Ledger → Credit shows Player deposit · Other
-   income (player picker on deposit only). Ledger → Debit shows Expense · Withdrawal · Season due
-   in one row, "Season due" not clipped; Withdrawal/Season due reveal the player picker and hide
-   Common; Expense keeps Common + split preview.
-1. Record Abhishek Khare's real ₹5,000 withdrawal from the Debit sheet → red "Withdrawal by
-   Abhishek Khare" row in the ledger, same line on `/players/<id>` with running balance, pool card
-   drops by 5,000 (to about −₹96 unless the pool was topped up). If the amount exceeds his balance
-   the sheet shows the `EXCEEDS_BALANCE` message — then decide the amount with him.
-2. Also try: a withdrawal above balance (expect the 422 text), edit the withdrawal row (stays
-   negative), an old BOOKING row still renders and opens for edit.
+0. Phone check after the `da9558a` deploy: complete a scheduled match — step 1 shows Won / Lost /
+   Tie, Tie selects amber, submit stores it, the match card and match page badge read "Tie" (also
+   on a tournament match). Share a completed no-guest match: the copied caption is the result line,
+   a blank line, then "…has been deducted from every player's deposit."; with guests: result line,
+   then the transfer-to-captain list. Guest demo step 1 shows the same three cards.
+1. Carried from sessions 34–35: team `/admin` has no money tiles; tournament Admin tab five tiles,
+   Details full-width; tournament Ledger tab Credit / Debit (Expense · Withdrawal, 2-up); `/more`
+   8 tiles in 4 even rows (Purchases greyed for `sg_viewer`); Ledger → Credit = Player deposit ·
+   Other income, Debit = Expense · Withdrawal · Season due, "Season due" not clipped; wizard footer
+   reads plain "Next".
+2. Record Abhishek Khare's real ₹5,000 withdrawal from the Debit sheet (pool was ₹4,904 — expect
+   it to go to about −₹96 unless topped up; above-balance amounts get `EXCEEDS_BALANCE`).
 3. Carried checks from 31–33: match-sheet guest glyph / VC / "Ball ₹65", footer credit line,
-   deposit caption on a no-guest match, tournament bar "Back" + "Matches" card.
+   tournament bar "Back" + "Matches" card.
 4. Carried: Fearless Fighters test-match deletion; viewer-seat phone test; ground presets phone
    check; fee preview wrap; Feature 6 self-service; Feature 7 hardening (login rate limiting).
 
 ## Open questions
 
+- Should the shared match-sheet PNG itself show the result (Won / Lost / Tie)? Today only the
+  copied caption does (owner did not ask for it on 2026-10-17).
 - Drop the legacy `ground_bookings` table and `ground_booking` enum value (migration 56)? Not urgent.
 - Should the LedgerRow give withdrawal rows a chip (like SEASON DUE), or is the red amount enough?
 - Carried: VC mark on the on-screen fee table; VC in the guest demo fixtures; abandon reason on
