@@ -1,6 +1,55 @@
-# Memory — session 36: Tie result (m57 applied) + result-aware share captions
+# Memory — session 37: ledger kind filter on /pool (viewers included)
 
-Last updated: 2026-10-17 (session 36; earlier sessions kept below)
+Last updated: 2026-10-23 (session 37; earlier sessions kept below)
+
+## Session 37 (2026-10-23) — Ledger kind filter
+
+Owner's ask (phone screenshot of /pool + caption): one filter option on the Ledger to see auto
+match deductions, season dues, withdrawals, expenses, common expenses, match fees, deposits —
+available to viewers too — and "how expensive is this filter; should viewers get it or not?"
+
+**Answer given:** cheap — one filter change costs exactly one `/pool` page load, the same as
+"Show older entries" (one ledger query of ≤51 rows on the existing
+`pool_entries_team_kind_date_idx`, no COUNT, no migration; a filtered page is never heavier than
+the unfiltered one; the removed XLSX export was ~28 KB ≈ 1.5 page views). **Viewers get it.**
+
+**Built (uncommitted at the time of writing, no migration — still 57):**
+- `lib/poolKinds.ts`: `LedgerFilter` union, `LEDGER_FILTERS` (All entries · Deposits · Match
+  collections · Match fees · Expenses · Common expenses · Withdrawals · Season dues · Other
+  income), `ledgerFilterDef`, `parseLedgerFilter` (unknown → all), `rowMatchesFilter`.
+  **Decision: a match fee is not a kind** — fee rows are `plain_debit` / `other_income` — so
+  "Match fees" = `match_id IS NOT NULL` in `pool_ledger_public` (fee rows, pending-cleared
+  slices, `match_refund`), and "Expenses" / "Other income" = that kind with `match_id IS NULL`.
+  Legacy kinds (`ground_booking`, `equipment`, `expense_recovery`) only under All.
+- `app/(app)/pool/page.tsx`: reads `?kind=` next to `?page=` inside the Suspense hole; applies
+  `.in("kind", …)` / `.not|.is("match_id", …)` to the server query (**server-side on purpose —
+  the list is paged at 50, so a browser filter would miss older pages**); "Show older entries"
+  carries `&kind=`; the control renders for both branches (admin: slotted into
+  `PoolAdminSection` via new `filter` prop + `activeFilter`; viewer/megaadmin: above the plain
+  list). Filtered empty state = new `components/pool/LedgerEmptyFiltered.tsx` ("No <label> yet."
+  + "Show all entries" link); unfiltered empty copy unchanged.
+- `components/pool/LedgerFilter.tsx` (client): `<select>` (ScheduledMatchList recipe, `h-11`),
+  `router.push("/pool?kind=…")`, no `useSearchParams`.
+- `PoolAdminSection`: an optimistic add whose row the active filter would hide is not shown.
+- `types/index.ts`: `PoolEntryKind` gains the missing legacy `expense_recovery`.
+- Tests: 5 new in `lib/poolKinds.test.ts` (vitest 145). tsc clean, lint 12 warnings (baseline).
+- Docs: 02 (B2 FACT + frontend row), README `/pool` row, `context/ui-registry.md`
+  (LedgerFilter / LedgerEmptyFiltered entry). 09 untouched (no API change). Share image
+  unchanged (latest 20, all kinds). Tournament ledger has no filter (different kind set).
+
+**Verified:** every filter's PostgREST query run read-only against prod `pool_ledger_public`
+for the owner's team: all=96 = deposit 40 + match_collection 8 + match_fee 25 + expense 7 +
+common 2 + withdrawal 3 + season_due 6 + other_income 5 (match-fee rows are plain_debit +
+other_income, as designed). **Not browser-checked as a signed-in user**: dev server on
+localhost:3000 holds no session and I have no credentials; the guest sample rendered fine.
+Phone check list: dropdown sits under Credit/Debit/share; each option narrows the list; "Show
+older entries" keeps the filter; an empty option shows "No … yet." + Show all; viewer login sees
+the same dropdown without the toolbar.
+
+**Rollout:** commit on the owner's word → push on the owner's word → phone check. No migration.
+
+Gotcha this session: `npm run dev &` inside a backgrounded Bash call leaves an orphaned `next
+dev` holding the port after the shell exits — start it with `run_in_background` directly.
 
 ## Session 36 (2026-10-17) — Tie result + result-aware share captions
 
