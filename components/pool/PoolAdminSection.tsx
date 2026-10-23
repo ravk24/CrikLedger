@@ -10,8 +10,15 @@ import { MoneyInput } from "@/components/shared/MoneyInput";
 import { CreditSheet } from "@/components/pool/CreditSheet";
 import { DebitSheet } from "@/components/pool/DebitSheet";
 import { DownloadImageButton } from "@/components/shared/DownloadImageButton";
+import { LedgerEmptyFiltered } from "@/components/pool/LedgerEmptyFiltered";
 import { opponentLabel } from "@/lib/format";
-import { isManualKind, isPlayerLinked } from "@/lib/poolKinds";
+import {
+  isManualKind,
+  isPlayerLinked,
+  ledgerFilterDef,
+  rowMatchesFilter,
+  type LedgerFilter,
+} from "@/lib/poolKinds";
 import type { PoolLedgerRow } from "@/types";
 
 type PlayerOption = { id: string; name: string };
@@ -20,6 +27,10 @@ type Props = {
   entries: PoolLedgerRow[];
   players: PlayerOption[];
   activePlayerCount: number;
+  // The kind dropdown, rendered by the page (viewers get the same one
+  // above their plain list) and slotted between the toolbar and rows.
+  filter?: React.ReactNode;
+  activeFilter: LedgerFilter;
 };
 
 // Admin mode for P4: manual rows tap-to-edit, locked auto rows inert,
@@ -72,6 +83,8 @@ export function PoolAdminSection({
   entries: serverEntries,
   players,
   activePlayerCount,
+  filter,
+  activeFilter,
 }: Props) {
   // The list reflects an edit, delete or new credit the moment it is
   // sent; the refresh after the write reconciles it with the ledger
@@ -89,6 +102,12 @@ export function PoolAdminSection({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // A new row that the active filter would hide is not shown
+  // optimistically — the refresh after the write would drop it anyway.
+  function optimisticAdd(row: PoolLedgerRow) {
+    if (rowMatchesFilter(row, activeFilter)) changeLedger({ type: "add", row });
+  }
 
   function openEdit(entry: PoolLedgerRow) {
     setEditing(entry);
@@ -195,30 +214,36 @@ export function PoolAdminSection({
         />
       </div>
 
-      <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
-        {entries.map((entry) => (
-          <LedgerRow
-            key={entry.id}
-            entry={entry}
-            onEdit={
-              isManualKind(entry.kind) ? () => openEdit(entry) : undefined
-            }
-          />
-        ))}
-      </section>
+      {filter}
+
+      {entries.length === 0 && activeFilter !== "all" ? (
+        <LedgerEmptyFiltered label={ledgerFilterDef(activeFilter).label} />
+      ) : (
+        <section className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface shadow-card">
+          {entries.map((entry) => (
+            <LedgerRow
+              key={entry.id}
+              entry={entry}
+              onEdit={
+                isManualKind(entry.kind) ? () => openEdit(entry) : undefined
+              }
+            />
+          ))}
+        </section>
+      )}
 
       <CreditSheet
         open={creditOpen}
         onOpenChange={setCreditOpen}
         players={players}
-        onOptimisticAdd={(row) => changeLedger({ type: "add", row })}
+        onOptimisticAdd={optimisticAdd}
       />
       <DebitSheet
         open={debitOpen}
         onOpenChange={setDebitOpen}
         players={players}
         activePlayerCount={activePlayerCount}
-        onOptimisticAdd={(row) => changeLedger({ type: "add", row })}
+        onOptimisticAdd={optimisticAdd}
       />
 
       <SheetShell

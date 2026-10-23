@@ -19,6 +19,7 @@ export type PoolEntryKind =
   | "equipment" // LEGACY — removed from the sheet earlier; old rows keep the EQUIPMENT chip
   | "match_collection"
   | "match_refund" // AUTO on abandon: reverses the match's fee rows (migration 54)
+  | "expense_recovery" // LEGACY — no longer written; old rows stay locked (not in MANUAL_KINDS)
   | "plain_debit"
   | "common_debit"
   | "opening_due" // season carryforward — player debt, not pool money

@@ -98,7 +98,7 @@ reaches the browser.
 | `/car-fee` | Car Fee Calculator — enter the Google Maps distance (starting location → ground), fee = CEILING(2 × distance × ₹9.6/km) |
 | `/car-count` | Car Counter — active players with how many times each brought a car (derived from match participation) |
 | `/matches/[id]` | Match detail — fee table, cost breakdown, surplus to pool |
-| `/pool` | Team fund ledger (+ Credit/Debit and share-image buttons when logged in as admin — the only place money is entered; the admin console has no money tiles) |
+| `/pool` | Team fund ledger with a kind filter for every reader (`?kind=` — deposits, match collections, match fees, expenses, common expenses, withdrawals, season dues, other income; + Credit/Debit and share-image buttons when logged in as admin — the only place money is entered; the admin console has no money tiles) |
 | `/players/[id]` | Public player statement with running balance |
 | `/tournaments/[id]/ledger` | Tournament fund ledger — the same Credit / Debit sheets as `/pool` (Player deposit · Other income; Expense · Withdrawal), no season due |
 | `/admin` | Admin console — schedule match, 6-step complete-match wizard (result → costs → players → guests → cars → fee preview), edit/abandon |
