@@ -8,7 +8,8 @@ Owner's ask (phone screenshot of /pool + caption): "Not liking this filter drop 
 Remove the share icon and add one filter icon; one orange dot if any filter is applied, no dot
 otherwise; remove the filter drop down." Follow-up: a proper funnel icon, not a kebab/dots glyph.
 
-**Built (no migration — still 57):**
+**Built and pushed: commit `f200486` on main (7425a62..f200486) on the owner's "commit and
+push"; no migration — still 57. Vercel deploys from main.**
 - `components/pool/LedgerFilter.tsx` rewritten: lucide `Filter` (funnel) in the old share
   button's `size-11` cell recipe; `bg-low` dot (`size-2.5`, `ring-2 ring-surface`, top-right)
   only when `value !== "all"` — `low` (#d97706) is the project's orange, Tailwind palette
@@ -34,7 +35,17 @@ funnel opens a 9-row menu with a tick on the active row; picking Deposits reload
 funnel gains the orange dot; All entries clears it; viewer login sees the funnel right-aligned
 above the list; "Show older entries" keeps `&kind=`.
 
-**Rollout:** commit on the owner's word → push on the owner's word → phone check. No migration.
+**Current state:** code and docs pushed (`f200486`); this notes file is the only later change.
+Sessions 31–38 are all still unverified on the owner's phone — one check after this deploy
+covers them.
+
+**Next session starts with:** the owner's phone-check verdict on the funnel (list above). If the
+amber `low` dot does not read as orange on the phone, the only knob is the token: do not reach
+for a Tailwind palette class (banned by `context/ui-rules.md`). Pending from earlier sessions:
+Abhishek's real ₹5,000 withdrawal, Feature 6 self-service, login rate limiting.
+
+**Open questions:** none from this session. The ledger share image is retired from the UI by the
+owner's explicit ask; its route stays in the tree — delete it only if the owner says so.
 
 ## Session 37 (2026-10-23) — Ledger kind filter
 
