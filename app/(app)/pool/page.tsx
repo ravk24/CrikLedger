@@ -98,7 +98,13 @@ async function PoolLedgerData({
   const canEdit =
     !!admin && !admin.mustChangePassword && canWrite(admin, "team", team.id);
 
-  const filterControl = <LedgerFilter value={filter} />;
+  // Viewers and the megaadmin have no toolbar: the funnel sits alone,
+  // right-aligned, where the admin's toolbar would be.
+  const filterControl = (
+    <div className="flex justify-end">
+      <LedgerFilter value={filter} />
+    </div>
+  );
 
   if (entries.length === 0 && !canEdit) {
     return (
@@ -126,7 +132,6 @@ async function PoolLedgerData({
           entries={entries}
           players={players.map((p) => ({ id: p.id, name: p.name }))}
           activePlayerCount={players.length}
-          filter={filterControl}
           activeFilter={filter}
         />
         {olderLink}

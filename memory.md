@@ -1,6 +1,40 @@
-# Memory — session 37: ledger kind filter on /pool (viewers included)
+# Memory — session 38: ledger filter becomes a funnel icon; share-image button retired
 
-Last updated: 2026-10-23 (session 37; earlier sessions kept below)
+Last updated: 2026-10-24 (session 38; earlier sessions kept below)
+
+## Session 38 (2026-10-24) — Filter icon replaces the share icon and the dropdown row
+
+Owner's ask (phone screenshot of /pool + caption): "Not liking this filter drop down design.
+Remove the share icon and add one filter icon; one orange dot if any filter is applied, no dot
+otherwise; remove the filter drop down." Follow-up: a proper funnel icon, not a kebab/dots glyph.
+
+**Built (no migration — still 57):**
+- `components/pool/LedgerFilter.tsx` rewritten: lucide `Filter` (funnel) in the old share
+  button's `size-11` cell recipe; `bg-low` dot (`size-2.5`, `ring-2 ring-surface`, top-right)
+  only when `value !== "all"` — `low` (#d97706) is the project's orange, Tailwind palette
+  classes are banned; tapping opens a hand-rolled menu (AccountMenu recipe: `w-56`, `role=menu`,
+  `menuitemradio` rows at `min-h-11`, `Check` on the active one, Escape / outside tap / select
+  close). Same `router.push("/pool?kind=…")` as before; re-picking the active option is a no-op.
+- `PoolAdminSection`: `filter` slot prop removed; the toolbar's third cell is now
+  `<LedgerFilter value={activeFilter} />`; `DownloadImageButton` import gone. The `LedgerFilter`
+  type is imported as `LedgerFilterValue` to dodge the component name (same alias the page uses).
+- `app/(app)/pool/page.tsx`: viewer/megaadmin branch wraps the button in `flex justify-end`
+  (list and filtered-empty branches alike); no longer passes `filter=`.
+- **Retired from the UI: the ledger share image.** The share button was the only caller of
+  `GET /api/share/ledger`; the route and `DownloadImageButton` stay in the tree with no caller
+  (same treatment as the retired XLSX export). Owner asked for the removal explicitly.
+- Docs: README `/pool` row, 02 (filter FACT + retirement note), `context/ui-registry.md`
+  (LedgerFilter entry rewritten with a class table; PoolAdminSection and DownloadImageButton
+  entries). 09 untouched (route unchanged).
+- tsc clean, lint 12 warnings (baseline), vitest 145. Not browser-checked signed in (no
+  credentials); guest `/pool` unaffected (DemoLedger has no filter).
+
+**Phone check list:** toolbar = Credit / Debit / funnel, no share button, no dropdown row;
+funnel opens a 9-row menu with a tick on the active row; picking Deposits reloads filtered and the
+funnel gains the orange dot; All entries clears it; viewer login sees the funnel right-aligned
+above the list; "Show older entries" keeps `&kind=`.
+
+**Rollout:** commit on the owner's word → push on the owner's word → phone check. No migration.
 
 ## Session 37 (2026-10-23) — Ledger kind filter
 

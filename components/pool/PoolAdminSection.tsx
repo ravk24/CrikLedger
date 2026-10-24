@@ -9,7 +9,7 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { MoneyInput } from "@/components/shared/MoneyInput";
 import { CreditSheet } from "@/components/pool/CreditSheet";
 import { DebitSheet } from "@/components/pool/DebitSheet";
-import { DownloadImageButton } from "@/components/shared/DownloadImageButton";
+import { LedgerFilter } from "@/components/pool/LedgerFilter";
 import { LedgerEmptyFiltered } from "@/components/pool/LedgerEmptyFiltered";
 import { opponentLabel } from "@/lib/format";
 import {
@@ -17,7 +17,7 @@ import {
   isPlayerLinked,
   ledgerFilterDef,
   rowMatchesFilter,
-  type LedgerFilter,
+  type LedgerFilter as LedgerFilterValue,
 } from "@/lib/poolKinds";
 import type { PoolLedgerRow } from "@/types";
 
@@ -27,14 +27,13 @@ type Props = {
   entries: PoolLedgerRow[];
   players: PlayerOption[];
   activePlayerCount: number;
-  // The kind dropdown, rendered by the page (viewers get the same one
-  // above their plain list) and slotted between the toolbar and rows.
-  filter?: React.ReactNode;
-  activeFilter: LedgerFilter;
+  // Drives the toolbar's funnel button (viewers get the same button
+  // above their plain list) and the optimistic-add gate below.
+  activeFilter: LedgerFilterValue;
 };
 
 // Admin mode for P4: manual rows tap-to-edit, locked auto rows inert,
-// Credit/Debit buttons in a row above the ledger.
+// Credit/Debit buttons plus the ledger filter in a row above the ledger.
 type LedgerChange =
   | { type: "edit"; id: string; amount: number; message: string }
   | { type: "delete"; id: string }
@@ -83,7 +82,6 @@ export function PoolAdminSection({
   entries: serverEntries,
   players,
   activePlayerCount,
-  filter,
   activeFilter,
 }: Props) {
   // The list reflects an edit, delete or new credit the moment it is
@@ -207,14 +205,8 @@ export function PoolAdminSection({
         >
           <Minus size={16} /> Debit
         </button>
-        <DownloadImageButton
-          endpoint="/api/share/ledger"
-          filename="ledger.png"
-          title="Ledger"
-        />
+        <LedgerFilter value={activeFilter} />
       </div>
-
-      {filter}
 
       {entries.length === 0 && activeFilter !== "all" ? (
         <LedgerEmptyFiltered label={ledgerFilterDef(activeFilter).label} />
