@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withTransaction } from "@/lib/db";
 import { deleteScheduledMatchWithFees } from "@/lib/matches";
-import { requireSuperadmin } from "@/lib/session";
+import { requireTeamRowWrite } from "@/lib/session";
 import { ApiError, handleRouteError } from "@/lib/validate";
 
 // Superadmin only — the opponent cancelled a scheduled match. Deletes
@@ -13,16 +13,17 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireSuperadmin();
     const { id } = await params;
+    // Superadmin of the MATCH's team, not of the active one (F-1).
+    const admin = await requireTeamRowWrite("matches", id, { superadmin: true });
 
     const result = await withTransaction(async (client) => {
       const cur = await client.query(
         `SELECT id, other_fee_entry_id, pending_cleared_entry_id, fee_direction
          FROM matches
-         WHERE id = $1 AND status = 'scheduled'
+         WHERE id = $1 AND team_id = $2 AND status = 'scheduled'
          FOR UPDATE`,
-        [id],
+        [id, admin.scopeId],
       );
       const match = cur.rows[0];
       if (!match) {

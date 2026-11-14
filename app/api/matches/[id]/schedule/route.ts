@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withTransaction } from "@/lib/db";
 import { opponentLabel } from "@/lib/format";
-import { requireAdmin } from "@/lib/session";
+import { requireTeamRowWrite } from "@/lib/session";
 import { ApiError, editMatchSchema, handleRouteError } from "@/lib/validate";
 
 // Fix a scheduled match before it is played — including filling in what
@@ -18,17 +18,18 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const admin = await requireAdmin();
     const { id } = await params;
+    // Authorized against the MATCH's team, not the active one (F-1).
+    const admin = await requireTeamRowWrite("matches", id);
     const body = editMatchSchema.parse(await req.json());
 
     const result = await withTransaction(async (client) => {
       const cur = await client.query(
         `SELECT opponent, venue, other_fee_entry_id, fee_direction
          FROM matches
-         WHERE id = $1 AND status = 'scheduled'
+         WHERE id = $1 AND team_id = $2 AND status = 'scheduled'
          FOR UPDATE`,
-        [id],
+        [id, admin.scopeId],
       );
       const match = cur.rows[0];
       if (!match) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withTransaction } from "@/lib/db";
 import { clearMatchPending } from "@/lib/matches";
-import { requireAdmin } from "@/lib/session";
+import { requireTeamRowWrite } from "@/lib/session";
 import { clearPendingSchema, handleRouteError } from "@/lib/validate";
 
 // Any admin — the outstanding match fee arrived (or went out). One-way:
@@ -15,8 +15,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const admin = await requireAdmin();
     const { id } = await params;
+    // Authorized against the MATCH's team, not the active one (F-1).
+    const admin = await requireTeamRowWrite("matches", id);
     const body = clearPendingSchema.parse(await req.json());
 
     const result = await withTransaction((client) =>

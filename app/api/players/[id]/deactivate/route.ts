@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withTransaction } from "@/lib/db";
-import { requireAdmin } from "@/lib/session";
+import { requireTeamRowWrite } from "@/lib/session";
 import { ApiError, handleRouteError } from "@/lib/validate";
 import { formatRupees } from "@/lib/format";
 
@@ -9,15 +9,16 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireAdmin();
     const { id } = await params;
+    // Authorized against the PLAYER's team, not the active one (F-1).
+    const admin = await requireTeamRowWrite("players", id);
 
     const result = await withTransaction(async (client) => {
       const balRes = await client.query(
         `SELECT p.name, p.is_captain, p.is_vice_captain, b.balance FROM players p
          JOIN player_balances b ON b.id = p.id
-         WHERE p.id = $1`,
-        [id],
+         WHERE p.id = $1 AND p.team_id = $2`,
+        [id, admin.scopeId],
       );
       const row = balRes.rows[0];
       if (!row) {
@@ -46,9 +47,10 @@ export async function POST(
           `${row.name} still has a balance of ${balance < 0 ? "−" : ""}₹${formatRupees(balance)} (${direction}) — record the settlement entry in the pool first, then deactivate`,
         );
       }
-      await client.query(`UPDATE players SET is_active = FALSE WHERE id = $1`, [
-        id,
-      ]);
+      await client.query(
+        `UPDATE players SET is_active = FALSE WHERE id = $1 AND team_id = $2`,
+        [id, admin.scopeId],
+      );
       return { id, name: row.name };
     });
 

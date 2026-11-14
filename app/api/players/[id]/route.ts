@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pool } from "@/lib/db";
-import { requireAdmin } from "@/lib/session";
+import { requireTeamRowWrite } from "@/lib/session";
 import { ApiError, editPlayerSchema, handleRouteError } from "@/lib/validate";
 
 function isUniqueViolation(error: unknown): boolean {
@@ -17,17 +17,18 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireAdmin();
     const { id } = await params;
+    // Authorized against the PLAYER's team, not the active one (F-1).
+    const admin = await requireTeamRowWrite("players", id);
     const body = editPlayerSchema.parse(await req.json());
 
     try {
       const res = await pool.query(
         `UPDATE players
          SET name = COALESCE($2, name)
-         WHERE id = $1
+         WHERE id = $1 AND team_id = $3
          RETURNING id, name, is_active`,
-        [id, body.name ?? null],
+        [id, body.name ?? null, admin.scopeId],
       );
       if (res.rowCount === 0) {
         throw new ApiError(404, "NOT_FOUND", "Player not found");

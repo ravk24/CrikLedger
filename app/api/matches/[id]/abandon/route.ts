@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withTransaction } from "@/lib/db";
 import { opponentLabel } from "@/lib/format";
-import { requireAdmin } from "@/lib/session";
+import { requireTeamRowWrite } from "@/lib/session";
 import { ApiError, abandonMatchSchema, handleRouteError } from "@/lib/validate";
 
 export async function POST(
@@ -9,8 +9,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const admin = await requireAdmin();
     const { id } = await params;
+    // Authorized against the MATCH's team, not the active one (F-1).
+    const admin = await requireTeamRowWrite("matches", id);
     const { reason } = abandonMatchSchema.parse(await req.json());
 
     const result = await withTransaction(async (client) => {
@@ -23,10 +24,10 @@ export async function POST(
         `UPDATE matches
          SET status = 'abandoned', abandoned_reason = $2,
              updated_by = $3, updated_at = NOW()
-         WHERE id = $1 AND status = 'scheduled'
+         WHERE id = $1 AND team_id = $4 AND status = 'scheduled'
          RETURNING id, status, team_id, opponent,
                    other_fee_entry_id, pending_cleared_entry_id`,
-        [id, reason, admin.id],
+        [id, reason, admin.id, admin.scopeId],
       );
       const row = res.rows[0];
       if (!row) {

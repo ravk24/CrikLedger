@@ -324,7 +324,17 @@ async function requireScope(
   options: RequireOptions = {},
 ): Promise<ScopedAdmin> {
   const admin = await requireAccount(options);
+  return authorizeScope(admin, kind, scopeId, needSuperadmin);
+}
 
+// The role half of requireScope, for a caller that has already loaded
+// the session (requireTeamRowWrite) — so the account row is read once.
+function authorizeScope(
+  admin: SessionAdmin,
+  kind: ScopeKind,
+  scopeId: string | null,
+  needSuperadmin: boolean,
+): ScopedAdmin {
   // Checked FIRST, before the active-team lookup: the platform account is
   // refused every scope write whether or not it currently has a team
   // selected, and the error should say so rather than reporting the
@@ -371,6 +381,50 @@ export function requireTeamSuperadmin(
   teamId?: string | null,
 ): Promise<ScopedAdmin> {
   return requireScope("team", teamId ?? null, true);
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Write guard for a team-owned row named in the URL (a match or a
+ * player). Resolves the row's OWN team and checks the caller can write
+ * THAT team.
+ *
+ * requireAdmin() alone only proves "you may write your active team" —
+ * it never tied the URL's id to it, so an admin of one team could change
+ * another team's players and matches by id (test_docs F-1, 2026-11-14).
+ * Authorizing against the row's team, not the active one, also keeps a
+ * member of several teams working on whichever team's page they are on:
+ * the match and player pages already gate their buttons by the row's
+ * team (canWrite(admin, "team", match.team_id)).
+ *
+ * team_id on these rows never changes after insert, so reading it
+ * outside the route's own transaction is safe. Sign-in is checked first
+ * so a signed-out caller cannot probe which ids exist.
+ */
+export async function requireTeamRowWrite(
+  table: "matches" | "players",
+  id: string,
+  { superadmin = false }: { superadmin?: boolean } = {},
+): Promise<ScopedAdmin> {
+  const admin = await requireAccount();
+  const notFound = new ApiError(
+    404,
+    "NOT_FOUND",
+    table === "matches" ? "Match not found" : "Player not found",
+  );
+  // A malformed id would otherwise reach the ::uuid comparison and
+  // surface as a 500.
+  if (!UUID_RE.test(id)) throw notFound;
+  // `table` is a closed union, never user input.
+  const res = await pool.query<{ team_id: string }>(
+    `SELECT team_id FROM ${table} WHERE id = $1`,
+    [id],
+  );
+  const teamId = res.rows[0]?.team_id;
+  if (!teamId) throw notFound;
+  return authorizeScope(admin, "team", teamId, superadmin);
 }
 
 export function requireTournamentAdmin(

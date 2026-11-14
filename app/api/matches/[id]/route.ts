@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withTransaction } from "@/lib/db";
 import { completeMatch } from "@/lib/matches";
-import { requireAdmin, requireSuperadmin } from "@/lib/session";
+import { requireTeamRowWrite } from "@/lib/session";
 import { ApiError, handleRouteError, matchSubmitSchema } from "@/lib/validate";
 
 // Edit — identical payload and semantics to submit.
@@ -10,8 +10,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const admin = await requireAdmin();
     const { id } = await params;
+    // Authorized against the MATCH's team, not the active one (F-1).
+    const admin = await requireTeamRowWrite("matches", id);
     const body = matchSubmitSchema.parse(await req.json());
     const result = await completeMatch(id, admin.id, body);
     return NextResponse.json({ success: true, data: result });
@@ -27,14 +28,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await requireSuperadmin();
     const { id } = await params;
+    // Superadmin of the MATCH's team, not of the active one (F-1).
+    const admin = await requireTeamRowWrite("matches", id, { superadmin: true });
 
     await withTransaction(async (client) => {
       const cur = await client.query(
         `SELECT other_fee_entry_id, pending_cleared_entry_id, refund_entry_id
-         FROM matches WHERE id = $1 FOR UPDATE`,
-        [id],
+         FROM matches WHERE id = $1 AND team_id = $2 FOR UPDATE`,
+        [id, admin.scopeId],
       );
       const match = cur.rows[0];
       if (!match) {
