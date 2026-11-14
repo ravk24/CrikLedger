@@ -39,7 +39,7 @@ import type {
 // through it would put sample-mode branches inside the one component
 // that must never regress. What IS shared is every step component below,
 // so the windows a visitor walks are the paid windows, not lookalikes:
-// the seven of MatchWizard's ALL_STEPS, in the same order.
+// the eight of MatchWizard's ALL_STEPS, in the same order.
 type Step =
   | "intro"
   | "result"

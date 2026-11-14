@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { activeGrounds, findGround, type TeamGround } from "@/lib/grounds";
 import { formatRupees } from "@/lib/format";
 
@@ -34,6 +34,8 @@ export function GroundPicker({
   // (editing an older match).
   const [otherChosen, setOtherChosen] = useState(false);
   const showOther = otherChosen || (value.trim() !== "" && !matched);
+  // Called before the early return below, as hooks must be.
+  const otherId = useId();
 
   if (options.length === 0) {
     return (
@@ -86,24 +88,31 @@ export function GroundPicker({
         </select>
       </label>
       {showOther && (
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-text-secondary">
+        // Title as <label htmlFor>, the note linked by aria-describedby,
+        // so the field's name is just "Ground name" (test_docs F-5).
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor={otherId}
+            className="text-xs font-medium text-text-secondary"
+          >
             Ground name
-          </span>
+          </label>
           <input
+            id={otherId}
             type="text"
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Type the ground name"
             required={required}
             autoFocus
+            aria-describedby={`${otherId}-note`}
             className={inputClass}
           />
-          <span className="text-xs text-text-muted">
+          <span id={`${otherId}-note`} className="text-xs text-text-muted">
             Not in the team&apos;s list — the car fee will be typed when the
             match is completed.
           </span>
-        </label>
+        </div>
       )}
     </div>
   );
