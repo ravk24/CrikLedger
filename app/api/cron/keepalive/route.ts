@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isCronAuthorized } from "@/lib/cronAuth";
 import { pool } from "@/lib/db";
 
 // Daily Vercel cron — guards against the Supabase free-tier 7-day pause.
 export async function GET(req: NextRequest) {
-  const auth = req.headers.get("authorization");
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(req.headers.get("authorization"))) {
     return NextResponse.json(
       { success: false, error: { code: "UNAUTHORIZED", message: "Bad token" } },
       { status: 401 },

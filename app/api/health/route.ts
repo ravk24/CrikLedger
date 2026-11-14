@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isCronAuthorized } from "@/lib/cronAuth";
 
 // "Is this deployment wired up?" — one curl, for an operator.
 //
@@ -37,9 +38,8 @@ async function probe(fn: () => Promise<unknown>): Promise<string> {
 }
 
 export async function GET(req: NextRequest) {
-  if (
-    req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
+  // Fails closed when CRON_SECRET is unset (lib/cronAuth.ts).
+  if (!isCronAuthorized(req.headers.get("authorization"))) {
     return NextResponse.json(
       { success: false, error: { code: "UNAUTHORIZED", message: "Bad token" } },
       { status: 401 },

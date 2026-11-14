@@ -416,7 +416,20 @@ export function handleRouteError(prefix: string, error: unknown): NextResponse {
       { status: error.status },
     );
   }
-  if (error instanceof ZodError) {
+  // A body that is not JSON at all makes `await req.json()` throw a
+  // SyntaxError before zod ever runs. That is the client's mistake, the
+  // same as a body that fails its schema — it used to fall through to
+  // the 500 below and be logged as a server fault (test_docs F-3,
+  // 2026-11-14). Route code parses no other JSON, so a SyntaxError here
+  // means a malformed request body. Matched by NAME, not instanceof: the
+  // error comes from the platform's fetch implementation, which may live
+  // in another JS realm (a sandboxed module context), where instanceof
+  // SyntaxError is false.
+  const isSyntaxError =
+    typeof error === "object" &&
+    error !== null &&
+    (error as { name?: unknown }).name === "SyntaxError";
+  if (error instanceof ZodError || isSyntaxError) {
     return NextResponse.json(
       {
         success: false,
