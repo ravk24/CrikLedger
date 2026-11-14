@@ -1,6 +1,40 @@
-# Memory — session 38: ledger filter becomes a funnel icon; share-image button retired
+# Memory — session 39: cross-tenant write hole closed on match/player [id] routes
 
-Last updated: 2026-10-24 (session 38; earlier sessions kept below)
+Last updated: 2026-11-14 (session 39; earlier sessions kept below)
+
+## Session 39 (2026-11-14) — Local test suite, then the F-1 tenancy fix
+
+A local-only QA suite was built first (`test-suite/` + `test_docs/`, both git-ignored through
+`.git/info/exclude`, never committed): Vitest unit/component/PGlite integration, Jest contracts
+and snapshots, Playwright e2e on a dead-env `next dev`. It found **F-1 (High)**: nine `[id]`
+write routes checked only "admin of *some* team" (`requireAdmin()` = active team) and looked the
+row up by id alone, so an admin of team A could rename/deactivate/reactivate team B's players
+and edit/complete/abandon/clear-pending/cancel/delete team B's matches. Proved on the real
+schema (PGlite, all 57 migrations), never against prod.
+
+**Fix (owner chose "F-1 only"): commit `cc3df35`, pushed to main on the owner's "commit and
+push" together with this notes commit; no migration — still 57. Backup run 43614896617 green
+just before (2026-11-14).**
+- New `requireTeamRowWrite(table, id, { superadmin })` in `lib/session.ts`: sign-in first,
+  UUID check (malformed → 404, not 500), reads the row's `team_id`, then authorizes against
+  THAT team via the extracted `authorizeScope()` (requireScope now delegates to it — same
+  codes). Authorizing against the row's team, not the active one, keeps an admin of two teams
+  working on whichever team's page they are on (the pages already gate by `match.team_id`).
+- The nine routes use it and also pin `AND team_id = $n` in their SQL: `players/[id]` PATCH,
+  `/deactivate`, `/reactivate`; `matches/[id]` PATCH + DELETE, `/schedule`, `/submit`,
+  `/abandon`, `/clear-pending`, `/cancel`.
+- Cross-team caller now gets `403 NOT_A_MEMBER`; behaviour for one's own team is unchanged.
+- Verified: 18 tenant tests (incl. a two-team admin on the non-active team) pass; with the fix
+  stashed, 11 of them fail — proof they catch the hole. Vitest 190, Jest 30, Playwright 69,
+  app suite 145, tsc clean, lint 12 warnings. `09-api.md` updated.
+
+**Still open (documented in `test_docs/06-findings.md`, deliberately not fixed this session):**
+F-2 cron/health accept `Bearer undefined` if `CRON_SECRET` is unset; F-3 malformed JSON → 500;
+F-4 `text-muted`/`accent`/`credit` tokens below WCAG AA contrast.
+
+**Next:** phone-check after the Vercel deploy (complete a match, edit a fixture, rename a
+player). Optional read-only audit for past abuse (Supabase SQL editor): matches whose
+`updated_by` is not a member of the match's team.
 
 ## Session 38 (2026-10-24) — Filter icon replaces the share icon and the dropdown row
 
