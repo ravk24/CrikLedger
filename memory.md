@@ -28,9 +28,20 @@ just before (2026-11-14).**
   stashed, 11 of them fail — proof they catch the hole. Vitest 190, Jest 30, Playwright 69,
   app suite 145, tsc clean, lint 12 warnings. `09-api.md` updated.
 
-**Still open (documented in `test_docs/06-findings.md`, deliberately not fixed this session):**
-F-2 cron/health accept `Bearer undefined` if `CRON_SECRET` is unset; F-3 malformed JSON → 500;
-F-4 `text-muted`/`accent`/`credit` tokens below WCAG AA contrast.
+**Later the same session — F-2 and F-3 fixed: commit `ced0723`, pushed on the owner's "commit and push":**
+- F-2: new `lib/cronAuth.ts` `isCronAuthorized()` used by `/api/cron/keepalive` and
+  `/api/health`. Fails closed on an unset or blank `CRON_SECRET` (the old inline check let the
+  literal header `Bearer undefined` in). Vercel cron sends no header when the var is unset, so
+  the daily keepalive is unchanged.
+- F-3: `handleRouteError` (`lib/validate.ts`) maps a `SyntaxError` from `req.json()` to the same
+  `422 INVALID_BODY` as a zod failure, without logging it. Matched by `error.name`, not
+  `instanceof` — the error comes from the platform fetch, which can live in another JS realm
+  (it did under Jest). No other route code calls `JSON.parse`.
+- Verified: the new tests fail on the old code (4 Jest, 1 Vitest); Jest 34, Vitest 191,
+  Playwright 71, app suite 145, tsc clean, lint 12 warnings. No DB involvement.
+
+**Still open:** F-4 `text-muted`/`accent`/`credit` tokens below WCAG AA contrast (design call);
+F-5 helper text inside `<label>`s; F-6 stale "seven steps" comment in `GuestMatchFlow.tsx`.
 
 **Next:** phone-check after the Vercel deploy (complete a match, edit a fixture, rename a
 player). Optional read-only audit for past abuse (Supabase SQL editor): matches whose
