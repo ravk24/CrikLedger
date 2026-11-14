@@ -19,14 +19,22 @@
   --color-border: #dfe5ee;
   --color-border-strong: #c7d1de;
 
+  /* WCAG AA (2026-11-14, test_docs F-4): every TEXT colour below must
+     reach 4.5:1 on all three light grounds — surface #ffffff,
+     surface-secondary #f4f7fb AND background #eef2f7 (the worst case;
+     helper text sits directly on it). Worst-case ratio in brackets.
+     Old values, all failing: muted #94a3b8 (2.28), accent #0284c7 (3.64;
+     white on it 4.10), credit #16a34a (2.93), low #d97706 (2.83),
+     debit #dc2626 (4.30). Re-check any new shade before changing it. */
+
   /* Text */
   --color-text-primary: #0f172a;
   --color-text-secondary: #475569;
-  --color-text-muted: #94a3b8;
+  --color-text-muted: #5f6f85; /* 4.56 — still visibly lighter than secondary */
 
   /* Accent — sky blue, the share-card family. Primary buttons, links,
      focus rings. NOT money. */
-  --color-accent: #0284c7;
+  --color-accent: #0369a1; /* 5.28; white text on it 5.93 */
   --color-accent-foreground: #ffffff;
   --color-accent-light: #e0f2fe;
 
@@ -45,17 +53,17 @@
   --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 14px rgb(15 23 42 / 0.06);
 
   /* Money + status: CREDIT / SURPLUS — green */
-  --color-credit: #16a34a;
+  --color-credit: #157a3a; /* 4.82 */
   --color-credit-light: #dcfce7;
   --color-credit-foreground: #14532d;
 
   /* Money + status: LOW balance warning — amber */
-  --color-low: #d97706;
+  --color-low: #a94f08; /* 4.90 */
   --color-low-light: #fef3c7;
   --color-low-foreground: #92400e;
 
   /* Money + status: DEBIT / DEBT — red */
-  --color-debit: #dc2626;
+  --color-debit: #d42020; /* 4.64 */
   --color-debit-light: #fee2e2;
   --color-debit-foreground: #991b1b;
 
