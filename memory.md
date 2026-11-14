@@ -51,7 +51,19 @@ just before (2026-11-14).**
 - Verified: new component tests fail on the old components (9); Vitest 196, Jest 34,
   Playwright 71 (axe included), app suite 145, tsc clean, lint 12 warnings.
 
-**Still open:** F-4 `text-muted`/`accent`/`credit` tokens below WCAG AA contrast (design call).
+**Then F-4 — colour contrast: commit `6c70604`, pushed on the owner's "commit and push" (shades approved "as shown"):**
+- Five token values in `app/globals.css` (no class changed anywhere): `text-muted` #94a3b8 →
+  #5f6f85, `accent` #0284c7 → #0369a1, `credit` #16a34a → #157a3a, `low` #d97706 → #a94f08,
+  `debit` #dc2626 → #d42020. Each now passes 4.5:1 on all three light grounds; the worst case is
+  `background` #eef2f7, where helper text sits. The obvious Tailwind steps (slate-500, green-700)
+  still failed there, so the nearest passing shades were computed instead. The owner chose from
+  before/after Pixel 7 screenshots (tokens injected into the page only).
+- Chrome tokens, badge pairs and the share-image PNGs (navy canvas, grey there 6.96) unchanged.
+- Rule plus table recorded in `context/ui-tokens.md`. The local axe scan now BLOCKS on contrast;
+  all 7 pages × 2 viewports scan clean.
+- The extended scan found **F-7 (Low, open)**: the `StepFeePreview.tsx` scroll list holds only text,
+  so it isn't keyboard-focusable (axe `scrollable-region-focusable`). Fix: `tabIndex={0}`,
+  `role="region"`, `aria-label`. Not done (outside the F-4 scope).
 
 **Next:** phone-check after the Vercel deploy (complete a match, edit a fixture, rename a
 player). Optional read-only audit for past abuse (Supabase SQL editor): matches whose
