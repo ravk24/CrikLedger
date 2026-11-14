@@ -33,7 +33,17 @@ export function StepFeePreview({
   return (
     <div className="flex flex-col gap-3">
       <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
-        <div className="max-h-56 divide-y divide-border overflow-y-auto">
+        {/* The rows are plain text, so nothing inside can take focus and a
+            keyboard user could not scroll past the fold. tabIndex makes the
+            list itself focusable (arrow keys scroll it); the named region
+            tells a screen reader what it is; the ring shows on keyboard
+            focus only, never on tap (test_docs F-7, 2026-11-14). */}
+        <div
+          tabIndex={0}
+          role="region"
+          aria-label="Fees per player"
+          className="max-h-56 divide-y divide-border overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+        >
         {rows.map((row) => {
           const key = rowKey(row);
           const isRebate = row.fee < 0;
