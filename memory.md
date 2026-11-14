@@ -74,6 +74,22 @@ fail with the fix stashed. Every suite is green with **zero known-defect markers
 Jest 34, Playwright 61, app 145, tsc clean, lint 12 warnings. **All seven findings F-1…F-7 are
 closed.**
 
+**Session close — reports and docs.** Final coverage (Vitest, files loaded): 70.0% lines, 61.7%
+branches; 65 of 196 source files are loaded. Tournaments, ops, superadmin and share routes are 0%
+loaded. Jest and Playwright aren't instrumented (Jest can't reach files outside `test-suite/`).
+Full report: `test-suite/FINAL-REPORT.md` (local). Docs brought in step:
+- `README.md`: `CRON_SECRET` row.
+- `CrikLedger-docs/09-api.md`: `INVALID_BODY` rule, cron auth, a new `/api/health` entry.
+- `12-security.md` §2: status box. Team routes fixed at `cc3df35`. Pool entries and tournaments
+  were already scoped before today; tournaments verified by reading only.
+- `14-known-issues.md`: new §12 with F-1…F-7 and the current verification state.
+- `context/ui-tokens.md` and `ui-registry.md`: contrast, labelled-field and scroll-box rules.
+- `test_docs/` 01, 03, 05, 07, 08, 09.
+
+**Next session starts with:** the owner's phone check (deeper colours are the only visible
+change); optionally the read-only F-1 audit query; then tournament tests and success-path tests
+for the F-1 routes (the biggest coverage gaps).
+
 **Next:** phone-check after the Vercel deploy (complete a match, edit a fixture, rename a
 player). Optional read-only audit for past abuse (Supabase SQL editor): matches whose
 `updated_by` is not a member of the match's team.

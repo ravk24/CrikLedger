@@ -152,7 +152,7 @@ The app is installable as a **PWA** (web manifest + install nudge) and designed 
    | `DATABASE_URL` | Supabase **transaction pooler** string (port 6543) — all writes |
    | `SUPABASE_SERVICE_ROLE_KEY` | Server-only client, never shipped to the browser |
    | `SESSION_SECRET` | Signs the admin session JWT |
-   | `CRON_SECRET` | Guards `/api/cron/keepalive` |
+   | `CRON_SECRET` | Guards `/api/cron/keepalive` and `/api/health` (exact `Bearer` match; if unset, both refuse every request) |
 
 3. **Run it:**
 
