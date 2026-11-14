@@ -40,8 +40,18 @@ just before (2026-11-14).**
 - Verified: the new tests fail on the old code (4 Jest, 1 Vitest); Jest 34, Vitest 191,
   Playwright 71, app suite 145, tsc clean, lint 12 warnings. No DB involvement.
 
-**Still open:** F-4 `text-muted`/`accent`/`credit` tokens below WCAG AA contrast (design call);
-F-5 helper text inside `<label>`s; F-6 stale "seven steps" comment in `GuestMatchFlow.tsx`.
+**Later still — F-5 and F-6 fixed: commit `bf73d5f`, pushed on the owner's "commit and push":**
+- F-5: helper/status text and the ₹ glyph sat inside wrapping `<label>`s, so screen readers
+  spoke them as part of the field's name. `MoneyInput`, `SignupForm` (user id status, email
+  helper, password hint) and `GroundPicker`'s "Other ground" field now use a `div` wrapper +
+  `<label htmlFor={useId()}>` with the same classes, helper text linked by `aria-describedby`,
+  ₹ `aria-hidden`. Visual layout unchanged. The rule is recorded in `context/ui-registry.md`
+  (MoneyInput entry). Found by a label sweep script; no other offenders.
+- F-6: `GuestMatchFlow.tsx` comment now says "eight" wizard steps (it is 8 in both wizards).
+- Verified: new component tests fail on the old components (9); Vitest 196, Jest 34,
+  Playwright 71 (axe included), app suite 145, tsc clean, lint 12 warnings.
+
+**Still open:** F-4 `text-muted`/`accent`/`credit` tokens below WCAG AA contrast (design call).
 
 **Next:** phone-check after the Vercel deploy (complete a match, edit a fixture, rename a
 player). Optional read-only audit for past abuse (Supabase SQL editor): matches whose
