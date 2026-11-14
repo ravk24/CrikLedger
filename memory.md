@@ -61,9 +61,18 @@ just before (2026-11-14).**
 - Chrome tokens, badge pairs and the share-image PNGs (navy canvas, grey there 6.96) unchanged.
 - Rule plus table recorded in `context/ui-tokens.md`. The local axe scan now BLOCKS on contrast;
   all 7 pages × 2 viewports scan clean.
-- The extended scan found **F-7 (Low, open)**: the `StepFeePreview.tsx` scroll list holds only text,
-  so it isn't keyboard-focusable (axe `scrollable-region-focusable`). Fix: `tabIndex={0}`,
-  `role="region"`, `aria-label`. Not done (outside the F-4 scope).
+- The extended scan found **F-7**: the `StepFeePreview.tsx` scroll list holds only text, so it
+  wasn't keyboard-focusable (axe `scrollable-region-focusable`).
+
+**Last — F-7 fixed: commit `1029537`, pushed on the owner's "commit and push":** the fee list `div` gained
+`tabIndex={0}`, `role="region"`, `aria-label="Fees per player"` and a keyboard-only
+`focus-visible` ring (never shows on tap). It is shared by the team wizard, the tournament wizard
+and the guest sample. OpsConsole's account list was checked and is fine (its rows are buttons).
+The rule is recorded in `context/ui-registry.md` ("Scroll-box rule"). Guarded by the now fully
+blocking guest-screen axe scan plus a keyboard test (Tab reaches the list, End scrolls it); all 4
+fail with the fix stashed. Every suite is green with **zero known-defect markers**: Vitest 196,
+Jest 34, Playwright 61, app 145, tsc clean, lint 12 warnings. **All seven findings F-1…F-7 are
+closed.**
 
 **Next:** phone-check after the Vercel deploy (complete a match, edit a fixture, rename a
 player). Optional read-only audit for past abuse (Supabase SQL editor): matches whose
