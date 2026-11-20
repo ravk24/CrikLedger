@@ -27,7 +27,7 @@ export function Money({ amount, variant = "neutral", className }: Props) {
   }
 
   return (
-    <span className={cn("tabular-nums", color, className)}>
+    <span className={cn("whitespace-nowrap tabular-nums", color, className)}>
       {prefix}
       {value}
     </span>

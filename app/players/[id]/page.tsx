@@ -94,7 +94,7 @@ async function StatementData({
             <StatusBadge status={player.status} />
           </p>
         </div>
-        <div className="text-right">
+        <div className="shrink-0 text-right">
           <p className="text-[11px] font-bold uppercase tracking-wider text-text-muted">
             Balance
           </p>
