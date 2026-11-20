@@ -1,6 +1,28 @@
-# Memory — session 39: cross-tenant write hole closed on match/player [id] routes
+# Memory — session 40: negative balance no longer splits beside a long name
 
-Last updated: 2026-11-14 (session 39; earlier sessions kept below)
+Last updated: 2026-11-20 (session 40; earlier sessions kept below)
+
+## Session 40 (2026-11-20) — Balance wrap fix on the player page
+
+From an owner phone screenshot: on `/players/[id]`, a long name ("Kunwar Chandra Prakash")
+squeezed the right-hand balance column until the amount broke between the sign and the digits
+("−" on one line, "₹303" on the next).
+
+**Fix: commit `f2da350`, pushed to main on the owner's "commit and push just these two files";
+no migration — still 57.**
+- `components/shared/Money.tsx`: the span always carries `whitespace-nowrap`, so no amount
+  anywhere in the app can split between its prefix (`−₹` / `+₹` / `₹`) and its digits.
+- `app/players/[id]/page.tsx`: the balance column is `shrink-0`; the name column (`min-w-0`)
+  wraps instead.
+
+Only those two files were committed. The working tree still holds the owner's own uncommitted
+edits in 12 component files (admin tiles/sheets, SignupForm, AnimatedRupees, InstallNudge,
+InstallGuide, OpsConsole, tournament tiles/sheet) plus the untracked
+`components/install/detect.ts` — not this session's work; leave them alone unless asked.
+
+Class-only change: tsc/lint/vitest not re-run, not browser-checked. Next: the owner's phone
+check of that player page (long name + negative balance on one line), then the session 39
+carry-overs.
 
 ## Session 39 (2026-11-14) — Local test suite, then the F-1 tenancy fix
 
